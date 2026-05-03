@@ -1,6 +1,6 @@
 -- ===============================================================
 -- PROGETTO TESI L31 - REGISTRO CENTRALIZZATO NIS2 (ACN)
--- VERSIONE: 3.2 (CONSOLIDATA PER ALLINEAMENTO DML)
+-- VERSIONE: 3.3 (ALLINEAMENTO STRUTTURALE ACN & RISK MANAGEMENT)
 -- ===============================================================
 
 -- 1. TABELLE DI DOMINIO E ANAGRAFICHE BASE
@@ -45,7 +45,7 @@ CREATE TABLE ruolo (
 -- 2. RISORSE UMANE E RESPONSABILITÀ
 CREATE TABLE responsabile (
   id serial PRIMARY KEY,
-  nome varchar NOT NULL, -- Nome completo per compatibilità DML
+  nome varchar NOT NULL, 
   email varchar,
   telefono varchar,
   organizzazione_id int REFERENCES organizzazione(id),
@@ -67,7 +67,9 @@ CREATE TABLE asset (
   classificazione_criticita varchar,
   descrizione text,
   ubicazione varchar,
-  versione varchar, -- AGGIUNTA: Necessaria per Auditing NIS2
+  versione varchar,             -- Tracciamento versioning (NIS2)
+  bollettino_acn_ref varchar,    -- NUOVO: Riferimento ufficiale CSIRT/ACN
+  analisi_rischio_cve text,      -- NUOVO: Dettaglio tecnico vulnerabilità
   data_inserimento date DEFAULT now(),
   organizzazione_id int REFERENCES organizzazione(id),
   responsabile_id int REFERENCES responsabile(id)
@@ -81,7 +83,7 @@ CREATE TABLE fornitore (
   contatto_email varchar
 );
 
--- 6. STATO SERVIZIO (Spostata sopra per dipendenza FK in 'servizio')
+-- 6. STATO SERVIZIO
 CREATE TABLE stato_servizio (
   id serial PRIMARY KEY,
   codice varchar, -- OPERATIVO, MANUTENZIONE, CRITICO
@@ -93,7 +95,7 @@ CREATE TABLE servizio (
   nome varchar NOT NULL,
   descrizione text,
   tipo_servizio_id int REFERENCES tipo_servizio(id),
-  stato_servizio_id int REFERENCES stato_servizio(id), -- AGGIUNTA: Necessaria per monitoraggio
+  stato_servizio_id int REFERENCES stato_servizio(id),
   organizzazione_id int REFERENCES organizzazione(id),
   responsabile_id int REFERENCES responsabile(id)
 );
