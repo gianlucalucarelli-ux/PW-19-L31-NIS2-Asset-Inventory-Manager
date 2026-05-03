@@ -1,6 +1,6 @@
 -- ===============================================================
 -- PROGETTO TESI L31 - REGISTRO CENTRALIZZATO NIS2 (ACN)
--- VERSIONE: 3.1 (CONSOLIDATA)
+-- VERSIONE: 3.2 (CONSOLIDATA PER ALLINEAMENTO DML)
 -- ===============================================================
 
 -- 1. TABELLE DI DOMINIO E ANAGRAFICHE BASE
@@ -12,7 +12,7 @@ CREATE TABLE organizzazione (
 
 CREATE TABLE categoria_asset (
   id serial PRIMARY KEY,
-  codice_acn varchar UNIQUE, -- Integrazione Tassonomia ACN (es. AC:IN_HW-CS_SR)
+  codice_acn varchar UNIQUE, 
   nome varchar NOT NULL,
   descrizione text
 );
@@ -45,8 +45,7 @@ CREATE TABLE ruolo (
 -- 2. RISORSE UMANE E RESPONSABILITÀ
 CREATE TABLE responsabile (
   id serial PRIMARY KEY,
-  nome varchar,
-  cognome varchar,
+  nome varchar NOT NULL, -- Nome completo per compatibilità DML
   email varchar,
   telefono varchar,
   organizzazione_id int REFERENCES organizzazione(id),
@@ -68,6 +67,7 @@ CREATE TABLE asset (
   classificazione_criticita varchar,
   descrizione text,
   ubicazione varchar,
+  versione varchar, -- AGGIUNTA: Necessaria per Auditing NIS2
   data_inserimento date DEFAULT now(),
   organizzazione_id int REFERENCES organizzazione(id),
   responsabile_id int REFERENCES responsabile(id)
@@ -81,11 +81,19 @@ CREATE TABLE fornitore (
   contatto_email varchar
 );
 
+-- 6. STATO SERVIZIO (Spostata sopra per dipendenza FK in 'servizio')
+CREATE TABLE stato_servizio (
+  id serial PRIMARY KEY,
+  codice varchar, -- OPERATIVO, MANUTENZIONE, CRITICO
+  descrizione text
+);
+
 CREATE TABLE servizio (
   id serial PRIMARY KEY,
   nome varchar NOT NULL,
   descrizione text,
   tipo_servizio_id int REFERENCES tipo_servizio(id),
+  stato_servizio_id int REFERENCES stato_servizio(id), -- AGGIUNTA: Necessaria per monitoraggio
   organizzazione_id int REFERENCES organizzazione(id),
   responsabile_id int REFERENCES responsabile(id)
 );
@@ -93,7 +101,7 @@ CREATE TABLE servizio (
 -- 4. DIPENDENZE E SUPPLY CHAIN
 CREATE TABLE tipo_dipendenza_servizio (
   id serial PRIMARY KEY,
-  codice varchar, -- TECNICA o FORNITURA
+  codice varchar, 
   descrizione text
 );
 
@@ -104,7 +112,6 @@ CREATE TABLE servizio_dipendenza (
   asset_id int REFERENCES asset(id),
   fornitore_id int REFERENCES fornitore(id),
   descrizione text,
-  -- VINCOLO XOR: Obbligo di valorizzare esattamente uno tra asset e fornitore (NIS2 Compliance)
   CONSTRAINT check_dipendenza_esclusiva CHECK (
     (asset_id IS NOT NULL AND fornitore_id IS NULL) OR 
     (asset_id IS NULL AND fornitore_id IS NOT NULL)
@@ -114,13 +121,13 @@ CREATE TABLE servizio_dipendenza (
 -- 5. SERVICE COMPOSITION E IMPATTO
 CREATE TABLE tipo_dipendenza (
   id serial PRIMARY KEY,
-  codice varchar, -- HARD, SOFT, INFO
+  codice varchar, 
   descrizione text
 );
 
 CREATE TABLE esito_impatto (
   id serial PRIMARY KEY,
-  codice varchar, -- TOTALE, PARZIALE, NESSUNO
+  codice varchar, 
   descrizione text
 );
 
@@ -134,13 +141,7 @@ CREATE TABLE servizio_componente (
   PRIMARY KEY (servizio_padre_id, servizio_figlio_id)
 );
 
--- 6. MONITORAGGIO STATO E EVENTI
-CREATE TABLE stato_servizio (
-  id serial PRIMARY KEY,
-  codice varchar, -- UP, DOWN, DEGRADED
-  descrizione text
-);
-
+-- 6. EVENTI
 CREATE TABLE evento_servizio (
   id serial PRIMARY KEY,
   servizio_id int REFERENCES servizio(id),
@@ -151,17 +152,17 @@ CREATE TABLE evento_servizio (
   severita varchar
 );
 
--- 7. AUDITING E GESTIONE DELLO STORICO (VERSIONING)
+-- 7. AUDITING (VERSIONING)
 CREATE TABLE versioning_asset (
   id serial PRIMARY KEY,
   asset_id int REFERENCES asset(id),
   utente varchar,
-  operazione varchar, -- INSERT, UPDATE, DELETE
+  operazione varchar, 
   data_modifica timestamp DEFAULT now(),
   descrizione text
 );
 
--- FUNZIONE TRIGGER PER IL LOG AUTOMATICO DELLE MODIFICHE
+-- FUNZIONE TRIGGER
 CREATE OR REPLACE FUNCTION process_asset_audit()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -178,7 +179,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ATTIVAZIONE DEL TRIGGER SULLA TABELLA ASSET
+-- ATTIVAZIONE TRIGGER
 CREATE TRIGGER trg_asset_audit
 AFTER UPDATE OR DELETE ON asset
 FOR EACH ROW EXECUTE FUNCTION process_asset_audit();
