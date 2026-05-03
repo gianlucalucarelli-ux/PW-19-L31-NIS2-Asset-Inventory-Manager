@@ -1,13 +1,17 @@
 -- ===============================================================
--- 01-INIZIALIZZAZIONE SCHEMA (VERSIONE 3.4 - COMPLETA 19 TABELLE)
+-- 01-INIZIALIZZAZIONE SCHEMA (VERSIONE 3.5 - 3NF PURA - 20 TABELLE)
 -- ===============================================================
 
--- RESET
+-- 0. RESET TOTALE (Se dà ancora errore di throttling, aspetta un minuto)
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 
--- 1. ANAGRAFICHE BASE
-CREATE TABLE organizzazione (id serial PRIMARY KEY, nome varchar NOT NULL, descrizione text);
+-- 1. TABELLE DI DOMINIO (PADRE)
+CREATE TABLE organizzazione (
+    id serial PRIMARY KEY, 
+    nome varchar NOT NULL, 
+    descrizione text
+);
 
 CREATE TABLE categoria_asset (
     id serial PRIMARY KEY, 
@@ -38,22 +42,31 @@ CREATE TABLE responsabile_ruolo (
     PRIMARY KEY (responsabile_id, ruolo_id)
 );
 
--- 3. ASSET E FORNITORI
+-- 3. NUOVA TABELLA VULNERABILITÀ (PER 3NF)
+CREATE TABLE vulnerabilita (
+    id serial PRIMARY KEY,
+    codice_bollettino varchar UNIQUE, 
+    descrizione_rischio text,
+    livello_severita varchar,
+    data_pubblicazione date DEFAULT now()
+);
+
+-- 4. TABELLA ASSET (NORMALIZZATA)
 CREATE TABLE asset (
     id serial PRIMARY KEY,
     nome varchar NOT NULL,
     categoria_asset_id int REFERENCES categoria_asset(id),
+    vulnerabilita_id int REFERENCES vulnerabilita(id), 
     classificazione_criticita varchar,
     descrizione text,
     ubicazione varchar,
     versione varchar,
-    bollettino_acn_ref varchar,
-    analisi_rischio_cve text,
     data_inserimento date DEFAULT now(),
     organizzazione_id int REFERENCES organizzazione(id),
     responsabile_id int REFERENCES responsabile(id)
 );
 
+-- 5. SUPPLY CHAIN E MONITORAGGIO
 CREATE TABLE fornitore (
     id serial PRIMARY KEY, 
     nome varchar NOT NULL, 
@@ -62,7 +75,6 @@ CREATE TABLE fornitore (
     contatto_email varchar
 );
 
--- 4. STATO E SERVIZI
 CREATE TABLE stato_servizio (id serial PRIMARY KEY, codice varchar, descrizione text);
 
 CREATE TABLE servizio (
@@ -75,7 +87,7 @@ CREATE TABLE servizio (
     responsabile_id int REFERENCES responsabile(id)
 );
 
--- 5. DIPENDENZE E SUPPLY CHAIN
+-- 6. DIPENDENZE E COMPOSIZIONE
 CREATE TABLE tipo_dipendenza_servizio (id serial PRIMARY KEY, codice varchar, descrizione text);
 
 CREATE TABLE servizio_dipendenza (
@@ -91,7 +103,6 @@ CREATE TABLE servizio_dipendenza (
     )
 );
 
--- 6. COMPOSIZIONE E IMPATTO
 CREATE TABLE tipo_dipendenza (id serial PRIMARY KEY, codice varchar, descrizione text);
 CREATE TABLE esito_impatto (id serial PRIMARY KEY, codice varchar, descrizione text);
 
@@ -125,21 +136,23 @@ CREATE TABLE versioning_asset (
     descrizione text
 );
 
--- TRIGGER
+-- 8. TRIGGER
 CREATE OR REPLACE FUNCTION process_asset_audit()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'UPDATE') THEN
         INSERT INTO versioning_asset (asset_id, utente, operazione, descrizione)
-        VALUES (OLD.id, current_user, 'UPDATE', 'Modifica record');
+        VALUES (OLD.id, current_user, 'UPDATE', 'Modifica record asset in 3NF');
         RETURN NEW;
     ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO versioning_asset (asset_id, utente, operazione, descrizione)
-        VALUES (OLD.id, current_user, 'DELETE', 'Eliminazione record');
+        VALUES (OLD.id, current_user, 'DELETE', 'Eliminazione record asset');
         RETURN OLD;
     END IF;
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_asset_audit AFTER UPDATE OR DELETE ON asset FOR EACH ROW EXECUTE FUNCTION process_asset_audit();
+CREATE TRIGGER trg_asset_audit
+AFTER UPDATE OR DELETE ON asset
+FOR EACH ROW EXECUTE FUNCTION process_asset_audit();
