@@ -1,80 +1,77 @@
 -- ===============================================================
--- 02-POPOLAMENTO DATI (VERSIONE 4.0 - LOGICA 3NF & TASS. ACN)
--- Progetto: NIS2 Asset Inventory Manager
+-- 02-POPOLAMENTO DATI (VERSIONE 5.0 - DATASET COMPLETO NIS2)
 -- ===============================================================
 
--- 1. PULIZIA DATI (Idempotenza)
--- Utilizziamo TRUNCATE con CASCADE e RESTART IDENTITY per garantire che ogni 
--- esecuzione dello script parta da un database pulito, resettando i contatori degli ID.
+-- 1. RESET TOTALE (Garantisce che l'ordine degli ID riparta da 1)
 TRUNCATE organizzazione, categoria_asset, stato_servizio, tipo_servizio, ruolo, 
          responsabile, vulnerabilita, asset, servizio, servizio_componente, 
          versioning_asset RESTART IDENTITY CASCADE;
 
--- 2. INSERIMENTI DI DOMINIO (Configurazione base dell'ambiente)
+-- 2. ORGANIZZAZIONE
 INSERT INTO organizzazione (nome, descrizione) 
-VALUES ('Ente Pubblico Esempio', 'Organizzazione pilota per la gestione Asset NIS2');
+VALUES ('Comune Digitale Alpha', 'Ente pilota per la resilienza infrastrutturale NIS2');
 
-INSERT INTO stato_servizio (codice, descrizione) 
-VALUES ('OPERATIVO', 'Servizio attivo'), ('CRITICO', 'Servizio interrotto/compromesso');
-
-INSERT INTO tipo_servizio (nome) VALUES ('Essenziale'), ('Importante');
-
--- 3. CATEGORIE ASSET (Mapping Tassonomia Cyber ACN v2.0)
--- Inseriamo le categorie utilizzando i codici predicati ufficiali ACN per l'interoperabilità.
+-- 3. CATEGORIE ASSET (Tassonomia ACN v2.0 completa)
 INSERT INTO categoria_asset (codice_acn, nome, descrizione) VALUES
 ('AC:IN_HW-CS_SR', 'Server Fisico', 'Infrastruttura di calcolo on-premise'),
-('AC:IN_HW-NW_GT', 'Dispositivo Networking', 'Router, Switch e Gateway di rete'),
+('AC:IN_HW-NW_GT', 'Networking Gateway', 'Router e Gateway di frontiera'),
 ('AC:IN_SW-DM_DB', 'Database Management', 'Sistemi di gestione basi dati'),
-('AC:IN_SW-AP_WS', 'Applicativo Web', 'Server web e interfacce utente'),
-('AC:IN_HW-CS_WS', 'Workstation', 'Postazioni di lavoro ufficio tecnico'),
-('AC:IN_HW-NW_FW', 'Firewall/Security', 'Appliance di sicurezza perimetrale'),
-('AC:IN_SW-DM_BK', 'Backup System', 'Sistemi di conservazione dati'),
-('AC:IN_HW-IT_ID', 'IoT Device', 'Sensori e dispositivi smart'),
-('AC:IN_HW-CS_MB', 'Dispositivo Mobile', 'Smartphone e tablet aziendali'),
-('AC:IN_SW-OS_LX', 'Sistema Operativo', 'Distribuzioni Linux enterprise');
+('AC:IN_SW-AP_WS', 'Web Server', 'Server per erogazione servizi web'),
+('AC:IN_HW-CS_WS', 'Workstation', 'Postazioni di lavoro critiche'),
+('AC:IN_HW-NW_FW', 'Firewall Appliance', 'Sistemi di difesa perimetrale'),
+('AC:IN_SW-DM_BK', 'Backup & Recovery', 'Sistemi di salvataggio dati'),
+('AC:IN_HW-IT_ID', 'IoT Sensor', 'Sensori monitoraggio ambientale'),
+('AC:IN_HW-CS_MB', 'Mobile Device', 'Dispositivi mobili di servizio'),
+('AC:IN_SW-OS_LX', 'OS Enterprise', 'Sistemi operativi Linux-based');
 
--- 4. ANAGRAFICA RESPONSABILI (Punti di Contatto - PoC)
-INSERT INTO responsabile (organizzazione_id, nome, email) 
-SELECT id, 'Mario Rossi', 'mario.rossi@ente.it' FROM organizzazione WHERE nome = 'Ente Pubblico Esempio';
+-- 4. STATI E TIPI SERVIZIO
+INSERT INTO stato_servizio (codice, descrizione) VALUES 
+('OPERATIVO', 'Attivo'), ('CRITICO', 'Interrotto'), ('MANUTENZIONE', 'In aggiornamento');
+INSERT INTO tipo_servizio (nome) VALUES ('Essenziale'), ('Importante');
 
--- 5. VULNERABILITÀ (Entità per la gestione proattiva del rischio)
--- Inseriamo bollettini di sicurezza realistici per testare la segnalazione nel frontend.
-INSERT INTO vulnerabilita (codice_bollettino, descrizione_rischio, livello_severita) VALUES 
-('BL-2024-001', 'Vulnerabilità critica nel servizio di autenticazione', 'Alta'),
-('BL-2024-018', 'Zero-day exploit su kernel di rete', 'Alta'),
-('BL-2026-003', 'Rilevata vulnerabilità su gestione memoria (CVE-2024-1234)', 'Alta'),
-('BL-2024-005', 'Necessario aggiornamento firmware protocollo SSL', 'Media'),
-('BL-2023-099', 'Configurazione debole cifratura backup', 'Bassa');
+-- 5. RESPONSABILI (PoC - Punti di Contatto)
+INSERT INTO responsabile (organizzazione_id, nome, email) VALUES
+(1, 'Marco Bianchi', 'm.bianchi@comune.it'),
+(1, 'Laura Neri', 'l.neri@comune.it'),
+(1, 'Stefano Verdi', 's.verdi@comune.it'),
+(1, 'Giulia Rossi', 'g.rossi@comune.it'),
+(1, 'Roberto Blu', 'r.blu@comune.it');
 
--- 6. ASSET (Inventario Hardware e Software)
--- Colleghiamo gli asset alle categorie ACN e, dove necessario, alle vulnerabilità rilevate.
-INSERT INTO asset (organizzazione_id, categoria_asset_id, vulnerabilita_id, nome, descrizione, classificazione_criticita, versione) 
-SELECT o.id, c.id, v.id, 'SRV-DB-CITIZENS', 'Database Anagrafe Centrale', 'Critica', 'PostgreSQL 15'
-FROM organizzazione o, categoria_asset c, vulnerabilita v 
-WHERE o.nome = 'Ente Pubblico Esempio' AND c.codice_acn = 'AC:IN_SW-DM_DB' AND v.codice_bollettino = 'BL-2026-003';
+-- 6. VULNERABILITÀ (Catalogo CVE/Bollettini simulati)
+INSERT INTO vulnerabilita (codice_bollettino, descrizione_rischio, livello_severita) VALUES
+('CVE-2024-001', 'Buffer Overflow in OpenSSL', 'Alta'),
+('CVE-2024-015', 'Privilege Escalation Kernel', 'Alta'),
+('CVE-2023-999', 'Weak SSH Configuration', 'Media'),
+('CVE-2024-555', 'SQL Injection Portal', 'Alta'),
+('ACN-2026-03', 'Outdated Firmware IoT', 'Bassa'),
+('CVE-2024-111', 'Zero-day RDP exploit', 'Critica'),
+('CVE-2024-222', 'Insecure Backup Protocol', 'Media'),
+('CVE-2024-333', 'DDoS Vulnerability', 'Bassa'),
+('CVE-2024-444', 'Cross-Site Scripting (XSS)', 'Media'),
+('CVE-2024-666', 'Broken Access Control', 'Alta');
 
-INSERT INTO asset (organizzazione_id, categoria_asset_id, vulnerabilita_id, nome, descrizione, classificazione_criticita, versione)
-SELECT o.id, c.id, v.id, 'FW-PERIM-01', 'Firewall Perimetrale Core', 'Critica', 'FortiOS 7.2'
-FROM organizzazione o, categoria_asset c, vulnerabilita v 
-WHERE o.nome = 'Ente Pubblico Esempio' AND c.codice_acn = 'AC:IN_HW-NW_FW' AND v.codice_bollettino = 'BL-2024-018';
+-- 7. ASSET (10 record diversificati)
+INSERT INTO asset (organizzazione_id, categoria_asset_id, vulnerabilita_id, nome, descrizione, classificazione_criticita, versione) VALUES
+(1, 1, 1, 'SRV-DC-01', 'Domain Controller Primario', 'Alta', 'Windows 2022'),
+(1, 3, 4, 'DB-CITIZENS-01', 'Database Anagrafe', 'Critica', 'PostgreSQL 15'),
+(1, 6, 6, 'FW-BORDER-01', 'Firewall Perimetrale Esterno', 'Critica', 'FortiOS 7.4'),
+(1, 4, 10, 'WEB-APP-PORTAL', 'Portale Servizi Cittadino', 'Alta', 'Ubuntu 22.04 / Nginx'),
+(1, 7, 7, 'NAS-SAFE-STORE', 'Storage Backup Immutabile', 'Alta', 'TrueNAS Enterprise'),
+(1, 2, 3, 'RTR-MAIN-GATE', 'Router di Frontiera', 'Alta', 'Cisco IOS-XE'),
+(1, 5, 2, 'WS-ADMIN-SEC', 'Workstation Amministratore', 'Media', 'Debian 12'),
+(1, 8, 5, 'IOT-TEMP-SENS', 'Sensore Temperatura CED', 'Bassa', 'FreeRTOS'),
+(1, 10, NULL, 'OS-GENERIC-LX', 'Template OS per Virtual Machines', 'Media', 'RHEL 9'),
+(1, 1, NULL, 'SRV-PRINT-01', 'Server di Stampa Uffici', 'Bassa', 'Windows 2019');
 
--- Asset senza vulnerabilità note (Baseline di sicurezza)
-INSERT INTO asset (organizzazione_id, categoria_asset_id, nome, descrizione, classificazione_criticita, versione)
-SELECT id, (SELECT id FROM categoria_asset WHERE codice_acn = 'AC:IN_HW-CS_SR'), 'SRV-CORE-01', 'Domain Controller', 'Alta', 'Windows 2022' FROM organizzazione;
-
-INSERT INTO asset (organizzazione_id, categoria_asset_id, nome, descrizione, classificazione_criticita, versione)
-SELECT id, (SELECT id FROM categoria_asset WHERE codice_acn = 'AC:IN_HW-NW_GT'), 'SW-DIST-05', 'Switch Distribuzione', 'Media', 'Cisco IOS 17.x' FROM organizzazione;
-
-INSERT INTO asset (organizzazione_id, categoria_asset_id, nome, descrizione, classificazione_criticita, versione)
-SELECT id, (SELECT id FROM categoria_asset WHERE codice_acn = 'AC:IN_SW-AP_WS'), 'WEB-PORTAL-01', 'Portale Servizi Online', 'Alta', 'Nginx 1.24' FROM organizzazione;
-
--- 7. SERVIZI NIS2 (Modellazione Servizi Essenziali)
-INSERT INTO servizio (organizzazione_id, tipo_servizio_id, stato_servizio_id, nome)
-SELECT o.id, t.id, s.id, 'Anagrafe Digitale'
-FROM organizzazione o, tipo_servizio t, stato_servizio s
-WHERE o.nome = 'Ente Pubblico Esempio' AND t.nome = 'Essenziale' AND s.codice = 'OPERATIVO';
-
-INSERT INTO servizio (organizzazione_id, tipo_servizio_id, stato_servizio_id, nome)
-SELECT o.id, t.id, s.id, 'Gateway Pagamenti'
-FROM organizzazione o, tipo_servizio t, stato_servizio s
-WHERE o.nome = 'Ente Pubblico Esempio' AND t.nome = 'Essenziale' AND s.codice = 'OPERATIVO';
+-- 8. SERVIZI (Esempi di Servizi Essenziali NIS2)
+INSERT INTO servizio (organizzazione_id, tipo_servizio_id, stato_servizio_id, nome) VALUES
+(1, 1, 1, 'Anagrafe Online'),
+(1, 1, 1, 'Sistema Pagamenti PagoPA'),
+(1, 1, 2, 'Portale della Trasparenza'),
+(1, 2, 1, 'Protocollo Informatico'),
+(1, 1, 3, 'Gestione Rifiuti Smart'),
+(1, 2, 1, 'SUAP Digitale'),
+(1, 1, 1, 'Emergenza Protezione Civile'),
+(1, 1, 1, 'Fascicolo Sanitario Locale'),
+(1, 2, 1, 'Mensa Scolastica Web'),
+(1, 1, 1, 'Posta Elettronica Certificata');
