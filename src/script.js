@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://jacyruehgxjzxufzfoly.supabase.co';
 // TODO: Incolla qui dentro la tua chiave anon public reale presa dalle impostazioni API (inizia con eyJ...)
-const SUPABASE_KEY = 'https://jacyruehgxjzxufzfoly.supabase.co/rest/v1/'; 
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphY3lydWVoZ3hqenh1Znpmb2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjY3NTEsImV4cCI6MjA5MzQwMjc1MX0.L7WiMfnil2hkso-YrdQE5UXH28Q-XwNLEacv989UKxM'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Gestione visualizzazioni sicura
