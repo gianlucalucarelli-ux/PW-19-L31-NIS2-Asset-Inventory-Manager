@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://jacyruehgxjzxufzfoly.supabase.co';
 // TODO: Incolla qui dentro la tua chiave anon public reale presa dalle impostazioni API (inizia con eyJ...)
-const SUPABASE_KEY = 'INSERISCI_LA_TUA_CHIAVE_ANON_REALE'; 
+const SUPABASE_KEY = 'https://jacyruehgxjzxufzfoly.supabase.co/rest/v1/'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Gestione visualizzazioni sicura
