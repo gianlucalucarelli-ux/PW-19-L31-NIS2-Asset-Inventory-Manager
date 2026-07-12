@@ -1,35 +1,37 @@
 /**
  * CONFIGURAZIONE CONNESSIONE BACKEND
- * Nota: In una vera pipeline di CI/CD queste chiavi sarebbero variabili d'ambiente.
+ * Nota: Credenziali aggiornate allineate all'istanza Supabase Pro
  */
 const SUPABASE_URL = 'https://jacyruehgxjzxufzfoly.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_s5aXWNZZ7ZuHYKVo_XpdqA_lJV8wHUw';
+// TODO: Sostituisci questa stringa con la tua vera chiave anonPublic (Settings -> API) che inizia con eyJhbGciOi
+const SUPABASE_KEY = 'INSERISCI_QUI_LA_TUA_ANON_PUBLIC_KEY_REALE'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
  * FUNZIONE PRINCIPALE: loadAssets
- * Recupera i dati tramite una JOIN complessa tra Asset e Vulnerabilità
+ * Recupera gli asset e include i servizi essenziali associati tramite tabella pivot
  */
 async function loadAssets() {
     console.log("Tentativo di recupero dati in corso...");
 
-    // Eseguiamo una query "relazionale": chiediamo gli asset e i dettagli 
-    // della vulnerabilità collegata tramite Foreign Key
+    // Query relazionale basata sullo schema reale di Supabase
     const { data, error } = await _supabase
         .from('asset')
         .select(`
+            id,
             nome,
             versione,
             classificazione_criticita,
-            vulnerabilita (
-                codice_bollettino,
-                livello_severita
+            relazione_asset_servizio (
+                servizio_essenziale (
+                    nome_servizio
+                )
             )
         `);
 
     if (error) {
         console.error("Errore durante il recupero dei dati:", error.message);
-        document.getElementById('assetBody').innerHTML = `<tr><td colspan="5">Errore di rete: verificare configurazione CORS.</td></tr>`;
+        document.getElementById('assetBody').innerHTML = `<tr><td colspan="5">Errore di rete: verificare configurazione RLS o credenziali API.</td></tr>`;
         return;
     }
 
@@ -37,28 +39,33 @@ async function loadAssets() {
 }
 
 /**
- * FUNZIONE DI RENDERING: Trasforma l'array di oggetti JSON in righe HTML
+ * FUNZIONE DI RENDERING: Trasforma l'array JSON in righe HTML coerenti con NIS2
  */
 function renderTable(assets) {
     const tbody = document.getElementById('assetBody');
-    
-    // Svuotiamo il caricamento
     tbody.innerHTML = '';
 
     assets.forEach(asset => {
         const row = document.createElement('tr');
         
-        // Logica per gestire la mancanza di vulnerabilità (Asset sicuro)
-        const bollettino = asset.vulnerabilita?.codice_bollettino || 'N/D';
-        const severita = asset.vulnerabilita?.livello_severita || 'Nessuna';
-        const riskClass = severita === 'Alta' ? 'risk-high' : 'risk-none';
+        // Estrae i nomi dei servizi associati mappando l'array della relazione
+        const relazioni = asset.relazione_asset_servizio || [];
+        const serviziNomi = relazioni
+            .map(r => r.servizio_essenziale?.nome_servizio)
+            .filter(Boolean)
+            .join(', ');
+
+        const listaServizi = serviziNomi || 'Nessun servizio associato';
+        const criticita = asset.classificazione_criticita || 'Bassa';
+        
+        // Assegnazione classe CSS in base alla criticità dell'asset
+        const riskClass = criticita === 'Alta' ? 'risk-high' : 'risk-none';
 
         row.innerHTML = `
             <td><strong>${asset.nome}</strong></td>
             <td>${asset.versione || '---'}</td>
-            <td>${asset.classificazione_criticita}</td>
-            <td><code>${bollettino}</code></td>
-            <td><span class="risk-badge ${riskClass}">${severita}</span></td>
+            <td><span class="risk-badge ${riskClass}">${criticita}</span></td>
+            <td>${listaServizi}</td>
         `;
         
         tbody.appendChild(row);
