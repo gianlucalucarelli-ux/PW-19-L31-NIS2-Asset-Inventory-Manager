@@ -1,66 +1,313 @@
-/* Definizione Variabili Globali per una gestione coerente dei colori */
-:root {
+/* ==========================================================================
+   1. DEFINIZIONE VARIABILI GLOBALI E TEMI (DARK / LIGHT MODE)
+   ========================================================================== */
+:root[data-theme="dark"] {
     --primary: #38bdf8;        /* Blu Cybersecurity */
-    --bg-main: #0f172a;       /* Sfondo scuro profondo */
-    --bg-card: #1e293b;       /* Sfondo card */
+    --bg-main: #0f172a;        /* Sfondo scuro profondo */
+    --bg-card: #1e293b;        /* Sfondo card */
     --text-high: #f8fafc;     /* Testo principale */
     --text-low: #94a3b8;      /* Testo secondario */
     --danger: #ef4444;        /* Rosso per criticità alta */
     --border: #334155;        /* Colore bordi e linee */
 }
 
-/* Reset e impostazioni base */
-* { margin: 0; padding: 0; box-sizing: border-box; }
+:root[data-theme="light"] {
+    --primary: #0284c7;        /* Blu scuro per leggibilità */
+    --bg-main: #f1f5f9;        /* Sfondo grigio chiarissimo */
+    --bg-card: #ffffff;        /* Sfondo card bianca */
+    --text-high: #0f172a;     /* Testo scuro principale */
+    --text-low: #475569;      /* Testo secondario scuro */
+    --danger: #dc2626;        /* Rosso per criticità */
+    --border: #cbd5e1;        /* Bordi chiari */
+}
+
+/* ==========================================================================
+   2. RESET E IMPOSTAZIONI BASE
+   ========================================================================== */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}
 
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-main);
     color: var(--text-high);
     line-height: 1.6;
-    padding: 40px 20px;
+    padding-bottom: 40px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.app-container { max-width: 1100px; margin: 0 auto; }
+.app-container { 
+    max-width: 1100px; 
+    margin: 40px auto; 
+    padding: 0 20px;
+}
 
-/* Header e titoli */
-.main-header { margin-bottom: 40px; text-align: left; }
-h1 { font-size: 2.2rem; font-weight: 700; color: var(--primary); }
+/* ==========================================================================
+   3. BARRA DI NAVIGAZIONE PRINCIPALE (NEW)
+   ========================================================================== */
+.main-nav {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 15px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo { 
+    font-weight: 700; 
+    color: var(--primary); 
+    font-size: 1.1rem;
+}
+
+.nav-menu { 
+    display: flex; 
+    gap: 24px; 
+}
+
+.nav-link { 
+    color: var(--text-low); 
+    text-decoration: none; 
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+}
+
+.nav-link.active, .nav-link:hover { 
+    color: var(--primary); 
+}
+
+.nav-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* ==========================================================================
+   4. HEADER E ELEMENTI DI PRESENTAZIONE
+   ========================================================================== */
+.main-header { 
+    margin-bottom: 40px; 
+    text-align: left; 
+}
+
+h1 { 
+    font-size: 2.2rem; 
+    font-weight: 700; 
+    color: var(--primary); 
+}
+
+.uni-tag {
+    color: var(--primary); 
+    font-weight: 700; 
+    letter-spacing: 2px; 
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.meta-tag {
+    color: var(--text-low); 
+    margin-top: 10px;
+    font-size: 1rem;
+}
+
 .badge-status { 
-    background: #0ea5e922; color: var(--primary); 
-    padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; border: 1px solid var(--primary);
+    background: #0ea5e922; 
+    color: var(--primary); 
+    padding: 4px 12px; 
+    border-radius: 20px; 
+    font-size: 0.8rem; 
+    border: 1px solid var(--primary);
 }
 
-/* Struttura a Card (Contenitore della tabella) */
+/* ==========================================================================
+   5. STRUTTURA CARD COMPONENT
+   ========================================================================== */
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
     overflow: hidden;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-.card-header { padding: 20px; border-bottom: 1px solid var(--border); }
-.card-header h2 { font-size: 1.2rem; }
-.card-header p { color: var(--text-low); font-size: 0.9rem; }
+.card-header { 
+    padding: 20px; 
+    border-bottom: 1px solid var(--border); 
+}
 
-/* Design della Tabella Dati */
-table { width: 100%; border-collapse: collapse; }
+.card-header h2 { 
+    font-size: 1.2rem; 
+    color: var(--text-high);
+}
+
+.card-header p { 
+    color: var(--text-low); 
+    font-size: 0.9rem; 
+    margin-top: 4px;
+}
+
+/* ==========================================================================
+   6. INTERFACCIA COMPONENTI FORM E INPUT (NEW)
+   ========================================================================== */
+.form-input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    color: var(--text-high);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.text-center { text-align: center; }
+.large-input { font-size: 1.5rem; letter-spacing: 5px; }
+
+.btn-primary { 
+    width: 100%; 
+    padding: 14px; 
+    background: var(--primary); 
+    color: var(--bg-card); 
+    border: none; 
+    border-radius: 6px; 
+    font-weight: 700; 
+    cursor: pointer;
+    font-size: 1rem;
+    transition: opacity 0.2s ease;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+
+.btn-success { 
+    width: 100%; 
+    padding: 14px; 
+    background: #10b981; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    font-weight: 700; 
+    cursor: pointer;
+    font-size: 1rem;
+    transition: opacity 0.2s ease;
+}
+
+.btn-success:hover { opacity: 0.9; }
+
+.btn-theme { 
+    background: transparent; 
+    border: 1px solid var(--border); 
+    color: var(--text-high); 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.btn-logout { 
+    background: var(--danger); 
+    color: white; 
+    border: none; 
+    padding: 8px 15px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.error-msg {
+    color: var(--danger); 
+    margin-top: 20px; 
+    font-size: 0.85rem; 
+    text-align: center;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   7. DESIGN DELLA TABELLA DATI
+   ========================================================================== */
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
 th { 
-    background: #33415555; padding: 16px; 
-    text-align: left; font-size: 0.75rem; 
-    text-transform: uppercase; color: var(--text-low); 
+    background: rgba(51, 65, 85, 0.2); 
+    padding: 16px; 
+    text-align: left; 
+    font-size: 0.75rem; 
+    text-transform: uppercase; 
+    color: var(--text-low); 
+    border-bottom: 1px solid var(--border);
 }
-td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
 
-/* Effetto Hover sulle righe */
-tr:hover { background-color: #2d3748; transition: 0.2s; }
+td { 
+    padding: 16px; 
+    border-bottom: 1px solid var(--border); 
+    font-size: 0.95rem; 
+    color: var(--text-high);
+}
 
-/* Badge Dinamici per il Rischio */
+tr:hover { 
+    background-color: rgba(56, 189, 248, 0.05); 
+    transition: background-color 0.2s ease; 
+}
+
+/* ==========================================================================
+   8. BADGE DINAMICI ED ELEMENTI STATO
+   ========================================================================== */
 .risk-badge {
-    padding: 5px 10px; border-radius: 6px; 
-    font-size: 0.8rem; font-weight: 600;
+    padding: 5px 10px; 
+    border-radius: 6px; 
+    font-size: 0.8rem; 
+    font-weight: 600;
+    display: inline-block;
 }
-.risk-high { background: #ef444422; color: var(--danger); border: 1px solid var(--danger); }
-.risk-none { background: #10b98122; color: #10b981; border: 1px solid #10b981; }
 
-.loading { text-align: center; color: var(--primary); padding: 40px; }
+.risk-high { 
+    background: rgba(239, 68, 68, 0.15); 
+    color: var(--danger); 
+    border: 1px solid var(--danger); 
+}
+
+.risk-none { 
+    background: rgba(16, 185, 129, 0.15); 
+    color: #10b981; 
+    border: 1px solid #10b981; 
+}
+
+.loading { 
+    text-align: center; 
+    color: var(--primary); 
+    padding: 40px; 
+    font-weight: 600;
+}
+
+footer { 
+    text-align: center; 
+    margin-top: 50px; 
+    color: var(--text-low); 
+    font-size: 0.75rem;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
