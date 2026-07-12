@@ -3,7 +3,7 @@
  */
 const SUPABASE_URL = 'https://jacyruehgxjzxufzfoly.supabase.co';
 // TODO: Ricorda di inserire qui la tua vera chiave anonPublic (Settings -> API) che inizia con eyJhbGciOi
-const SUPABASE_KEY = 'INSERISCI_QUI_LA_TUA_ANON_PUBLIC_KEY_REALE'; 
+const SUPABASE_KEY = 'https://jacyruehgxjzxufzfoly.supabase.co/rest/v1/'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
