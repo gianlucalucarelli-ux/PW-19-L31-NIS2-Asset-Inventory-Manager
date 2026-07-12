@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIS2 Asset Manager | 3NF Dashboard</title>
-    
+    <title>NIS2 Asset Inventory Manager | Università Pegaso</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
@@ -12,47 +11,77 @@
 </head>
 <body>
 
+<nav class="main-nav">
+    <div class="nav-container">
+        <span class="nav-logo">🛡️ NIS2 Asset Manager</span>
+        <div class="nav-menu" id="nav-menu-links" style="display: none;">
+            <a href="#dashboard-section" class="nav-link active">Dashboard</a>
+            <a href="#info-section" class="nav-link">Info Progetto</a>
+        </div>
+        <div class="nav-actions">
+            <button id="theme-toggle" class="btn-theme" title="Cambia Tema">🌓 Modalità</button>
+            <button id="logout-btn" class="btn-logout" style="display: none;">Logout</button>
+        </div>
+    </div>
+</nav>
+
 <div class="app-container">
-    <header class="main-header">
-        <h1>🛡️ NIS2 Asset Inventory Manager</h1>
-        <span class="badge-status">Architettura DB 3NF Connessa</span>
+    <header class="main-header" id="presentation-header">
+        <p class="uni-tag">UNIVERSITÀ TELEMATICA PEGASO</p>
+        <h1>NIS2 Asset Inventory Manager</h1>
+        <p class="meta-tag">Candidato: <strong>Gianluca Lucarelli</strong> | Corso: Laurea L31 | Traccia: NIS2 Asset Inventory</p>
     </header>
 
-    <main class="card">
-        <div class="card-header">
-            <h2>Dashboard Asset Critici</h2>
-            <p>Elenco degli asset aziendali e mappatura dei servizi essenziali associati ai fini della conformità ACN / NIS2.</p>
+    <div id="auth-container" class="card" style="max-width: 450px; margin: 0 auto; padding: 30px;">
+        <div id="login-view">
+            <h2 style="margin-bottom: 20px; font-size: 1.2rem;">Accesso Riservato Personale Autorizzato</h2>
+            <form id="login-form">
+                <input type="email" id="auth-email" placeholder="Email Istituzionale" required class="form-input">
+                <input type="password" id="auth-password" placeholder="Password" required class="form-input">
+                <button type="submit" class="btn-primary">Entra nel Sistema</button>
+            </form>
         </div>
-        
+
+        <div id="mfa-view" style="display: none; text-align: center;">
+            <h2 id="mfa-title" style="margin-bottom: 15px;">Sicurezza 2FA</h2>
+            <p id="mfa-desc" style="font-size: 0.9rem; margin-bottom: 20px;"></p>
+            <div id="mfa-setup-area" style="display:none; margin-bottom:20px; background: #e2e8f0; color: #0f172a; padding: 15px; border-radius: 8px;">
+                <p style="font-size: 0.8rem; font-weight: bold; word-break: break-all;" id="mfa-secret"></p>
+            </div>
+            <input type="text" id="mfa-code" placeholder="Codice OTP" maxlength="6" class="form-input text-center large-input">
+            <button id="mfa-verify-btn" class="btn-success">Verifica Identità</button>
+        </div>
+        <div id="auth-error" class="error-msg"></div>
+    </div>
+
+    <main class="card" id="dashboard-container" style="display: none; margin-top: 20px;">
+        <div class="card-header">
+            <h2>Asset Critici Aziendali</h2>
+            <p>Area protetta da cifratura perimetrale e policy RLS.</p>
+        </div>
         <table>
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Nome Asset</th>
-                    <th>Versione Software</th>
+                    <th>Asset Critico</th>
+                    <th>Versione SW</th>
                     <th>Criticità (NIS2)</th>
-                    <th>Servizi Essenziali Associati</th>
+                    <th>Servizi Essenziali Impattati</th>
                 </tr>
             </thead>
-            <tbody id="asset-table-body">
-                <tr>
-                    <td colspan="5" class="loading">
-                        Inizializzazione connessione sicura al DB Pro...
-                    </td>
-                </tr>
-            </tbody>
+            <tbody id="asset-table-body"></tbody>
         </table>
-        
-        <div id="no-data" style="display: none; text-align: center; padding: 20px; color: #94a3b8;">
-            Nessun record restituito. Accesso negato dalle policy RLS (Utente Anonimo).
-        </div>
     </main>
 
-    <footer style="text-align: center; margin-top: 40px; color: #94a3b8; font-size: 0.8rem;">
-        <hr style="border-color: #334155; margin-bottom: 20px;">
-        <p>Tesi L31 - Sviluppo conforme a direttiva NIS2 e standard ACN</p>
+    <section class="card" id="info-container" style="display: none; margin-top: 20px; padding: 30px;">
+        <h2>Dettagli Architetturali del Progetto</h2>
+        <p style="margin-top: 15px;">Questo applicativo rappresenta il frontend di un sistema di tracciamento asset conforme ai requisiti della **Direttiva (UE) 2022/2555 (NIS2)**.</p>
+        <p>Il database di backend è strutturato in **Terza Forma Normale (3NF)** per eliminare le ridondanze informative e garantire la consistenza dei dati relativi all'infrastruttura di un'azienda sanitaria.</p>
+    </section>
+
+    <footer>
+        Sviluppo conforme a Direttiva NIS2 e linee guida ACN per infrastrutture sanitarie critiche.
     </footer>
 </div>
-
 </body>
 </html>
