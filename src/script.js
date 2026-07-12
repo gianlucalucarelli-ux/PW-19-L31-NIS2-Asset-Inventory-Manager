@@ -81,3 +81,45 @@ function renderTable(assets) {
 
 // Inizializzazione al caricamento del DOM
 document.addEventListener('DOMContentLoaded', loadAssets);
+/**
+ * GESTIONE TEMA DINAMICO (DARK / LIGHT MODE)
+ */
+const themeToggle = document.getElementById('theme-toggle');
+themeToggle.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', newTheme);
+});
+
+/**
+ * GESTIONE MENU DI NAVIGAZIONE INTERNO
+ */
+const links = document.querySelectorAll('.nav-link');
+links.forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        links.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+
+        const target = link.getAttribute('href');
+        if (target === '#dashboard-section') {
+            document.getElementById('dashboard-container').style.display = 'block';
+            document.getElementById('info-container').style.display = 'none';
+        } else if (target === '#info-section') {
+            document.getElementById('dashboard-container').style.display = 'none';
+            document.getElementById('info-container').style.display = 'block';
+        }
+    });
+});
+
+/**
+ * MODIFICA NELLE FUNZIONI DI MOSTRA DASHBOARD ESISTENTI
+ * Assicurati che quando l'utente si autentica con successo, venga mostrato il menu:
+ */
+function showDashboard() {
+    document.getElementById('auth-container').style.display = 'none';
+    document.getElementById('nav-menu-links').style.display = 'flex'; // Mostra il menu
+    document.getElementById('logout-btn').style.display = 'block';      // Mostra il logout
+    document.getElementById('dashboard-container').style.display = 'block';
+    loadAssets();
+}
