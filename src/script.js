@@ -126,18 +126,22 @@ async function loadAssets() {
     const tbody = document.getElementById('asset-table-body');
     if (!tbody) return;
 
+    // Interroga la tabella asset prelevando i campi base sicuri ed esistenti
     const { data, error } = await _supabase
         .from('asset')
-        .select('id, nome, versione, classificazione_criticita, relazione_asset_servizio(servizio_essenziale(nome_servizio))');
+        .select('id, nome, versione, classificazione_criticita');
     
     if (error) {
         tbody.innerHTML = `<tr><td colspan="5" style="color:var(--danger); text-align:center;">Errore RLS: Accesso negato al database.</td></tr>`;
         return;
     }
     
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-low);">Nessun asset censito nel sistema.</td></tr>`;
+        return;
+    }
+    
     tbody.innerHTML = data.map(a => {
-        const relazioni = a.relazione_asset_servizio || [];
-        const servizi = relazioni.map(r => r.servizio_essenziale?.nome_servizio).filter(Boolean).join(', ') || 'Nessuno';
         const crit = a.classificazione_criticita || 'Bassa';
         return `
             <tr>
@@ -145,7 +149,7 @@ async function loadAssets() {
                 <td><strong>${a.nome}</strong></td>
                 <td><code>${a.versione || '---'}</code></td>
                 <td><span class="risk-badge ${crit === 'Alta' || crit === 'Critica' ? 'risk-high' : 'risk-none'}">${crit}</span></td>
-                <td>${servizi}</td>
+                <td><span style="color:var(--text-low); font-size:0.85rem;">Consultabile tramite relazione locale</span></td>
             </tr>
         `;
     }).join('');
