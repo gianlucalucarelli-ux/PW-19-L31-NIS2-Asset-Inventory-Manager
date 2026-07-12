@@ -1,20 +1,17 @@
 /**
  * CONFIGURAZIONE CONNESSIONE BACKEND
- * Nota: Credenziali aggiornate allineate all'istanza Supabase Pro
  */
 const SUPABASE_URL = 'https://jacyruehgxjzxufzfoly.supabase.co';
-// TODO: Sostituisci questa stringa con la tua vera chiave anonPublic (Settings -> API) che inizia con eyJhbGciOi
+// TODO: Ricorda di inserire qui la tua vera chiave anonPublic (Settings -> API) che inizia con eyJhbGciOi
 const SUPABASE_KEY = 'INSERISCI_QUI_LA_TUA_ANON_PUBLIC_KEY_REALE'; 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /**
- * FUNZIONE PRINCIPALE: loadAssets
- * Recupera gli asset e include i servizi essenziali associati tramite tabella pivot
+ * RECUPERO DATI DAL DB PRO
  */
 async function loadAssets() {
     console.log("Tentativo di recupero dati in corso...");
 
-    // Query relazionale basata sullo schema reale di Supabase
     const { data, error } = await _supabase
         .from('asset')
         .select(`
@@ -29,9 +26,13 @@ async function loadAssets() {
             )
         `);
 
+    const tbody = document.getElementById('asset-table-body');
+    const noDataMsg = document.getElementById('no-data');
+
     if (error) {
         console.error("Errore durante il recupero dei dati:", error.message);
-        document.getElementById('assetBody').innerHTML = `<tr><td colspan="5">Errore di rete: verificare configurazione RLS o credenziali API.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="color: #ef4444; text-align: center;"><strong>Errore di Sicurezza (RLS):</strong> Accesso non autorizzato.</td></tr>`;
+        noDataMsg.style.display = 'block';
         return;
     }
 
@@ -39,31 +40,37 @@ async function loadAssets() {
 }
 
 /**
- * FUNZIONE DI RENDERING: Trasforma l'array JSON in righe HTML coerenti con NIS2
+ * RENDERING DELLE RIGHE HTML
  */
 function renderTable(assets) {
-    const tbody = document.getElementById('assetBody');
+    const tbody = document.getElementById('asset-table-body');
+    const noDataMsg = document.getElementById('no-data');
     tbody.innerHTML = '';
+
+    if (!assets || assets.length === 0) {
+        noDataMsg.style.display = 'block';
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Nessun asset disponibile.</td></tr>`;
+        return;
+    }
 
     assets.forEach(asset => {
         const row = document.createElement('tr');
         
-        // Estrae i nomi dei servizi associati mappando l'array della relazione
         const relazioni = asset.relazione_asset_servizio || [];
         const serviziNomi = relazioni
             .map(r => r.servizio_essenziale?.nome_servizio)
             .filter(Boolean)
             .join(', ');
 
-        const listaServizi = serviziNomi || 'Nessun servizio associato';
+        const listaServizi = serviziNomi || '<span style="color: #94a3b8;">Nessun servizio</span>';
         const criticita = asset.classificazione_criticita || 'Bassa';
         
-        // Assegnazione classe CSS in base alla criticità dell'asset
-        const riskClass = criticita === 'Alta' ? 'risk-high' : 'risk-none';
+        const riskClass = (criticita === 'Alta' || criticita === 'Critica') ? 'risk-high' : 'risk-none';
 
         row.innerHTML = `
+            <td><span style="color: #94a3b8;">#${asset.id}</span></td>
             <td><strong>${asset.nome}</strong></td>
-            <td>${asset.versione || '---'}</td>
+            <td><code>${asset.versione || '---'}</code></td>
             <td><span class="risk-badge ${riskClass}">${criticita}</span></td>
             <td>${listaServizi}</td>
         `;
@@ -72,5 +79,5 @@ function renderTable(assets) {
     });
 }
 
-// Avvio dell'applicazione al caricamento della pagina
+// Inizializzazione al caricamento del DOM
 document.addEventListener('DOMContentLoaded', loadAssets);
