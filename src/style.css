@@ -314,24 +314,40 @@ th {
     margin: 0 auto; 
 }
 /* =========================================
-   FIX ALLINEAMENTO NAV E HEADER
+   FIX ALLINEAMENTO LAYOUT DASHBOARD E HEADER
    ========================================= */
-.nav-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+.dashboard-layout {
+    display: flex !important;
+    gap: 20px !important;
+    align-items: flex-start !important;
+    width: 100% !important;
 }
 
-.nav-menu, .nav-actions {
-    display: flex;
-    gap: 15px;
-    align-items: center;
+.sidebar {
+    width: 250px !important;
+    flex-shrink: 0 !important;
+}
+
+.content-view {
+    flex-grow: 1 !important;
+    width: 100% !important;
+}
+
+.nav-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.nav-menu {
+    display: flex !important;
+    gap: 20px !important;
 }
 
 #presentation-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; /* Riporta i testi impilati a sinistra */
-    gap: 8px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
 }
