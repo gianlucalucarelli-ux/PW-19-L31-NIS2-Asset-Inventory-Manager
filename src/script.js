@@ -179,23 +179,19 @@
         // INTERCETTAZIONE EVENTI GRAFICI (BINDING CORRETTO SU ID TUA NAV)
         // =========================================================================
         
-        // Switch chiaro/scuro su id="theme-toggle"
+        // Switch chiaro/scuro universale (Gestisce sia data-theme che classi CSS)
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', () => {
-                document.body.classList.toggle('dark-mode');
-                const isDark = document.body.classList.contains('dark-mode');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                const htmlRoot = document.documentElement;
+                const isDark = htmlRoot.getAttribute('data-theme') === 'dark';
+                
+                // Toggle su attributo HTML
+                htmlRoot.setAttribute('data-theme', isDark ? 'light' : 'dark');
+                
+                // Toggle su classe Body (per sicurezza)
+                document.body.classList.toggle('dark-mode', !isDark);
+                document.body.classList.toggle('light-mode', isDark);
+                
+                localStorage.setItem('theme', isDark ? 'light' : 'dark');
             });
         }
-
-        // Mostra/Nasconde Info Progetto intercettando il link href="#info-section"
-        if (infoNavLink) {
-            infoNavLink.addEventListener('click', (e) => {
-                e.preventDefault(); // Impedisce il salto di ancoraggio della pagina
-                if (infoContainer) {
-                    infoContainer.style.display = (infoContainer.style.display === 'none' || infoContainer.style.display === '') ? 'block' : 'none';
-                }
-            });
-        }
-    });
-})();
