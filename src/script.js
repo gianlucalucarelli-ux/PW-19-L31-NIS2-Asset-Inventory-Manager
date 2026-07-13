@@ -1,5 +1,5 @@
 // =========================================================================
-// FILE: src/script.js (BUILD STABILE CON BINDING NATIVO DEI COMPONENTI UI)
+// FILE: src/script.js (BUILD STABILE CON ASSEGNAZIONE DOM ALLINEATA)
 // DESCRIZIONE: Engine SPA per NIS2 Asset Manager (Autenticazione & Caricamento)
 // =========================================================================
 
@@ -10,180 +10,189 @@
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Elementi del DOM intercettati nativamente
-    const loginForm = document.getElementById('login-form');
-    const loginView = document.getElementById('login-view');
-    const mfaView = document.getElementById('mfa-view');
-    const authContainer = document.getElementById('auth-container');
-    const authError = document.getElementById('auth-error');
-    const dashboardContainer = document.getElementById('dashboard-container');
-    const infoContainer = document.getElementById('info-container');
-    const navMenuLinks = document.getElementById('nav-menu-links');
-    const logoutBtn = document.getElementById('logout-btn');
-    const assetTableBody = document.getElementById('asset-table-body');
-    
-    // Nuovi elementi mappati per la gestione dei bottoni UI
-    const themeToggleBtn = document.getElementById('theme-toggle-btn'); 
-    const infoToggleBtn = document.getElementById('info-toggle-btn');
-
-    // Listener per il Form di Login Primario (Email/Password)
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        authError.textContent = ""; 
+    // Esecuzione al completamento del parsing dell'HTML (Previene nodi DOM nulli)
+    document.addEventListener('DOMContentLoaded', () => {
         
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
+        // Elementi del DOM intercettati nativamente
+        const loginForm = document.getElementById('login-form');
+        const loginView = document.getElementById('login-view');
+        const mfaView = document.getElementById('mfa-view');
+        const authContainer = document.getElementById('auth-container');
+        const authError = document.getElementById('auth-error');
+        const dashboardContainer = document.getElementById('dashboard-container');
+        const infoContainer = document.getElementById('info-container');
+        const navMenuLinks = document.getElementById('nav-menu-links');
+        const logoutBtn = document.getElementById('logout-btn');
+        const assetTableBody = document.getElementById('asset-table-body');
+        
+        // Elementi mappati per la gestione dei bottoni UI
+        const themeToggleBtn = document.getElementById('theme-toggle-btn'); 
+        const infoToggleBtn = document.getElementById('info-toggle-btn');
 
-        try {
-            const { data: authData, error: authErrorResult } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-
-            if (authErrorResult) {
-                authError.textContent = "Errore: " + authErrorResult.message;
-                return;
-            }
-
-            console.log("Livello di autenticazione AAL1 convalidato.");
-
-            // Deviazione Condizionale Profilo Docente
-            if (email.toLowerCase() === 'docenteunitopegaso@gmail.com') {
-                console.log("Rilevata utenza docente. Attivazione deroga e sblocco interfaccia.");
-                mostraDashboardApplicativa();
-                return;
-            }
-
-            // Flusso Hardening MFA per Amministratore
-            const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-            if (mfaError) {
-                authError.textContent = "Errore nel controllo di sicurezza MFA.";
-                return;
-            }
-
-            if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
-                loginView.style.display = 'none';
-                mfaView.style.display = 'block';
-                document.getElementById('mfa-desc').textContent = "Inserisci il codice temporaneo generato sul tuo dispositivo per elevare la sessione a livello Avanzato (AAL2).";
-                inizializzaVerificaMFA();
-            } else {
-                mostraDashboardApplicativa();
-            }
-
-        } catch (err) {
-            console.error("Errore imprevisto durante il login:", err);
+        // Ripristino del tema salvato all'avvio (Esecuzione immediata sulla UI)
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
         }
-    });
 
-    function inizializzaVerificaMFA() {
-        const verifyBtn = document.getElementById('mfa-verify-btn');
-        const newVerifyBtn = verifyBtn.cloneNode(true);
-        verifyBtn.parentNode.replaceChild(newVerifyBtn, verifyBtn);
+        // Listener per il Form di Login Primario (Email/Password)
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                authError.textContent = ""; 
+                
+                const email = document.getElementById('auth-email').value;
+                const password = document.getElementById('auth-password').value;
 
-        newVerifyBtn.addEventListener('click', async () => {
-            const code = document.getElementById('mfa-code').value;
-            if (code.length !== 6) {
-                authError.textContent = "Il codice OTP deve essere di 6 cifre.";
-                return;
-            }
+                try {
+                    const { data: authData, error: authErrorResult } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password,
+                    });
 
-            const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-            if (factorsError || !factors.totp || factors.totp.length === 0) {
-                authError.textContent = "Nessun dispositivo MFA associato a questo account.";
-                return;
-            }
+                    if (authErrorResult) {
+                        authError.textContent = "Errore: " + authErrorResult.message;
+                        return;
+                    }
 
-            const factorId = factors.totp[0].id;
+                    console.log("Livello di autenticazione AAL1 convalidato.");
 
-            const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
-                factorId: factorId,
-                code: code
+                    // Deviazione Condizionale Profilo Docente
+                    if (email.toLowerCase() === 'docenteunitopegaso@gmail.com') {
+                        console.log("Rilevata utenza docente. Attivazione deroga e sblocco interfaccia.");
+                        mostraDashboardApplicativa();
+                        return;
+                    }
+
+                    // Flusso Hardening MFA per Amministratore
+                    const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+                    if (mfaError) {
+                        authError.textContent = "Errore nel controllo di sicurezza MFA.";
+                        return;
+                    }
+
+                    if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
+                        loginView.style.display = 'none';
+                        mfaView.style.display = 'block';
+                        document.getElementById('mfa-desc').textContent = "Inserisci il codice temporaneo generato sul tuo dispositivo per elevare la sessione a livello Avanzato (AAL2).";
+                        inizializzaVerificaMFA();
+                    } else {
+                        mostraDashboardApplicativa();
+                    }
+
+                } catch (err) {
+                    console.error("Errore imprevisto durante il login:", err);
+                }
             });
+        }
 
-            if (verifyError) {
-                authError.textContent = "Codice OTP non valido o scaduto.";
-                return;
-            }
-
-            console.log("Assurance Level AAL2 verificato con successo.");
-            mostraDashboardApplicativa();
-        });
-    }
-
-    function mostraDashboardApplicativa() {
-        authContainer.style.display = 'none';
-        authError.textContent = "";
-        dashboardContainer.style.display = 'block';
-        infoContainer.style.display = 'block';
-        navMenuLinks.style.display = 'flex';
-        logoutBtn.style.display = 'block';
-        
-        caricaAssetDallInventario();
-    }
-
-    async function caricaAssetDallInventario() {
-        try {
-            assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Caricamento record in corso...</td></tr>`;
+        function inizializzaVerificaMFA() {
+            const verifyBtn = document.getElementById('mfa-verify-btn');
+            if (!verifyBtn) return;
             
-            const { data, error } = await supabase.from('asset').select('*');
+            const newVerifyBtn = verifyBtn.cloneNode(true);
+            verifyBtn.parentNode.replaceChild(newVerifyBtn, verifyBtn);
 
-            if (error) {
-                assetTableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Errore RLS: Accesso Negato. ${error.message}</td></tr>`;
-                return;
-            }
+            newVerifyBtn.addEventListener('click', async () => {
+                const code = document.getElementById('mfa-code').value;
+                if (code.length !== 6) {
+                    authError.textContent = "Il codice OTP deve essere di 6 cifre.";
+                    return;
+                }
 
-            if (!data || data.length === 0) {
-                assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nessun asset censito nell'inventario attivo.</td></tr>`;
-                return;
-            }
+                const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+                if (factorsError || !factors.totp || factors.totp.length === 0) {
+                    authError.textContent = "Nessun dispositivo MFA associato a questo account.";
+                    return;
+                }
 
-            assetTableBody.innerHTML = data.map(asset => `
-                <tr>
-                    <td><strong>${asset.id}</strong></td>
-                    <td>${asset.nome}</td>
-                    <td><span class="badge-version">${asset.categoria || 'N/D'}</span></td>
-                    <td><span class="criticita-${asset.classificazione_criticita.toLowerCase()}">${asset.classificazione_criticita}</span></td>
-                    <td>Erogazione Servizi Critici</td>
-                </tr>
-            `).join('');
+                const factorId = factors.totp[0].id;
 
-        } catch (err) {
-            console.error("Errore nel caricamento dei dati:", err);
+                const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
+                    factorId: factorId,
+                    code: code
+                });
+
+                if (verifyError) {
+                    authError.textContent = "Codice OTP non valido o scaduto.";
+                    return;
+                }
+
+                console.log("Assurance Level AAL2 verificato con successo.");
+                mostraDashboardApplicativa();
+            });
         }
-    }
 
-    // Gestione del Logout
-    logoutBtn.addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.reload();
-    });
+        function mostraDashboardApplicativa() {
+            if (authContainer) authContainer.style.display = 'none';
+            if (authError) authError.textContent = "";
+            if (dashboardContainer) dashboardContainer.style.display = 'block';
+            if (infoContainer) infoContainer.style.display = 'block';
+            if (navMenuLinks) navMenuLinks.style.display = 'flex';
+            if (logoutBtn) logoutBtn.style.display = 'block';
+            
+            caricaAssetDallInventario();
+        }
 
-    // =========================================================================
-    // GESTIONE EVENTI UI NATIVA (NO ONCLICK NELL'HTML)
-    // =========================================================================
-    
-    // Intercettazione del bottone Tema (Assicurarsi che l'elemento HTML abbia id="theme-toggle-btn")
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
-    }
+        async function caricaAssetDallInventario() {
+            if (!assetTableBody) return;
+            try {
+                assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Caricamento record in corso...</td></tr>`;
+                
+                const { data, error } = await supabase.from('asset').select('*');
 
-    // Intercettazione del bottone Info (Assicurarsi che l'elemento HTML abbia id="info-toggle-btn")
-    if (infoToggleBtn) {
-        infoToggleBtn.addEventListener('click', () => {
-            if (infoContainer) {
-                infoContainer.style.display = (infoContainer.style.display === 'none' || infoContainer.style.display === '') ? 'block' : 'none';
+                if (error) {
+                    assetTableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Errore RLS: Accesso Negato. ${error.message}</td></tr>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nessun asset censito nell'inventario attivo.</td></tr>`;
+                    return;
+                }
+
+                assetTableBody.innerHTML = data.map(asset => `
+                    <tr>
+                        <td><strong>${asset.id}</strong></td>
+                        <td>${asset.nome}</td>
+                        <td><span class="badge-version">${asset.categoria || 'N/D'}</span></td>
+                        <td><span class="criticita-${asset.classificazione_criticita.toLowerCase()}">${asset.classificazione_criticita}</span></td>
+                        <td>Erogazione Servizi Critici</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error("Errore nel caricamento dei dati:", err);
             }
-        });
-    }
+        }
 
-    // Ripristino del tema salvato all'avvio (Esecuzione immediata)
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-    }
+        // Gestione del Logout
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                await supabase.auth.signOut();
+                window.location.reload();
+            });
+        }
+
+        // =========================================================================
+        // GESTIONE EVENTI UI NATIVA (CON ERROR BINDING PROTECTION)
+        // =========================================================================
+        
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            });
+        }
+
+        if (infoToggleBtn) {
+            infoToggleBtn.addEventListener('click', () => {
+                if (infoContainer) {
+                    infoContainer.style.display = (infoContainer.style.display === 'none' || infoContainer.style.display === '') ? 'block' : 'none';
+                }
+            });
+        }
+    });
 })();
