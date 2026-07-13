@@ -1,313 +1,235 @@
-/* ==========================================================================
-   1. DEFINIZIONE VARIABILI GLOBALI E TEMI (DARK / LIGHT MODE)
-   ========================================================================== */
-:root[data-theme="dark"] {
-    --primary: #38bdf8;        /* Blu Cybersecurity */
-    --bg-main: #0f172a;        /* Sfondo scuro profondo */
-    --bg-card: #1e293b;        /* Sfondo card */
-    --text-high: #f8fafc;     /* Testo principale */
-    --text-low: #94a3b8;      /* Testo secondario */
-    --danger: #ef4444;        /* Rosso per criticità alta */
-    --border: #334155;        /* Colore bordi e linee */
+/* =========================================
+   VARIABILI GLOBALI E TEMA
+   ========================================= */
+:root {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --text-high: #f8fafc;
+    --text-low: #94a3b8;
+    --primary: #38bdf8;
+    --border: #334155;
+    --error: #ef4444;
+    --success: #10b981;
 }
 
-:root[data-theme="light"] {
-    --primary: #0284c7;        /* Blu scuro per leggibilità */
-    --bg-main: #f1f5f9;        /* Sfondo grigio chiarissimo */
-    --bg-card: #ffffff;        /* Sfondo card bianca */
-    --text-high: #0f172a;     /* Testo scuro principale */
-    --text-low: #475569;      /* Testo secondario scuro */
-    --danger: #dc2626;        /* Rosso per criticità */
-    --border: #cbd5e1;        /* Bordi chiari */
+[data-theme="light"] {
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --text-high: #0f172a;
+    --text-low: #475569;
+    --primary: #0ea5e9;
+    --border: #e2e8f0;
 }
 
-/* ==========================================================================
-   2. RESET E IMPOSTAZIONI BASE
-   ========================================================================== */
-* { 
-    margin: 0; 
-    padding: 0; 
-    box-sizing: border-box; 
+/* =========================================
+   RESET E IMPOSTAZIONI BASE
+   ========================================= */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 body {
-    font-family: 'Inter', sans-serif;
     background-color: var(--bg-main);
     color: var(--text-high);
-    line-height: 1.6;
-    padding-bottom: 40px;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    padding: 20px;
+    line-height: 1.5;
 }
 
-.app-container { 
-    max-width: 1100px; 
-    margin: 40px auto; 
-    padding: 0 20px;
-}
-
-/* ==========================================================================
-   3. BARRA DI NAVIGAZIONE PRINCIPALE (NEW)
-   ========================================================================== */
-.main-nav {
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-    padding: 15px 20px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.nav-container {
-    max-width: 1100px;
-    margin: 0 auto;
+/* =========================================
+   HEADER E NAVIGAZIONE
+   ========================================= */
+header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 15px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
 }
 
-.nav-logo { 
-    font-weight: 700; 
-    color: var(--primary); 
-    font-size: 1.1rem;
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary);
 }
 
-.nav-menu { 
-    display: flex; 
-    gap: 24px; 
-}
-
-.nav-link { 
-    color: var(--text-low); 
-    text-decoration: none; 
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: color 0.2s ease;
-}
-
-.nav-link.active, .nav-link:hover { 
-    color: var(--primary); 
-}
-
-.nav-actions {
+nav {
     display: flex;
-    gap: 12px;
+    gap: 15px;
     align-items: center;
 }
 
-/* ==========================================================================
-   4. HEADER E ELEMENTI DI PRESENTAZIONE
-   ========================================================================== */
-.main-header { 
-    margin-bottom: 40px; 
-    text-align: left; 
+a {
+    color: var(--primary);
+    text-decoration: none;
 }
 
-h1 { 
-    font-size: 2.2rem; 
-    font-weight: 700; 
-    color: var(--primary); 
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-weight: bold;
 }
 
-.uni-tag {
-    color: var(--primary); 
-    font-weight: 700; 
-    letter-spacing: 2px; 
-    font-size: 0.85rem;
-    margin-bottom: 5px;
-}
-
-.meta-tag {
-    color: var(--text-low); 
+.btn-success {
+    background: var(--primary);
+    color: #000;
+    width: 100%;
+    padding: 10px;
     margin-top: 10px;
-    font-size: 1rem;
 }
 
-.badge-status { 
-    background: #0ea5e922; 
-    color: var(--primary); 
-    padding: 4px 12px; 
-    border-radius: 20px; 
-    font-size: 0.8rem; 
-    border: 1px solid var(--primary);
+.btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-high);
 }
 
-/* ==========================================================================
-   5. STRUTTURA CARD COMPONENT
-   ========================================================================== */
+/* =========================================
+   COMPONENTI CARD E FORMS
+   ========================================= */
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 0 auto;
+    max-width: 100%;
 }
 
-.card-header { 
-    padding: 20px; 
-    border-bottom: 1px solid var(--border); 
+#auth-container {
+    max-width: 400px;
+    margin-top: 50px;
 }
 
-.card-header h2 { 
-    font-size: 1.2rem; 
-    color: var(--text-high);
-}
-
-.card-header p { 
-    color: var(--text-low); 
-    font-size: 0.9rem; 
-    margin-top: 4px;
-}
-
-/* ==========================================================================
-   6. INTERFACCIA COMPONENTI FORM E INPUT (NEW)
-   ========================================================================== */
 .form-input {
     width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 10px;
     background: var(--bg-main);
     border: 1px solid var(--border);
     color: var(--text-high);
-    border-radius: 6px;
-    font-size: 0.95rem;
-    transition: border-color 0.2s ease;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: var(--primary);
-}
-
-.text-center { text-align: center; }
-.large-input { font-size: 1.5rem; letter-spacing: 5px; }
-
-.btn-primary { 
-    width: 100%; 
-    padding: 14px; 
-    background: var(--primary); 
-    color: var(--bg-card); 
-    border: none; 
-    border-radius: 6px; 
-    font-weight: 700; 
-    cursor: pointer;
-    font-size: 1rem;
-    transition: opacity 0.2s ease;
-}
-
-.btn-primary:hover { opacity: 0.9; }
-
-.btn-success { 
-    width: 100%; 
-    padding: 14px; 
-    background: #10b981; 
-    color: white; 
-    border: none; 
-    border-radius: 6px; 
-    font-weight: 700; 
-    cursor: pointer;
-    font-size: 1rem;
-    transition: opacity 0.2s ease;
-}
-
-.btn-success:hover { opacity: 0.9; }
-
-.btn-theme { 
-    background: transparent; 
-    border: 1px solid var(--border); 
-    color: var(--text-high); 
-    padding: 8px 12px; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.btn-logout { 
-    background: var(--danger); 
-    color: white; 
-    border: none; 
-    padding: 8px 15px; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-weight: 600;
-    font-size: 0.85rem;
+    border-radius: 4px;
 }
 
 .error-msg {
-    color: var(--danger); 
-    margin-top: 20px; 
-    font-size: 0.85rem; 
+    color: var(--error);
+    margin-top: 10px;
     text-align: center;
-    font-weight: 600;
+    font-size: 0.9rem;
 }
 
-/* ==========================================================================
-   7. DESIGN DELLA TABELLA DATI
-   ========================================================================== */
-table { 
-    width: 100%; 
-    border-collapse: collapse; 
+/* =========================================
+   TABELLE E BADGE
+   ========================================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
 }
 
-th { 
-    background: rgba(51, 65, 85, 0.2); 
-    padding: 16px; 
-    text-align: left; 
-    font-size: 0.75rem; 
-    text-transform: uppercase; 
-    color: var(--text-low); 
+th, td {
+    padding: 12px;
     border-bottom: 1px solid var(--border);
 }
 
-td { 
-    padding: 16px; 
-    border-bottom: 1px solid var(--border); 
-    font-size: 0.95rem; 
-    color: var(--text-high);
+th {
+    color: var(--primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
 }
 
-tr:hover { 
-    background-color: rgba(56, 189, 248, 0.05); 
-    transition: background-color 0.2s ease; 
-}
-
-/* ==========================================================================
-   8. BADGE DINAMICI ED ELEMENTI STATO
-   ========================================================================== */
 .risk-badge {
-    padding: 5px 10px; 
-    border-radius: 6px; 
-    font-size: 0.8rem; 
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.risk-high { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+.risk-none { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+
+/* =========================================
+   DASHBOARD LAYOUT & SIDEBAR
+   ========================================= */
+.dashboard-layout {
+    display: flex;
+    gap: 25px;
+    margin-top: 20px;
+    min-height: 70vh;
+    align-items: flex-start;
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 15px;
+    flex-shrink: 0;
+}
+
+.sidebar-menu { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+}
+
+.menu-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-low);
+    padding: 12px 15px;
+    text-align: left;
+    border-radius: 8px;
+    cursor: pointer;
     font-weight: 600;
-    display: inline-block;
+    transition: all 0.2s ease;
+    font-size: 1rem;
 }
 
-.risk-high { 
-    background: rgba(239, 68, 68, 0.15); 
-    color: var(--danger); 
-    border: 1px solid var(--danger); 
+.menu-btn:hover { background: rgba(56, 189, 248, 0.1); color: var(--primary); }
+.menu-btn.active { background: var(--primary); color: var(--bg-main); }
+
+.content-view { 
+    flex-grow: 1; 
+    width: 100%;
 }
 
-.risk-none { 
-    background: rgba(16, 185, 129, 0.15); 
-    color: #10b981; 
-    border: 1px solid #10b981; 
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
 }
 
-.loading { 
-    text-align: center; 
-    color: var(--primary); 
-    padding: 40px; 
-    font-weight: 600;
+.action-group { display: flex; gap: 15px; }
+
+.btn-action {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.2s;
 }
 
-footer { 
-    text-align: center; 
-    margin-top: 50px; 
-    color: var(--text-low); 
-    font-size: 0.75rem;
-    border-top: 1px solid var(--border);
-    padding-top: 20px;
+.btn-action:hover { filter: brightness(1.1); }
+.btn-add { background: var(--primary); color: var(--bg-main); }
+.btn-export { background: #10b981; color: white; }
+
+.form-card { 
+    padding: 30px; 
+    max-width: 600px; 
+    margin: 0 auto; 
 }

@@ -3,86 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIS2 Asset Inventory Manager | Università Pegaso</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>NIS2 Asset Inventory Manager</title>
+    <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <link rel="stylesheet" href="src/style.css">
     <script type="module" src="src/main.js"></script>
 </head>
 <body>
 
-<nav class="main-nav">
-    <div class="nav-container">
-        <span class="nav-logo">🛡️ NIS2 Asset Manager</span>
-        <div class="nav-menu" id="nav-menu-links" style="display: none;">
-            <a href="#dashboard-section" class="nav-link active">Dashboard</a>
-            <a href="#info-section" class="nav-link">Info Progetto</a>
-        </div>
-        <div class="nav-actions">
-            <button id="theme-toggle" class="btn-theme" title="Cambia Tema">🌓 Modalità</button>
-            <button id="logout-btn" class="btn-logout" style="display: none;">Logout</button>
-        </div>
-    </div>
-</nav>
-
-<div class="app-container">
-    <header class="main-header" id="presentation-header">
-        <p class="uni-tag">UNIVERSITÀ TELEMATICA PEGASO</p>
-        <h1 style="font-size: 2rem; font-weight: 700;">NIS2 Asset Inventory Manager</h1>
-        <p class="meta-tag">Candidato: <strong>Gianluca Lucarelli</strong> | Corso: Laurea L31 | Traccia: NIS2 Asset Inventory</p>
+    <header>
+        <div class="logo">NIS2 Manager</div>
+        <nav id="nav-menu-links" style="display: none;">
+            <a href="#info-section">Info Progetto</a>
+            <button id="theme-toggle">🌓 Tema</button>
+            <button id="logout-btn" style="display: none;">Esci</button>
+        </nav>
     </header>
 
-    <div id="auth-container" class="card" style="max-width: 450px; margin: 0 auto; padding: 30px;">
-        <div id="login-view">
-            <h2 style="margin-bottom: 20px; font-size: 1.2rem;">Accesso Riservato Personale Autorizzato</h2>
-            <form id="login-form">
-                <input type="email" id="auth-email" placeholder="Email Istituzionale" required class="form-input">
-                <input type="password" id="auth-password" placeholder="Password" required class="form-input">
-                <button type="submit" class="btn-primary">Entra nel Sistema</button>
-            </form>
+    <main id="info-container" style="display: none;">
+        <div class="card">
+            <h2>Progetto PW-19-L31</h2>
+            <p>Architettura per la gestione degli asset e la conformità NIS2.</p>
         </div>
-
-        <div id="mfa-view" style="display: none; text-align: center;">
-            <h2 id="mfa-title" style="margin-bottom: 15px;">Sicurezza 2FA</h2>
-            <p id="mfa-desc" style="font-size: 0.9rem; margin-bottom: 20px;"></p>
-            <div id="mfa-setup-area" style="display:none; margin-bottom:20px; background: #e2e8f0; color: #0f172a; padding: 15px; border-radius: 8px;">
-                <p style="font-size: 0.8rem; font-weight: bold; word-break: break-all;" id="mfa-secret"></p>
-            </div>
-            <input type="text" id="mfa-code" placeholder="Codice OTP" maxlength="6" class="form-input text-center large-input">
-            <button id="mfa-verify-btn" class="btn-success">Verifica Identità</button>
-        </div>
-        <div id="auth-error" class="error-msg"></div>
-    </div>
-
-    <main class="card" id="dashboard-container" style="display: none; margin-top: 20px;">
-        <div class="card-header">
-            <h2>Asset Critici Aziendali</h2>
-            <p>Area protetta da cifratura perimetrale e policy RLS.</p>
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Asset Critico</th>
-                    <th>Versione SW</th>
-                    <th>Criticità (NIS2)</th>
-                    <th>Servizi Essenziali Impattati</th>
-                </tr>
-            </thead>
-            <tbody id="asset-table-body"></tbody>
-        </table>
     </main>
 
-    <section class="card" id="info-container" style="display: none; margin-top: 20px; padding: 30px;">
-        <h2>Dettagli Architetturali del Progetto</h2>
-        <p style="margin-top: 15px;">Questo applicativo rappresenta il frontend di un sistema di tracciamento asset conforme ai requisiti della **Direttiva (UE) 2022/2555 (NIS2)**.</p>
-        <p>Il database di backend è strutturato in **Terza Forma Normale (3NF)** per eliminare le ridondanze informative e garantire la consistenza dei dati relativi all'infrastruttura di un'azienda sanitaria.</p>
-    </section>
+    <main id="auth-container" class="card">
+        <div id="login-view">
+            <h2>Accesso Operatore</h2>
+            <form id="login-form">
+                <input type="email" id="auth-email" placeholder="Email" required class="form-input">
+                <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" required class="form-input">
+                <button type="submit" class="btn-success">Accedi</button>
+            </form>
+        </div>
+        
+        <div id="mfa-view" style="display: none;">
+            <h2>Verifica a Due Fattori</h2>
+            <p id="mfa-desc">Inserisci il codice OTP.</p>
+            <input type="text" id="mfa-code" placeholder="000000" class="form-input">
+            <button id="mfa-verify-btn" class="btn-success">Verifica</button>
+        </div>
+        
+        <p id="auth-error" class="error-msg"></p>
+    </main>
 
-    <footer>
-        Sviluppo conforme a Direttiva NIS2 e linee guida ACN per infrastrutture sanitarie critiche.
-    </footer>
-</div>
+    <main id="dashboard-container" style="display: none;">
+        <div class="dashboard-layout">
+            
+            <aside class="sidebar">
+                <div class="sidebar-menu">
+                    <button class="menu-btn active" onclick="window.switchView('inventory')">📦 Inventario Asset</button>
+                    <button class="menu-btn" onclick="window.switchView('add-asset')">➕ Nuovo Asset</button>
+                    <button class="menu-btn" onclick="window.switchView('import-export')">📂 Import/Export</button>
+                </div>
+            </aside>
+
+            <section class="content-view">
+                
+                <div id="view-inventory" class="view-section">
+                    <div class="view-header">
+                        <h2>Inventario Asset Critici (NIS2)</h2>
+                        <div class="action-group">
+                            <button class="btn-action btn-add" onclick="window.switchView('add-asset')">Nuovo Asset</button>
+                            <button class="btn-action btn-export" onclick="window.esportaDatiACN()">Esporta XLS</button>
+                        </div>
+                    </div>
+                    <div class="card" style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Asset Critico</th>
+                                    <th>Tassonomia ACN</th>
+                                    <th>Criticità</th>
+                                    <th>Owner Tecnico</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="asset-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="view-add-asset" class="view-section" style="display:none;">
+                    <div class="view-header">
+                        <h2>Inserimento Nuovo Asset</h2>
+                    </div>
+                    <div class="card form-card">
+                        <form id="asset-form">
+                            <div style="margin-bottom: 15px;">
+                                <label>Nome Asset</label>
+                                <input type="text" id="asset-nome" placeholder="es. FW-BORDER-01" class="form-input" required>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label>Versione Software/Firmware</label>
+                                <input type="text" id="asset-versione" placeholder="es. 9.1(7)16" class="form-input">
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label>Livello Criticità</label>
+                                <select id="asset-criticita" class="form-input" required>
+                                    <option value="1">Bassa</option>
+                                    <option value="2">Media</option>
+                                    <option value="3">Alta</option>
+                                    <option value="4">Critica</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-success" style="width: 100%; padding: 12px; margin-bottom: 10px;">Salva nel Database 3NF</button>
+                            <button type="button" class="btn-logout" onclick="window.switchView('inventory')" style="width: 100%; background: #475569; padding: 12px;">Annulla</button>
+                        </form>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
 </body>
 </html>
