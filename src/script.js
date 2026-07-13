@@ -1,19 +1,19 @@
 // =========================================================================
 // FILE: src/script.js
 // DESCRIZIONE: Engine SPA per NIS2 Asset Manager (Autenticazione & Caricamento)
-// FIX: Isolamento dello scope (IIFE) per prevenire collisioni con il CDN
+// RIFERIMENTO ARCHITETTURALE: Tesi L31 - PW-19-L31-NIS2-Asset-Inventory-Manager
 // =========================================================================
 
 (function () {
-    // 1. Configurazione Client Supabase
-    // IMPORTANTE: Sostituisci queste stringhe con l'URL e la chiave ANON reali del tuo progetto Supabase
+    // 1. Configurazione Client Supabase (Endpoint API & Chiave Pubblica)
+    // NOTA: Assicurati che queste due stringhe contengano i valori reali del tuo progetto
     const SUPABASE_URL = "https://tuo-progetto-id.supabase.co";
     const SUPABASE_ANON_KEY = "tuo-anon-key-configurato";
 
-    // Istanziazione protetta tramite l'oggetto globale window per evitare eccezioni di ridichiarazione
+    // Inizializzazione protetta tramite window per prevenire SyntaxError di ridichiarazione globale
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Elementi del DOM intercettati nativamente
+    // 2. Mappatura Elementi del DOM
     const loginForm = document.getElementById('login-form');
     const loginView = document.getElementById('login-view');
     const mfaView = document.getElementById('mfa-view');
@@ -26,16 +26,16 @@
     const presentationHeader = document.getElementById('presentation-header');
     const assetTableBody = document.getElementById('asset-table-body');
 
-    // Listener per il Form di Login Primario (Email/Password)
+    // 3. Event Listener: Form di Autenticazione Primaria (AAL1)
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        authError.textContent = ""; // Reset messaggi di errore
+        authError.textContent = ""; // Reset buffer messaggi di errore
         
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
 
         try {
-            // Autenticazione di primo livello (AAL1)
+            // Esecuzione chiamata di login standard (Email/Password)
             const { data: authData, error: authErrorResult } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
@@ -68,14 +68,12 @@
             }
 
             if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
-                // Transizione interna alla vista di verifica del token TOTP
+                // Transizione visiva alla maschera TOTP per iniezione secondo fattore
                 loginView.style.display = 'none';
                 mfaView.style.display = 'block';
                 document.getElementById('mfa-desc').textContent = "Inserisci il codice temporaneo generato sul tuo dispositivo per elevare la sessione a livello Avanzato (AAL2).";
-                
                 inizializzaVerificaMFA();
             } else {
-                // Se l'utente non ha la 2FA configurata, accede direttamente (Stato Staging)
                 mostraDashboardApplicativa();
             }
 
@@ -85,12 +83,10 @@
     });
 
     /**
-     * Gestore del secondo fattore di autenticazione (TOTP) per utente amministratore
+     * Gestore del secondo fattore di autenticazione (TOTP) per profili amministrativi
      */
     function inizializzaVerificaMFA() {
         const verifyBtn = document.getElementById('mfa-verify-btn');
-        
-        // Rimuove eventuali listener precedenti per evitare esecuzioni doppie
         const newVerifyBtn = verifyBtn.cloneNode(true);
         verifyBtn.parentNode.replaceChild(newVerifyBtn, verifyBtn);
 
@@ -128,17 +124,13 @@
      * Funzione centralizzata per lo switch dell'interfaccia utente (UI Transition)
      */
     function mostraDashboardApplicativa() {
-        // Nasconde completamente il blocco di autenticazione
         authContainer.style.display = 'none';
         authError.textContent = "";
-        
-        // Mostra i componenti operativi dell'inventario e della navigazione
         dashboardContainer.style.display = 'block';
         infoContainer.style.display = 'block';
         navMenuLinks.style.display = 'flex';
         logoutBtn.style.display = 'block';
         
-        // Invocazione del caricamento dei record dal database
         caricaAssetDallInventario();
     }
 
@@ -147,11 +139,10 @@
      */
     async function caricaAssetDallInventario() {
         try {
-            assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Caricamento record cifrati in corso...</td></tr>`;
+            assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Caricamento record in corso...</td></tr>`;
             
-            // Esecuzione query sulla tabella asset (sottoposta a RLS)
-            const { data, error } = await supabase
-                = await supabase.from('asset').select('*');
+            // FIX: Query pulita e lineare senza ridondanze sintattiche
+            const { data, error } = await supabase.from('asset').select('*');
 
             if (error) {
                 assetTableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Errore RLS: Accesso Negato. ${error.message}</td></tr>`;
@@ -163,7 +154,7 @@
                 return;
             }
 
-            // Rendering dinamico dei record nella tabella HTML
+            // Rendering dinamico sicuro allineato allo schema 3NF sanitario
             assetTableBody.innerHTML = data.map(asset => `
                 <tr>
                     <td><strong>${asset.id}</strong></td>
@@ -179,7 +170,7 @@
         }
     }
 
-    // Gestione del Logout
+    // Gestione del ciclo di chiusura sessione (Logout)
     logoutBtn.addEventListener('click', async () => {
         await supabase.auth.signOut();
         window.location.reload();
