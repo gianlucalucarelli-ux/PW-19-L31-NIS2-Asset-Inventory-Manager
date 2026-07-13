@@ -1,19 +1,16 @@
 // =========================================================================
-// FILE: src/script.js
+// FILE: src/script.js (BUILD COMPLETA CON FIX UI E BOTTONI)
 // DESCRIZIONE: Engine SPA per NIS2 Asset Manager (Autenticazione & Caricamento)
-// RIFERIMENTO ARCHITETTURALE: Tesi L31 - PW-19-L31-NIS2-Asset-Inventory-Manager
 // =========================================================================
 
 (function () {
-    // 1. Configurazione Client Supabase (Endpoint API & Chiave Pubblica)
-    // NOTA: Assicurati che queste due stringhe contengano i valori reali del tuo progetto
+    // 1. Configurazione Client Supabase
     const SUPABASE_URL = "https://jacyruehgxjzxufzfoly.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphY3lydWVoZ3hqenh1Znpmb2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjY3NTEsImV4cCI6MjA5MzQwMjc1MX0.L7WiMfnil2hkso-YrdQE5UXH28Q-XwNLEacv989UKxM";
 
-    // Inizializzazione protetta tramite window per prevenire SyntaxError di ridichiarazione globale
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. Mappatura Elementi del DOM
+    // Elementi del DOM intercettati nativamente
     const loginForm = document.getElementById('login-form');
     const loginView = document.getElementById('login-view');
     const mfaView = document.getElementById('mfa-view');
@@ -23,19 +20,17 @@
     const infoContainer = document.getElementById('info-container');
     const navMenuLinks = document.getElementById('nav-menu-links');
     const logoutBtn = document.getElementById('logout-btn');
-    const presentationHeader = document.getElementById('presentation-header');
     const assetTableBody = document.getElementById('asset-table-body');
 
-    // 3. Event Listener: Form di Autenticazione Primaria (AAL1)
+    // Listener per il Form di Login Primario (Email/Password)
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        authError.textContent = ""; // Reset buffer messaggi di errore
+        authError.textContent = ""; 
         
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
 
         try {
-            // Esecuzione chiamata di login standard (Email/Password)
             const { data: authData, error: authErrorResult } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
@@ -48,18 +43,14 @@
 
             console.log("Livello di autenticazione AAL1 convalidato.");
 
-            // =========================================================================
-            // DEVIAZIONE CONDIZIONALE: Bypass controllato per profilo d'ispezione Docente
-            // =========================================================================
+            // Deviazione Condizionale Profilo Docente
             if (email.toLowerCase() === 'docenteunitopegaso@gmail.com') {
                 console.log("Rilevata utenza docente. Attivazione deroga e sblocco interfaccia.");
                 mostraDashboardApplicativa();
                 return;
             }
 
-            // =========================================================================
-            // FLUSSO DI HARDENING: Verifica MFA obbligatoria per utenza amministratore
-            // =========================================================================
+            // Flusso Hardening MFA per Amministratore
             const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
             if (mfaError) {
@@ -68,7 +59,6 @@
             }
 
             if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
-                // Transizione visiva alla maschera TOTP per iniezione secondo fattore
                 loginView.style.display = 'none';
                 mfaView.style.display = 'block';
                 document.getElementById('mfa-desc').textContent = "Inserisci il codice temporaneo generato sul tuo dispositivo per elevare la sessione a livello Avanzato (AAL2).";
@@ -82,9 +72,6 @@
         }
     });
 
-    /**
-     * Gestore del secondo fattore di autenticazione (TOTP) per profili amministrativi
-     */
     function inizializzaVerificaMFA() {
         const verifyBtn = document.getElementById('mfa-verify-btn');
         const newVerifyBtn = verifyBtn.cloneNode(true);
@@ -120,9 +107,6 @@
         });
     }
 
-    /**
-     * Funzione centralizzata per lo switch dell'interfaccia utente (UI Transition)
-     */
     function mostraDashboardApplicativa() {
         authContainer.style.display = 'none';
         authError.textContent = "";
@@ -134,14 +118,10 @@
         caricaAssetDallInventario();
     }
 
-    /**
-     * Interrogazione API del backend PostgreSQL con policy RLS attive
-     */
     async function caricaAssetDallInventario() {
         try {
             assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Caricamento record in corso...</td></tr>`;
             
-            // FIX: Query pulita e lineare senza ridondanze sintattiche
             const { data, error } = await supabase.from('asset').select('*');
 
             if (error) {
@@ -154,7 +134,6 @@
                 return;
             }
 
-            // Rendering dinamico sicuro allineato allo schema 3NF sanitario
             assetTableBody.innerHTML = data.map(asset => `
                 <tr>
                     <td><strong>${asset.id}</strong></td>
@@ -170,9 +149,31 @@
         }
     }
 
-    // Gestione del ciclo di chiusura sessione (Logout)
+    // Gestione del Logout
     logoutBtn.addEventListener('click', async () => {
         await supabase.auth.signOut();
         window.location.reload();
     });
+
+    // =========================================================================
+    // ESPOSIZIONE GLOBALE PER BOTTONI HTML
+    // =========================================================================
+    window.toggleDarkMode = function() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    };
+
+    window.mostraInfo = function() {
+        const infoBlock = document.getElementById('info-container');
+        if (infoBlock) {
+            infoBlock.style.display = (infoBlock.style.display === 'none' || infoBlock.style.display === '') ? 'block' : 'none';
+        }
+    };
+
+    // Ripristino del tema salvato all'avvio
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+    }
 })();
