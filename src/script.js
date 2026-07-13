@@ -1,5 +1,5 @@
 // =========================================================================
-// FILE: src/script.js (BUILD COMPLETA CON FIX UI E BOTTONI)
+// FILE: src/script.js (BUILD STABILE CON BINDING NATIVO DEI COMPONENTI UI)
 // DESCRIZIONE: Engine SPA per NIS2 Asset Manager (Autenticazione & Caricamento)
 // =========================================================================
 
@@ -21,6 +21,10 @@
     const navMenuLinks = document.getElementById('nav-menu-links');
     const logoutBtn = document.getElementById('logout-btn');
     const assetTableBody = document.getElementById('asset-table-body');
+    
+    // Nuovi elementi mappati per la gestione dei bottoni UI
+    const themeToggleBtn = document.getElementById('theme-toggle-btn'); 
+    const infoToggleBtn = document.getElementById('info-toggle-btn');
 
     // Listener per il Form di Login Primario (Email/Password)
     loginForm.addEventListener('submit', async (e) => {
@@ -156,22 +160,28 @@
     });
 
     // =========================================================================
-    // ESPOSIZIONE GLOBALE PER BOTTONI HTML
+    // GESTIONE EVENTI UI NATIVA (NO ONCLICK NELL'HTML)
     // =========================================================================
-    window.toggleDarkMode = function() {
-        document.body.classList.toggle('dark-mode');
-        const isDark = document.body.classList.contains('dark-mode');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    };
+    
+    // Intercettazione del bottone Tema (Assicurarsi che l'elemento HTML abbia id="theme-toggle-btn")
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    }
 
-    window.mostraInfo = function() {
-        const infoBlock = document.getElementById('info-container');
-        if (infoBlock) {
-            infoBlock.style.display = (infoBlock.style.display === 'none' || infoBlock.style.display === '') ? 'block' : 'none';
-        }
-    };
+    // Intercettazione del bottone Info (Assicurarsi che l'elemento HTML abbia id="info-toggle-btn")
+    if (infoToggleBtn) {
+        infoToggleBtn.addEventListener('click', () => {
+            if (infoContainer) {
+                infoContainer.style.display = (infoContainer.style.display === 'none' || infoContainer.style.display === '') ? 'block' : 'none';
+            }
+        });
+    }
 
-    // Ripristino del tema salvato all'avvio
+    // Ripristino del tema salvato all'avvio (Esecuzione immediata)
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
