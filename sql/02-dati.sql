@@ -1,6 +1,6 @@
 -- =========================================================================
 -- FILE: sql/02-dati.sql
--- DESCRIZIONE: Popolamento dizionari e record di test (ER v3.6)
+-- DESCRIZIONE: Popolamento dizionari e record di test conforme a ER v3.6
 -- =========================================================================
 
 TRUNCATE 
@@ -29,7 +29,7 @@ INSERT INTO public.responsabile_ruolo (responsabile_id, ruolo_id, is_titolare) V
 INSERT INTO public.vulnerabilita (codice_bollettino, descrizione_rischio, livello_severita) VALUES ('CVE-2026-0001', 'RCE nel firmware perimetrale', 'Critica');
 
 -- Core Asset
-INSERT INTO public.asset (nome, categoria_asset_id, classificazione_criticita, descrizione, ubicazione, versione, organizzazione_id, responsabile_id) VALUES 
+INSERT INTO public.asset (nome, categoria_asset_id, classificazione_criticita, descrizione, ubicazione, versione, organizzazione_id, responsable_id) VALUES 
 ('FW-BORDER-01', 1, 'Critica', 'Firewall principale', 'Server Room Piano -1', 'v7.4.2', 1, 1);
 
 -- Giunzioni Relazionali pure (ER v3.6 Specific)

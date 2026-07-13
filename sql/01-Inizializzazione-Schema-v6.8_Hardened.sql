@@ -1,6 +1,7 @@
 -- =========================================================================
 -- FILE: sql/01-Inizializzazione-Schema-v6.8_Hardened.sql
 -- TARGET ARCHITETTURALE: ER V3.6 (22 TABELLE PURA 3NF)
+-- DESCRIZIONE: DDL completo, Audit Log Engine e Trigger di sistema
 -- =========================================================================
 
 -- Rimozione preventiva per garantire la pulizia dell'ambiente di staging
@@ -149,7 +150,7 @@ CREATE TABLE public.servizio_componente (
     esito_impatto_id int REFERENCES public.esito_impatto(id) ON DELETE RESTRICT,
     peso_percentuale int CHECK (peso_percentuale BETWEEN 0 AND 100),
     descrizione text,
-    PRIMARY KEY (servizio_padre_id, servicio_figlio_id)
+    PRIMARY KEY (servizio_padre_id, servizio_figlio_id)
 );
 
 -- 6. INCIDENT RESPONSE E LOG COMPLIANCE FORENSE
@@ -173,7 +174,7 @@ CREATE TABLE public.audit_log (
     valore_nuovo text
 );
 
--- 7. AUDIT ENGINE COOKED WITH SUPABASE JWT
+-- 7. AUDIT ENGINE INTEGRATO CON JWT SUPABASE
 CREATE OR REPLACE FUNCTION public.process_asset_audit()
 RETURNS TRIGGER AS $$
 DECLARE
