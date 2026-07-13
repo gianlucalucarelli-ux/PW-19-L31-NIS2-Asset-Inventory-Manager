@@ -3,16 +3,21 @@
 // =========================================================================
 
 (function () {
+    // 1. Configurazione Client Supabase
     const SUPABASE_URL = "https://jacyruehgxjzxufzfoly.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphY3lydWVoZ3hqenh1Znpmb2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjY3NTEsImV4cCI6MjA5MzQwMjc1MX0.L7WiMfnil2hkso-YrdQE5UXH28Q-XwNLEacv989UKxM";
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // =========================================================================
+    // INIZIALIZZAZIONE IMMEDIATA TEMA
+    // =========================================================================
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
 
     document.addEventListener('DOMContentLoaded', () => {
         
+        // Elementi DOM
         const loginForm = document.getElementById('login-form');
         const loginView = document.getElementById('login-view');
         const mfaView = document.getElementById('mfa-view');
@@ -26,7 +31,12 @@
         
         const themeToggleBtn = document.getElementById('theme-toggle'); 
         const infoNavLink = document.querySelector('a[href="#info-section"]');
+        const mfaVerifyBtn = document.getElementById('mfa-verify-btn');
+        const mfaCodeInput = document.getElementById('mfa-code');
 
+        // =========================================================================
+        // LOGICA UI (Tema e Info)
+        // =========================================================================
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', () => {
                 const root = document.documentElement;
@@ -47,6 +57,9 @@
             });
         }
 
+        // =========================================================================
+        // LOGICA AUTH E SUPABASE
+        // =========================================================================
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -75,6 +88,49 @@
             });
         }
 
+        // =========================================================================
+        // LOGICA VERIFICA 2FA (MFA CHALLENGE & VERIFY)
+        // =========================================================================
+        if (mfaVerifyBtn) {
+            mfaVerifyBtn.addEventListener('click', async () => {
+                authError.textContent = "";
+                const code = mfaCodeInput.value.trim();
+                
+                if (!code || code.length !== 6) {
+                    authError.textContent = "Inserisci un codice OTP valido a 6 cifre.";
+                    return;
+                }
+
+                try {
+                    // 1. Recupera i fattori MFA registrati per l'utente
+                    const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+                    if (factorsError) throw factorsError;
+
+                    const totpFactor = factors.totp[0];
+                    if (!totpFactor) throw new Error("Nessun fattore TOTP trovato per questo utente.");
+
+                    // 2. Avvia la Challenge MFA
+                    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
+                    if (challengeError) throw challengeError;
+
+                    // 3. Verifica l'OTP contro la Challenge
+                    const { data: verifyData, error: verifyError } = await supabase.auth.mfa.verify({
+                        factorId: totpFactor.id,
+                        challengeId: challengeData.id,
+                        code: code
+                    });
+                    if (verifyError) throw verifyError;
+
+                    // Autenticazione AAL2 completata con successo
+                    mostraDashboard();
+
+                } catch (err) {
+                    console.error("Errore validazione MFA:", err.message);
+                    authError.textContent = "Errore OTP: " + err.message;
+                }
+            });
+        }
+
         function mostraDashboard() {
             if (authContainer) authContainer.style.display = 'none';
             if (dashboardContainer) dashboardContainer.style.display = 'block';
@@ -83,6 +139,9 @@
             caricaAsset();
         }
 
+        // =========================================================================
+        // DATA FETCHING (Interrogazione Vista ACN - Schema V3.6)
+        // =========================================================================
         async function caricaAsset() {
             if (!assetTableBody) return;
             
