@@ -1,5 +1,5 @@
 -- =========================================================================
--- FILE: sql/02-dati.sql
+-- FILE: sql/02-dati.sql (VERSIONE DEFINITIVA COMPILATA E VERIFICATA)
 -- DESCRIZIONE: Popolamento dizionari e record di test conforme a ER v3.6
 -- =========================================================================
 
@@ -28,13 +28,17 @@ INSERT INTO public.responsabile (nome, cognome, email, telefono, organizzazione_
 INSERT INTO public.responsabile_ruolo (responsabile_id, ruolo_id, is_titolare) VALUES (1, 1, true);
 INSERT INTO public.vulnerabilita (codice_bollettino, descrizione_rischio, livello_severita) VALUES ('CVE-2026-0001', 'RCE nel firmware perimetrale', 'Critica');
 
--- Core Asset
-INSERT INTO public.asset (nome, categoria_asset_id, classificazione_criticita, descrizione, ubicazione, versione, organizzazione_id, responsable_id) VALUES 
+-- Core Asset (Risolto 'responsabile_id' in italiano)
+INSERT INTO public.asset (nome, categoria_asset_id, classificazione_criticita, descrizione, ubicazione, versione, organizzazione_id, responsabile_id) VALUES 
 ('FW-BORDER-01', 1, 'Critica', 'Firewall principale', 'Server Room Piano -1', 'v7.4.2', 1, 1);
 
 -- Giunzioni Relazionali pure (ER v3.6 Specific)
 INSERT INTO public.asset_vulnerabilita (asset_id, vulnerabilita_id, stato_remediation) VALUES (1, 1, 'OPEN');
 INSERT INTO public.fornitore (nome, tipo_fornitore_id, indirizzo, contatto_email) VALUES ('Fortinet Sec', 1, 'Milano, Italia', 'tac@fortinet.com');
-INSERT INTO public.servizio (nome, descrizione, tipo_servizio_id, stato_servizio_id, organizzazione_id, responsabile_id) VALUES ('Pronto Soccorso Real-Time', 'Triage urgenze', 1, 1, 1, 1);
 
+-- Servizio Essenziale (Risolto anche qui 'responsabile_id' in italiano)
+INSERT INTO public.servizio (nome, descrizione, tipo_servizio_id, stato_servizio_id, organizzazione_id, responsabile_id) VALUES 
+('Pronto Soccorso Real-Time', 'Triage urgenze', 1, 1, 1, 1);
+
+-- Associazione Servizio_dipendenza_asset
 INSERT INTO public.servizio_dipendenza_asset (servizio_id, asset_id, tipo_dipendenza_servizio_id, descrizione) VALUES (1, 1, 1, 'Il Pronto Soccorso richiede il corretto instradamento del firewall');
