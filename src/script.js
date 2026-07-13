@@ -1,5 +1,5 @@
 // =========================================================================
-// FILE: src/script.js (BUILD STABILE CON ASSEGNAZIONE DOM ALLINEATA)
+// FILE: src/script.js (BUILD 100% ALLINEATA ALL'HTML DELL'UTENTE)
 // DESCRIZIONE: Engine SPA per NIS2 Asset Manager (Autenticazione & Caricamento)
 // =========================================================================
 
@@ -13,7 +13,7 @@
     // Esecuzione al completamento del parsing dell'HTML (Previene nodi DOM nulli)
     document.addEventListener('DOMContentLoaded', () => {
         
-        // Elementi del DOM intercettati nativamente
+        // Elementi del DOM intercettati nativamente dall'HTML fornito
         const loginForm = document.getElementById('login-form');
         const loginView = document.getElementById('login-view');
         const mfaView = document.getElementById('mfa-view');
@@ -25,11 +25,11 @@
         const logoutBtn = document.getElementById('logout-btn');
         const assetTableBody = document.getElementById('asset-table-body');
         
-        // Elementi mappati per la gestione dei bottoni UI
-        const themeToggleBtn = document.getElementById('theme-toggle-btn'); 
-        const infoToggleBtn = document.getElementById('info-toggle-btn');
+        // Mappatura controlli UI basata sugli ID reali del tuo index.html
+        const themeToggleBtn = document.getElementById('theme-toggle'); 
+        const infoNavLink = document.querySelector('a[href="#info-section"]');
 
-        // Ripristino del tema salvato all'avvio (Esecuzione immediata sulla UI)
+        // Ripristino del tema salvato all'avvio (Persistenza nello storage)
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
@@ -176,9 +176,10 @@
         }
 
         // =========================================================================
-        // GESTIONE EVENTI UI NATIVA (CON ERROR BINDING PROTECTION)
+        // INTERCETTAZIONE EVENTI GRAFICI (BINDING CORRETTO SU ID TUA NAV)
         // =========================================================================
         
+        // Switch chiaro/scuro su id="theme-toggle"
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', () => {
                 document.body.classList.toggle('dark-mode');
@@ -187,8 +188,10 @@
             });
         }
 
-        if (infoToggleBtn) {
-            infoToggleBtn.addEventListener('click', () => {
+        // Mostra/Nasconde Info Progetto intercettando il link href="#info-section"
+        if (infoNavLink) {
+            infoNavLink.addEventListener('click', (e) => {
+                e.preventDefault(); // Impedisce il salto di ancoraggio della pagina
                 if (infoContainer) {
                     infoContainer.style.display = (infoContainer.style.display === 'none' || infoContainer.style.display === '') ? 'block' : 'none';
                 }
