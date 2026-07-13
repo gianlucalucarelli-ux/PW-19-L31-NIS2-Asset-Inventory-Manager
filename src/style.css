@@ -313,3 +313,25 @@ th {
     max-width: 600px; 
     margin: 0 auto; 
 }
+/* =========================================
+   FIX ALLINEAMENTO NAV E HEADER
+   ========================================= */
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.nav-menu, .nav-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+#presentation-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Riporta i testi impilati a sinistra */
+    gap: 8px;
+}
