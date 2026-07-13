@@ -3,21 +3,16 @@
 // =========================================================================
 
 (function () {
-    // 1. Configurazione Client Supabase
     const SUPABASE_URL = "https://jacyruehgxjzxufzfoly.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphY3lydWVoZ3hqenh1Znpmb2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjY3NTEsImV4cCI6MjA5MzQwMjc1MX0.L7WiMfnil2hkso-YrdQE5UXH28Q-XwNLEacv989UKxM";
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // =========================================================================
-    // INIZIALIZZAZIONE IMMEDIATA TEMA (Evita flash bianco/nero)
-    // =========================================================================
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
 
     document.addEventListener('DOMContentLoaded', () => {
         
-        // Elementi DOM
         const loginForm = document.getElementById('login-form');
         const loginView = document.getElementById('login-view');
         const mfaView = document.getElementById('mfa-view');
@@ -29,18 +24,15 @@
         const logoutBtn = document.getElementById('logout-btn');
         const assetTableBody = document.getElementById('asset-table-body');
         
-        // Mappatura bottoni (ID reali dal tuo HTML)
         const themeToggleBtn = document.getElementById('theme-toggle'); 
         const infoNavLink = document.querySelector('a[href="#info-section"]');
 
-        // =========================================================================
-        // LOGICA UI (Tema e Info)
-        // =========================================================================
-        
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener('click', () => {
                 const root = document.documentElement;
-                const newTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                const currentTheme = root.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
                 root.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
             });
@@ -54,10 +46,6 @@
                 }
             });
         }
-
-        // =========================================================================
-        // LOGICA AUTH E SUPABASE
-        // =========================================================================
 
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
@@ -80,7 +68,6 @@
                         loginView.style.display = 'none';
                         mfaView.style.display = 'block';
                         document.getElementById('mfa-desc').textContent = "Inserisci OTP.";
-                        inizializzaMFA();
                     } else {
                         mostraDashboard();
                     }
@@ -98,15 +85,24 @@
 
         async function caricaAsset() {
             if (!assetTableBody) return;
-            const { data, error } = await supabase.from('asset').select('*');
-            if (error) { assetTableBody.innerHTML = `<tr><td colspan="5">Errore caricamento.</td></tr>`; return; }
+            
+            const { data, error } = await supabase
+                .from('vista_esportazione_acn_assets')
+                .select('*');
+                
+            if (error) { 
+                console.error("Errore Supabase:", error.message);
+                assetTableBody.innerHTML = `<tr><td colspan="5" class="error-msg">Errore RLS o Vista: ${error.message}</td></tr>`; 
+                return; 
+            }
+            
             assetTableBody.innerHTML = data.map(a => `
                 <tr>
-                    <td><strong>${a.id}</strong></td>
-                    <td>${a.nome}</td>
-                    <td>${a.categoria || 'N/D'}</td>
-                    <td><span class="risk-badge ${a.classificazione_criticita === 'Critica' ? 'risk-high' : 'risk-none'}">${a.classificazione_criticita}</span></td>
-                    <td>Erogazione Servizi</td>
+                    <td><strong>${a.Asset_ID}</strong></td>
+                    <td>${a.Asset_Name} <br><small style="color:var(--text-low);">${a.Software_Version}</small></td>
+                    <td>${a.ACN_Taxonomy_Code} <br><small style="color:var(--text-low);">${a.Asset_Category}</small></td>
+                    <td><span class="risk-badge ${a.Criticity_Level === 'Critica' ? 'risk-high' : 'risk-none'}">${a.Criticity_Level}</span></td>
+                    <td><small>${a.Technical_Owner}</small></td>
                 </tr>
             `).join('');
         }
