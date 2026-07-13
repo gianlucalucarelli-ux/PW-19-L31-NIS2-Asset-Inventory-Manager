@@ -1,70 +1,37 @@
 -- =================================================================================
--- FASE 3: ZERO TRUST & ROW LEVEL SECURITY (RLS) - INFRASTRUTTURA COMPLETA
--- Obiettivo: Bloccare tutti gli accessi di default e consentire solo la lettura pubblica.
+-- FILE: sql/03-sicurezza-rls.sql (VERSIONE REALE BLINDATA)
+-- DESCRIZIONE: Configurazione delle policy RLS a doppio binario (MFA o Account Ispezione)
 -- =================================================================================
 
--- STEP 1: Abilitazione del blocco totale (Zero Trust) su tutte le tabelle
-ALTER TABLE asset ENABLE ROW LEVEL SECURITY;
-ALTER TABLE categoria_asset ENABLE ROW LEVEL SECURITY;
-ALTER TABLE esito_impatto ENABLE ROW LEVEL SECURITY;
-ALTER TABLE evento_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fornitore ENABLE ROW LEVEL SECURITY;
-ALTER TABLE organizzazione ENABLE ROW LEVEL SECURITY;
-ALTER TABLE responsabile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE responsabile_ruolo ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ruolo ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ruolo_organigramma ENABLE ROW LEVEL SECURITY;
-ALTER TABLE servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE servizio_componente ENABLE ROW LEVEL SECURITY;
-ALTER TABLE servizio_dipendenza ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stato_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tipo_dipendenza ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tipo_dipendenza_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tipo_fornitore ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tipo_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE versioning_asset ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vulnerabilita ENABLE ROW LEVEL SECURITY;
+-- 1. Abilitazione del blocco totale (Zero Trust) sulle 9 tabelle attive
+ALTER TABLE public.organizzazione ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.responsabile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.asset ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.servizio ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fornitore ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ruolo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.responsabile_ruolo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.dipendenza ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.versioning_asset ENABLE ROW LEVEL SECURITY;
 
--- STEP 2: Pulizia di vecchie policy (Rende lo script idempotente/rieseguibile)
-DROP POLICY IF EXISTS "Lettura pubblica asset" ON asset;
-DROP POLICY IF EXISTS "Lettura pubblica categoria_asset" ON categoria_asset;
-DROP POLICY IF EXISTS "Lettura pubblica esito_impatto" ON esito_impatto;
-DROP POLICY IF EXISTS "Lettura pubblica evento_servizio" ON evento_servizio;
-DROP POLICY IF EXISTS "Lettura pubblica fornitore" ON fornitore;
-DROP POLICY IF EXISTS "Lettura pubblica organizzazione" ON organizzazione;
-DROP POLICY IF EXISTS "Lettura pubblica responsabile" ON responsabile;
-DROP POLICY IF EXISTS "Lettura pubblica responsabile_ruolo" ON responsabile_ruolo;
-DROP POLICY IF EXISTS "Lettura pubblica ruolo" ON ruolo;
-DROP POLICY IF EXISTS "Lettura pubblica ruolo_organigramma" ON ruolo_organigramma;
-DROP POLICY IF EXISTS "Lettura pubblica servizio" ON servizio;
-DROP POLICY IF EXISTS "Lettura pubblica servizio_componente" ON servizio_componente;
-DROP POLICY IF EXISTS "Lettura pubblica servizio_dipendenza" ON servizio_dipendenza;
-DROP POLICY IF EXISTS "Lettura pubblica stato_servizio" ON stato_servizio;
-DROP POLICY IF EXISTS "Lettura pubblica tipo_dipendenza" ON tipo_dipendenza;
-DROP POLICY IF EXISTS "Lettura pubblica tipo_dipendenza_servizio" ON tipo_dipendenza_servizio;
-DROP POLICY IF EXISTS "Lettura pubblica tipo_fornitore" ON tipo_fornitore;
-DROP POLICY IF EXISTS "Lettura pubblica tipo_servizio" ON tipo_servizio;
-DROP POLICY IF EXISTS "Lettura pubblica versioning_asset" ON versioning_asset;
-DROP POLICY IF EXISTS "Lettura pubblica vulnerabilita" ON vulnerabilita;
+-- 2. Rimozione preventiva di vecchie policy per garantire l'idempotenza
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.organizzazione;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.responsabile;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.asset;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.servizio;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.fornitore;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.ruolo;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.responsabile_ruolo;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.dipendenza;
+DROP POLICY IF EXISTS "Sorgente Protetta o Deroga Docente" ON public.versioning_asset;
 
--- STEP 3: Creazione delle eccezioni (Policy FOR SELECT)
-CREATE POLICY "Lettura pubblica asset" ON asset FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica categoria_asset" ON categoria_asset FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica esito_impatto" ON esito_impatto FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica evento_servizio" ON evento_servizio FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica fornitore" ON fornitore FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica organizzazione" ON organizzazione FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica responsabile" ON responsabile FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica responsabile_ruolo" ON responsabile_ruolo FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica ruolo" ON ruolo FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica ruolo_organigramma" ON ruolo_organigramma FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica servizio" ON servizio FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica servizio_componente" ON servizio_componente FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica servizio_dipendenza" ON servizio_dipendenza FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica stato_servizio" ON stato_servizio FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica tipo_dipendenza" ON tipo_dipendenza FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica tipo_dipendenza_servizio" ON tipo_dipendenza_servizio FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica tipo_fornitore" ON tipo_fornitore FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica tipo_servizio" ON tipo_servizio FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica versioning_asset" ON versioning_asset FOR SELECT USING (true);
-CREATE POLICY "Lettura pubblica vulnerabilita" ON vulnerabilita FOR SELECT USING (true);
+-- 3. Implementazione del doppio binario (MFA Livello AAL2 obbligatorio OR Eccezione nominale Docente)
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.organizzazione FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.responsabile FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.asset FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.servizio FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.fornitore FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.ruolo FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.responsabile_ruolo FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.dipendenza FOR ALL TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
+CREATE POLICY "Sorgente Protetta o Deroga Docente" ON public.versioning_asset FOR SELECT TO authenticated USING ((auth.jwt() ->> 'aal' = 'aal2') OR (auth.jwt() ->> 'email' = 'docenteunitopegaso@gmail.com'));
