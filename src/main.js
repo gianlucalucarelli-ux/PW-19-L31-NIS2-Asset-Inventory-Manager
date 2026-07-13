@@ -5,6 +5,7 @@ import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia } from '
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { exportToCSV } from './export.js';
 import { fetchAssets } from './database.js';
+console.log("Sistema modulare ES6 caricato correttamente!");
 
 // Esecuzione immediata per prevenire sfarfallii visivi
 initTheme();
