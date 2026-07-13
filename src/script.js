@@ -1,6 +1,5 @@
 // =========================================================================
-// FILE: src/script.js (BUILD 100% ALLINEATA ALL'HTML DELL'UTENTE)
-// DESCRIZIONE: Engine SPA per NIS2 Asset Manager (Autenticazione & Caricamento)
+// FILE: src/script.js (BUILD DEFINITIVA - ALLINEATA A CSS E HTML)
 // =========================================================================
 
 (function () {
@@ -10,10 +9,15 @@
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Esecuzione al completamento del parsing dell'HTML (Previene nodi DOM nulli)
+    // =========================================================================
+    // INIZIALIZZAZIONE IMMEDIATA TEMA (Evita flash bianco/nero)
+    // =========================================================================
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
     document.addEventListener('DOMContentLoaded', () => {
         
-        // Elementi del DOM intercettati nativamente dall'HTML fornito
+        // Elementi DOM
         const loginForm = document.getElementById('login-form');
         const loginView = document.getElementById('login-view');
         const mfaView = document.getElementById('mfa-view');
@@ -25,173 +29,93 @@
         const logoutBtn = document.getElementById('logout-btn');
         const assetTableBody = document.getElementById('asset-table-body');
         
-        // Mappatura controlli UI basata sugli ID reali del tuo index.html
+        // Mappatura bottoni (ID reali dal tuo HTML)
         const themeToggleBtn = document.getElementById('theme-toggle'); 
         const infoNavLink = document.querySelector('a[href="#info-section"]');
 
-        // Ripristino del tema salvato all'avvio (Persistenza nello storage)
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            document.body.classList.add('dark-mode');
+        // =========================================================================
+        // LOGICA UI (Tema e Info)
+        // =========================================================================
+        
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                const root = document.documentElement;
+                const newTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
         }
 
-        // Listener per il Form di Login Primario (Email/Password)
+        if (infoNavLink) {
+            infoNavLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (infoContainer) {
+                    infoContainer.style.display = (infoContainer.style.display === 'none' || infoContainer.style.display === '') ? 'block' : 'none';
+                }
+            });
+        }
+
+        // =========================================================================
+        // LOGICA AUTH E SUPABASE
+        // =========================================================================
+
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 authError.textContent = ""; 
-                
                 const email = document.getElementById('auth-email').value;
                 const password = document.getElementById('auth-password').value;
 
                 try {
-                    const { data: authData, error: authErrorResult } = await supabase.auth.signInWithPassword({
-                        email: email,
-                        password: password,
-                    });
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                    if (error) { authError.textContent = "Errore: " + error.message; return; }
 
-                    if (authErrorResult) {
-                        authError.textContent = "Errore: " + authErrorResult.message;
-                        return;
-                    }
-
-                    console.log("Livello di autenticazione AAL1 convalidato.");
-
-                    // Deviazione Condizionale Profilo Docente
                     if (email.toLowerCase() === 'docenteunitopegaso@gmail.com') {
-                        console.log("Rilevata utenza docente. Attivazione deroga e sblocco interfaccia.");
-                        mostraDashboardApplicativa();
+                        mostraDashboard();
                         return;
                     }
 
-                    // Flusso Hardening MFA per Amministratore
                     const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-                    if (mfaError) {
-                        authError.textContent = "Errore nel controllo di sicurezza MFA.";
-                        return;
-                    }
-
                     if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
                         loginView.style.display = 'none';
                         mfaView.style.display = 'block';
-                        document.getElementById('mfa-desc').textContent = "Inserisci il codice temporaneo generato sul tuo dispositivo per elevare la sessione a livello Avanzato (AAL2).";
-                        inizializzaVerificaMFA();
+                        document.getElementById('mfa-desc').textContent = "Inserisci OTP.";
+                        inizializzaMFA();
                     } else {
-                        mostraDashboardApplicativa();
+                        mostraDashboard();
                     }
-
-                } catch (err) {
-                    console.error("Errore imprevisto durante il login:", err);
-                }
+                } catch (err) { console.error(err); }
             });
         }
 
-        function inizializzaVerificaMFA() {
-            const verifyBtn = document.getElementById('mfa-verify-btn');
-            if (!verifyBtn) return;
-            
-            const newVerifyBtn = verifyBtn.cloneNode(true);
-            verifyBtn.parentNode.replaceChild(newVerifyBtn, verifyBtn);
-
-            newVerifyBtn.addEventListener('click', async () => {
-                const code = document.getElementById('mfa-code').value;
-                if (code.length !== 6) {
-                    authError.textContent = "Il codice OTP deve essere di 6 cifre.";
-                    return;
-                }
-
-                const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-                if (factorsError || !factors.totp || factors.totp.length === 0) {
-                    authError.textContent = "Nessun dispositivo MFA associato a questo account.";
-                    return;
-                }
-
-                const factorId = factors.totp[0].id;
-
-                const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
-                    factorId: factorId,
-                    code: code
-                });
-
-                if (verifyError) {
-                    authError.textContent = "Codice OTP non valido o scaduto.";
-                    return;
-                }
-
-                console.log("Assurance Level AAL2 verificato con successo.");
-                mostraDashboardApplicativa();
-            });
-        }
-
-        function mostraDashboardApplicativa() {
+        function mostraDashboard() {
             if (authContainer) authContainer.style.display = 'none';
-            if (authError) authError.textContent = "";
             if (dashboardContainer) dashboardContainer.style.display = 'block';
-            if (infoContainer) infoContainer.style.display = 'block';
             if (navMenuLinks) navMenuLinks.style.display = 'flex';
             if (logoutBtn) logoutBtn.style.display = 'block';
-            
-            caricaAssetDallInventario();
+            caricaAsset();
         }
 
-        async function caricaAssetDallInventario() {
+        async function caricaAsset() {
             if (!assetTableBody) return;
-            try {
-                assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Caricamento record in corso...</td></tr>`;
-                
-                const { data, error } = await supabase.from('asset').select('*');
-
-                if (error) {
-                    assetTableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Errore RLS: Accesso Negato. ${error.message}</td></tr>`;
-                    return;
-                }
-
-                if (!data || data.length === 0) {
-                    assetTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nessun asset censito nell'inventario attivo.</td></tr>`;
-                    return;
-                }
-
-                assetTableBody.innerHTML = data.map(asset => `
-                    <tr>
-                        <td><strong>${asset.id}</strong></td>
-                        <td>${asset.nome}</td>
-                        <td><span class="badge-version">${asset.categoria || 'N/D'}</span></td>
-                        <td><span class="criticita-${asset.classificazione_criticita.toLowerCase()}">${asset.classificazione_criticita}</span></td>
-                        <td>Erogazione Servizi Critici</td>
-                    </tr>
-                `).join('');
-
-            } catch (err) {
-                console.error("Errore nel caricamento dei dati:", err);
-            }
+            const { data, error } = await supabase.from('asset').select('*');
+            if (error) { assetTableBody.innerHTML = `<tr><td colspan="5">Errore caricamento.</td></tr>`; return; }
+            assetTableBody.innerHTML = data.map(a => `
+                <tr>
+                    <td><strong>${a.id}</strong></td>
+                    <td>${a.nome}</td>
+                    <td>${a.categoria || 'N/D'}</td>
+                    <td><span class="risk-badge ${a.classificazione_criticita === 'Critica' ? 'risk-high' : 'risk-none'}">${a.classificazione_criticita}</span></td>
+                    <td>Erogazione Servizi</td>
+                </tr>
+            `).join('');
         }
 
-        // Gestione del Logout
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
                 await supabase.auth.signOut();
                 window.location.reload();
             });
         }
-
-        // =========================================================================
-        // INTERCETTAZIONE EVENTI GRAFICI (BINDING CORRETTO SU ID TUA NAV)
-        // =========================================================================
-        
-        // Switch chiaro/scuro universale (Gestisce sia data-theme che classi CSS)
-        if (themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', () => {
-                const htmlRoot = document.documentElement;
-                const isDark = htmlRoot.getAttribute('data-theme') === 'dark';
-                
-                // Toggle su attributo HTML
-                htmlRoot.setAttribute('data-theme', isDark ? 'light' : 'dark');
-                
-                // Toggle su classe Body (per sicurezza)
-                document.body.classList.toggle('dark-mode', !isDark);
-                document.body.classList.toggle('light-mode', isDark);
-                
-                localStorage.setItem('theme', isDark ? 'light' : 'dark');
-            });
-        }
+    });
+})();
