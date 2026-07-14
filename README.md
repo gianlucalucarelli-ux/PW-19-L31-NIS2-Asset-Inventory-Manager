@@ -1,29 +1,31 @@
-# NIS2 Asset & Service Inventory Manager
-
-[![Project Status: Active](https://img.shields.io/badge/status-active-success.svg)]()
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)]()
-
-## 📝 Descrizione del Progetto
-Il presente Project Work nasce dall'esigenza di affrontare una sfida reale e stringente per le infrastrutture critiche del settore pubblico e privato: la gestione sicura e censita degli asset informativi in conformità con la direttiva NIS2 e le linee guida dell'Agenzia per la Cybersicurezza Nazionale (ACN). Il lavoro si inserisce nel percorso accademico presso l'Università Telematica Pegaso, a completamento del Corso di Laurea Triennale in Informatica per le aziende digitali (L-31), traducendo i modelli teorici in un prototipo funzionale di Asset Management. L'architettura proposta non si limita a catalogare le risorse hardware e software, ma implementa un sistema di gestione del dato basato su criteri di tracciabilità, integrità e sicurezza, offrendo un modello scalabile e conforme ai moderni standard di cybersecurity. Attraverso lo sviluppo di questo prototipo, l'elaborato intende dimostrare come l'adozione di metodologie di sviluppo agili e di piattaforme cloud native possa rispondere efficacemente alla complessità normativa, garantendo al contempo una gestione operativa semplificata e rigorosa per le aziende.
-
-## 🏗️ Architettura Tecnica
-Il sistema adotta un approccio *Cloud Native* per garantire scalabilità e sicurezza:
-* **Database:** PostgreSQL, progettato in Terza Forma Normale (3NF) per garantire l'integrità referenziale.
-* **Backend:** Supabase (PostgreSQL as a Service) con policy RLS (Row Level Security) attive.
-* **Frontend:** Interfaccia web sviluppata in HTML5, CSS3 e JavaScript ES6 (Vanilla).
-* **Versionamento:** Git & GitHub.
-
-## 📁 Struttura del Repository
-Il progetto è modulare per facilitare l'ispezione del codice:
-* `/src/` : Logica di business, gestione del DOM e interazione asincrona con le API.
-* `/sql/` : Script DDL per la modellazione relazionale e popolamento del database.
-* `/docs/` : Documentazione tecnica, schemi Entità-Relazione (ER) e flussi di processo.
-
-## 🚀 Funzionalità Principali
-* **Modellazione Relazionale:** Gestione completa delle relazioni tra asset IT, servizi e fornitori (Supply Chain).
-* **Compliance ACN:** Struttura dati ottimizzata per la generazione di report di sicurezza.
-* **Auditing Tracciabile:** Implementazione di trigger PL/pgSQL per la registrazione automatica delle modifiche su asset critici.
-* **Esportazione Dati:** Funzionalità di export in formato CSV standardizzato per le notifiche ACN.
+# PW-19-L31-NIS2-Asset-Inventory-Manager
+Registro centralizzato per la modellazione di asset e servizi critici secondo la direttiva NIS2 e tassonomia ACN.
+# PW-19-L31-NIS2-Asset-Inventory-Manager
+## Registro Centralizzato Asset e Servizi Critici (Direttiva NIS2 / ACN)
+### Progetto di Project Work - Corso di Laurea L31 in Informatica - Università Pegaso
 
 ---
-*Progetto di Project Work - Corso di Laurea L-31 in Informatica per le aziende digitali - Università Telematica Pegaso.*
+
+## 1. Descrizione del Progetto
+Il progetto risponde all'esigenza delle organizzazioni soggette alla direttiva NIS2 (UE 2022/2555) di censire in modo strutturato gli asset, i servizi critici e le dipendenze verso fornitori terzi.  
+L'obiettivo è la progettazione e realizzazione di un database relazionale centralizzato che consenta di modellare le relazioni gerarchiche tra asset e servizi, 
+i rispettivi responsabili e i metadati richiesti dall'Agenzia per la Cybersicurezza Nazionale (ACN) per la generazione dei profili di sicurezza.  
+
+## 2. Architettura e Tecnologie
+Il sistema è sviluppato seguendo i criteri di normalizzazione e sicurezza richiesti in ambito progettuale e professionale:
+*   Database: PostgreSQL (Modellazione in Terza Forma Normale - 3FN).  
+*   Tassonomia: Integrazione dei codici ACN (TC-ACN v2.0) per la classificazione standardizzata degli asset.  
+*   Frontend: Interfaccia di gestione sviluppata in HTML5, CSS3 e JavaScript ES6.  
+*   Hosting: Versionamento su GitHub con deployment del database tramite Cloud Provider (Supabase/PostgreSQL).  
+
+## 3. Struttura del Repository
+Il progetto è organizzato in modo modulare per garantire manutenibilità e scansionabilità:
+*   `/sql`: Script DDL di creazione del database (`schema.sql`) e dataset di test.  
+*   `/src`: Codice sorgente dell'interfaccia web e logica di interfacciamento.  
+*   `/docs`: Documentazione tecnica, Diagrammi ER (Entity-Relationship) e specifiche ACN.  
+
+## 4. Funzionalità Implementate
+*   Modellazione Asset/Servizi: Gestione delle relazioni molti-a-molti tra infrastruttura tecnologica e servizi erogati.  
+*   Supply Chain Management: Mappatura delle dipendenze da fornitori terzi con vincoli di integrità referenziale.  
+*   Auditing & Versioning: Sistema di log automatico tramite Trigger PL/pgSQL per la tracciabilità delle modifiche agli asset critici.  
+*   Export Strutturato: Predisposizione per l'esportazione di dati in formato CSV conforme ai requisiti di notifica ACN.
