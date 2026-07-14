@@ -7,6 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
     <link rel="stylesheet" href="src/style.css">
     <script type="module" src="src/main.js"></script>
 </head>
@@ -75,6 +77,9 @@
                         </div>
                         <div class="action-group" style="display: flex; gap: 10px;">
                             <button class="btn-primary" onclick="window.switchView('add-asset')">Nuovo Asset</button>
+                            <button id="btn-export-xls" class="btn-primary" style="background: #10b981; border-color: #10b981;">Esporta XLS</button>
+                            <button id="btn-trigger-import" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">Importa XLS</button>
+                            <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" style="display: none;">
                         </div>
                     </div>
                     <div style="overflow-x: auto;">
@@ -98,6 +103,8 @@
                         <h2 style="margin:0;">Inserimento Nuovo Asset</h2>
                     </div>
                     <form id="asset-form" style="max-width: 500px;">
+                        <input type="hidden" id="asset-id">
+                        
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 5px;">Nome Asset</label>
                             <input type="text" id="asset-nome" placeholder="es. FW-BORDER-01" class="form-input" required>
