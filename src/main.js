@@ -1,8 +1,7 @@
 // ===============================================================================================================
 // FILE: src/main.js Punto d'ingresso dell'applicazione. Orchestrazione degli eventi e mappatura delle API globali
 // ===============================================================================================================
-// MODIFICA QUESTA RIGA IN MAIN.JS
-import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable, updateHeaderUser } from './ui.js';
+import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable } from './ui.js';
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
 import { exportToExcel, parseExcelFile } from './importExport.js';
@@ -13,9 +12,6 @@ console.log("Sistema modulare ES6 caricato correttamente!");
 initTheme();
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Aggiorna l'header con l'utente (Funzione appena aggiunta in ui.js)
-    updateHeaderUser();
-
     // Riferimenti DOM
     const loginForm = document.getElementById('login-form');
     const loginView = document.getElementById('login-view');
