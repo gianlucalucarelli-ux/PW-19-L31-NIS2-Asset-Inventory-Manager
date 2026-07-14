@@ -27,3 +27,7 @@ Il progetto è organizzato in modo modulare per garantire manutenibilità e scan
 *   Supply Chain Management: Mappatura delle dipendenze da fornitori terzi con vincoli di integrità referenziale.  
 *   Auditing & Versioning: Sistema di log automatico tramite Trigger PL/pgSQL per la tracciabilità delle modifiche agli asset critici.  
 *   Export Strutturato: Predisposizione per l'esportazione di dati in formato CSV conforme ai requisiti di notifica ACN.
+
+## 5. Note Operative e Roadmap di Sviluppo
+L'applicazione è consultabile online per la valutazione delle funzionalità implementate:
+*  URL: 
