@@ -1,7 +1,7 @@
 // ===============================================================================================================
 // FILE: src/main.js Punto d'ingresso dell'applicazione. Orchestrazione degli eventi e mappatura delle API globali
 // ===============================================================================================================
-import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable } from './ui.js';
+import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable, updateHeaderUser } from './ui.js';
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
 import { exportToExcel, parseExcelFile } from './importExport.js';
@@ -12,6 +12,7 @@ console.log("Sistema modulare ES6 caricato correttamente!");
 initTheme();
 
 document.addEventListener('DOMContentLoaded', () => {
+    updateHeaderUser();
     // Riferimenti DOM
     const loginForm = document.getElementById('login-form');
     const loginView = document.getElementById('login-view');

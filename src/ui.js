@@ -2,6 +2,7 @@
 // FILE: src/ui.js Manipolazione del DOM, routing visivo e gestione del tema.
 // =========================================================================
 import { fetchAssets, fetchSupplyChain, fetchAuditLogs } from './database.js';
+import { supabase } from './database.js'; // O da dove esporti il client Supabase
 
 export function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -216,12 +217,13 @@ export async function loadAndRenderSupplyChain() {
 // --- NUOVA FUNZIONE PER VISUALIZZARE L'UTENTE LOGGATO ---
 export async function updateHeaderUser() {
     const userDisplay = document.getElementById('user-display');
-    if (!userDisplay) return; // Esci silenziosamente se l'elemento non esiste
+    if (!userDisplay) return; 
 
     try {
+        // Qui chiama supabase, che ORA è importato
         const { data: { user } } = await supabase.auth.getUser();
-        userDisplay.innerText = user ? `👤 ${user.email}` : "Nessun utente";
+        userDisplay.innerText = user ? `👤 ${user.email}` : "Nessun utente loggato";
     } catch (err) {
-        console.error("Errore aggiornamento header:", err);
+        console.log("Utente non loggato o errore:", err);
     }
 }
