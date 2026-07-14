@@ -49,11 +49,18 @@ export function switchView(viewId) {
 
 async function renderAuditLog() {
     const container = document.getElementById('audit-table-body');
-    if (!container) return;
+    if (!container) {
+        console.error("DEBUG: Elemento 'audit-table-body' non trovato nel DOM!");
+        return;
+    }
+    
+    console.log("DEBUG: Inizio esecuzione renderAuditLog"); // TEST 1
     
     try {
         container.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento log in corso...</td></tr>';
         const logs = await fetchAuditLogs();
+        
+        console.log("DEBUG: Log ricevuti dalla funzione:", logs); // TEST 2
         
         if (!logs || logs.length === 0) {
             container.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nessun evento registrato.</td></tr>';
@@ -68,7 +75,11 @@ async function renderAuditLog() {
                 <td style="padding: 10px; font-size: 0.85rem;">Asset ID: ${log.asset_id || 'N/A'}</td>
             </tr>
         `).join('');
+        
+        console.log("DEBUG: Rendering completato con successo."); // TEST 3
+        
     } catch (err) {
+        console.error("DEBUG: Errore nella funzione renderAuditLog:", err); // TEST 4
         container.innerHTML = `<tr><td colspan="4" class="error-msg">Errore: ${err.message}</td></tr>`;
     }
 }
