@@ -86,3 +86,13 @@ export async function fetchSupplyChain() {
     if (error) throw error;
     return data;
 }
+export async function fetchAuditLogs() {
+    const { data, error } = await supabase
+        .from('audit_log')
+        .select('*')
+        .order('data_modifica', { ascending: false })
+        .limit(50);
+    
+    if (error) throw error;
+    return data;
+}

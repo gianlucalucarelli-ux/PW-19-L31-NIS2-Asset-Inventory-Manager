@@ -1,7 +1,7 @@
 // =========================================================================
 // FILE: src/ui.js Manipolazione del DOM, routing visivo e gestione del tema.
 // =========================================================================
-import { fetchAssets, fetchSupplyChain } from './database.js';
+import { fetchAssets, fetchSupplyChain, fetchAuditLogs } from './database.js';
 
 export function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -47,17 +47,36 @@ export function switchView(viewId) {
 // FUNZIONI DI SUPPORTO VISTE (AUDIT E INCIDENTI)
 // =========================================================================
 
-function renderAuditLog() {
+async function renderAuditLog() {
     const container = document.getElementById('audit-table-body');
     if (!container) return;
-    container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Caricamento log in corso...</td></tr>';
-    // Qui aggiungeremo il fetch dalla tabella audit_log nei prossimi step
+    
+    try {
+        container.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento log in corso...</td></tr>';
+        const logs = await fetchAuditLogs();
+        
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nessun evento registrato.</td></tr>';
+            return;
+        }
+
+        container.innerHTML = logs.map(log => `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 10px; font-size: 0.85rem;">${new Date(log.data_modifica).toLocaleString()}</td>
+                <td style="padding: 10px;">${log.operazione}</td>
+                <td style="padding: 10px; font-size: 0.85rem;">${log.utente}</td>
+                <td style="padding: 10px; font-size: 0.85rem;">Asset ID: ${log.asset_id || 'N/A'}</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        container.innerHTML = `<tr><td colspan="4" class="error-msg">Errore: ${err.message}</td></tr>`;
+    }
 }
 
 function initIncidentWizard() {
     const container = document.getElementById('view-incidenti');
     if (!container) return;
-    // Qui inizializzeremo la logica del Wizard incidenti
+    console.log("Wizard Incidenti inizializzato e pronto.");
 }
 
 // =========================================================================
