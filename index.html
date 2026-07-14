@@ -63,6 +63,9 @@
                     <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('inventory')">📦 Inventario Asset</button>
                     <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('add-asset')">➕ Nuovo Asset</button>
                     <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('supply-chain')">🔗 Supply Chain</button>
+                    <hr style="width: 100%; border: 0; border-top: 1px solid var(--border-color); margin: 5px 0;">
+                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('audit-log')">📋 Audit Log</button>
+                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('incidenti')">🚨 Gestione Incidenti</button>
                 </div>
             </aside>
 
@@ -103,7 +106,6 @@
                     </div>
                     <form id="asset-form" style="max-width: 500px;">
                         <input type="hidden" id="asset-id">
-                        
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 5px;">Nome Asset</label>
                             <input type="text" id="asset-nome" placeholder="es. FW-BORDER-01" class="form-input" required>
@@ -144,7 +146,20 @@
                         </thead>
                         <tbody id="supply-chain-table-body"></tbody>
                     </table>
-                </div> 
+                </div>
+
+                <div id="view-audit-log" class="view-section card" style="display:none;">
+                    <h2>Audit Log (Compliance NIS2)</h2>
+                    <p style="font-size: 0.9rem; margin-bottom: 15px;">Tracciamento storico delle modifiche asset.</p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody id="audit-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div id="view-incidenti" class="view-section card" style="display:none;">
+                    <h2>Gestione Incidenti</h2>
+                    <p>Wizard per la segnalazione di eventi di sicurezza.</p>
+                </div>
 
             </section>
         </div>
