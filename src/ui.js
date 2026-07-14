@@ -2,7 +2,6 @@
 // FILE: src/ui.js Manipolazione del DOM, routing visivo e gestione del tema.
 // =========================================================================
 import { fetchAssets, fetchSupplyChain, fetchAuditLogs } from './database.js';
-import { supabase } from './database.js'; // O da dove esporti il client Supabase
 
 export function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -181,10 +180,7 @@ export function mostraDashboardInterfaccia() {
     if (dashboardContainer) dashboardContainer.style.display = 'block';
     if (navMenuLinks) navMenuLinks.style.display = 'flex';
     if (logoutBtn) logoutBtn.style.display = 'block';
-    
-    // Aggiorna l'utente nell'header dopo il login
-    updateHeaderUser(); 
-    
+           
     loadAndRenderTable();
 }
 
