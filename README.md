@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)]()
 
 ## 📝 Descrizione del Progetto
-Soluzione software progettata per rispondere agli obblighi di censimento e modellazione degli asset critici, definita dalla direttiva **NIS2 (UE 2022/2555)**. Il sistema permette alle organizzazioni (pubbliche e private) di mappare le dipendenze tra infrastruttura tecnologica e servizi erogati, garantendo piena aderenza alla tassonomia stabilita dall'**Agenzia per la Cybersicurezza Nazionale (ACN)**.
+Il presente Project Work nasce dall'esigenza di affrontare una sfida reale e stringente per le infrastrutture critiche del settore pubblico e privato: la gestione sicura e censita degli asset informativi in conformità con la direttiva NIS2 e le linee guida dell'Agenzia per la Cybersicurezza Nazionale (ACN). Il lavoro si inserisce nel percorso accademico presso l'Università Telematica Pegaso, a completamento del Corso di Laurea Triennale in Informatica per le aziende digitali (L-31), traducendo i modelli teorici in un prototipo funzionale di Asset Management. L'architettura proposta non si limita a catalogare le risorse hardware e software, ma implementa un sistema di gestione del dato basato su criteri di tracciabilità, integrità e sicurezza, offrendo un modello scalabile e conforme ai moderni standard di cybersecurity. Attraverso lo sviluppo di questo prototipo, l'elaborato intende dimostrare come l'adozione di metodologie di sviluppo agili e di piattaforme cloud native possa rispondere efficacemente alla complessità normativa, garantendo al contempo una gestione operativa semplificata e rigorosa per le aziende.
 
 ## 🏗️ Architettura Tecnica
 Il sistema adotta un approccio *Cloud Native* per garantire scalabilità e sicurezza:
