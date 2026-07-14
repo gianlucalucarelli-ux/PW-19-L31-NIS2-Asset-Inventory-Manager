@@ -33,5 +33,6 @@ L'applicazione è consultabile online per la valutazione delle funzionalità imp
 *  URL: https://gianlucalucarelli-ux.github.io/PW-19-L31-NIS2-Asset-Inventory-Manager/
 *  Credenziali: Il sistema utilizza un'autenticazione tramite provider esterno. Per l'accesso in modalità semplice senza MFA per i docenti
     ** Utenza: docentepegaso@gmail.com
+   
     ** password: 9P4UxeD2S$
 L'autenticazione MFA è stata implementata ed è funzionante 
