@@ -76,3 +76,13 @@ export async function bulkInsertAssets(assetsArray) {
     if (error) throw error;
     return data;
 }
+/**
+ * Legge i dati di supply chain dalla vista reporting servizi critici
+ */
+export async function fetchSupplyChain() {
+    const { data, error } = await supabase
+        .from('vista_reporting_servizi_critici')
+        .select('*');
+    if (error) throw error;
+    return data;
+}

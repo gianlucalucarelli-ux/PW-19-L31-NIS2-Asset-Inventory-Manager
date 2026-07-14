@@ -1,7 +1,7 @@
 // =========================================================================
 // FILE: src/ui.js Manipolazione del DOM, routing visivo e gestione del tema.
 // =========================================================================
-import { fetchAssets } from './database.js';
+import { fetchAssets, fetchSupplyChain } from './database.js';
 
 export function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -25,16 +25,6 @@ export function switchView(viewId) {
     // Mostra la sezione selezionata
     const targetView = document.getElementById('view-' + viewId);
     if (targetView) targetView.style.display = 'block';
-    
-    // Gestione stato attivo sulla Sidebar
-    /* Nota: Commentato temporaneamente se usi bottoni di tipo generico per evitare errori di classe
-    document.querySelectorAll('.menu-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if(btn.textContent.toLowerCase().includes(viewId.replace('-', ' '))) {
-            btn.classList.add('active');
-        }
-    });
-    */
 
     if (viewId === 'inventory') {
         loadAndRenderTable();
@@ -44,6 +34,8 @@ export function switchView(viewId) {
         if (!document.getElementById('asset-id').value) {
             resetAssetForm();
         }
+    } else if (viewId === 'supply-chain') {
+        loadAndRenderSupplyChain(); // Carica la tabella Supply Chain quando si apre la vista
     }
 }
 
@@ -149,4 +141,32 @@ export function mostraDashboardInterfaccia() {
     if (logoutBtn) logoutBtn.style.display = 'block';
     
     loadAndRenderTable();
+}
+
+export async function loadAndRenderSupplyChain() {
+    const container = document.getElementById('supply-chain-table-body');
+    if (!container) return;
+
+    try {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Estrazione dati Supply Chain in corso...</td></tr>';
+        const data = await fetchSupplyChain();
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Nessuna dipendenza registrata nel database.</td></tr>';
+            return;
+        }
+
+        container.innerHTML = data.map(item => `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 10px;">${item.Service_Name || 'N/D'}</td>
+                <td style="padding: 10px;">${item.Service_Type || 'N/D'}</td>
+                <td style="padding: 10px;"><strong>${item.Dependent_Asset || 'N/D'}</strong></td>
+                <td style="padding: 10px;">${item.Vendor_Partner || 'N/D'}</td>
+                <td style="padding: 10px; font-size: 0.8rem; color: var(--text-muted);">${item.Vendor_Contact || 'N/D'}</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error("Errore rendering Supply Chain:", err);
+        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore di comunicazione col DB: ${err.message}</td></tr>`;
+    }
 }
