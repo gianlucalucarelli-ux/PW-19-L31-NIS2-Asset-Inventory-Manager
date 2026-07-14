@@ -1,7 +1,8 @@
 // ===============================================================================================================
 // FILE: src/main.js Punto d'ingresso dell'applicazione. Orchestrazione degli eventi e mappatura delle API globali
 // ===============================================================================================================
-import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable } from './ui.js';
+// MODIFICA QUESTA RIGA IN MAIN.JS
+import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable, updateHeaderUser } from './ui.js';
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
 import { exportToExcel, parseExcelFile } from './importExport.js';

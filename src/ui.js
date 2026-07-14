@@ -215,19 +215,13 @@ export async function loadAndRenderSupplyChain() {
 }
 // --- NUOVA FUNZIONE PER VISUALIZZARE L'UTENTE LOGGATO ---
 export async function updateHeaderUser() {
+    const userDisplay = document.getElementById('user-display');
+    if (!userDisplay) return; // Esci silenziosamente se l'elemento non esiste
+
     try {
-        // Assumendo che 'supabase' sia disponibile globalmente o importato nel tuo main.js
         const { data: { user } } = await supabase.auth.getUser();
-        const userDisplay = document.getElementById('user-display');
-        
-        if (userDisplay) {
-            if (user) {
-                userDisplay.innerText = `👤 ${user.email}`;
-            } else {
-                userDisplay.innerText = "Nessun utente loggato";
-            }
-        }
+        userDisplay.innerText = user ? `👤 ${user.email}` : "Nessun utente";
     } catch (err) {
-        console.error("Errore nel recupero utente:", err);
+        console.error("Errore aggiornamento header:", err);
     }
 }
