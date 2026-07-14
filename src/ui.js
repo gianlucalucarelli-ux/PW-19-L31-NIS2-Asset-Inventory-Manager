@@ -26,18 +26,43 @@ export function switchView(viewId) {
     const targetView = document.getElementById('view-' + viewId);
     if (targetView) targetView.style.display = 'block';
 
+    // Gestione logiche specifiche per vista
     if (viewId === 'inventory') {
         loadAndRenderTable();
-        resetAssetForm(); // Pulisce sempre il form quando torni alla dashboard
+        resetAssetForm();
     } else if (viewId === 'add-asset') {
-        // Se c'è un ID nel campo nascosto stiamo modificando, altrimenti assicurati sia pulito
         if (!document.getElementById('asset-id').value) {
             resetAssetForm();
         }
     } else if (viewId === 'supply-chain') {
-        loadAndRenderSupplyChain(); // Carica la tabella Supply Chain quando si apre la vista
+        loadAndRenderSupplyChain();
+    } else if (viewId === 'audit-log') {
+        renderAuditLog();
+    } else if (viewId === 'incidenti') {
+        initIncidentWizard();
     }
 }
+
+// =========================================================================
+// FUNZIONI DI SUPPORTO VISTE (AUDIT E INCIDENTI)
+// =========================================================================
+
+function renderAuditLog() {
+    const container = document.getElementById('audit-table-body');
+    if (!container) return;
+    container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Caricamento log in corso...</td></tr>';
+    // Qui aggiungeremo il fetch dalla tabella audit_log nei prossimi step
+}
+
+function initIncidentWizard() {
+    const container = document.getElementById('view-incidenti');
+    if (!container) return;
+    // Qui inizializzeremo la logica del Wizard incidenti
+}
+
+// =========================================================================
+// FUNZIONI ESISTENTI (INVENTARIO E SUPPLY CHAIN)
+// =========================================================================
 
 export async function loadAndRenderTable() {
     const assetTableBody = document.getElementById('asset-table-body');
@@ -45,22 +70,18 @@ export async function loadAndRenderTable() {
 
     try {
         assetTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Sincronizzazione in corso...</td></tr>';
-        
         const data = await fetchAssets();
         
         if (!data || data.length === 0) {
-            assetTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Nessun asset censito. Importa un file Excel o creane uno manualmente.</td></tr>';
+            assetTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Nessun asset censito.</td></tr>';
             return;
         }
 
-        // Mapping compatibile sia con nomi colonna vecchi che nuovi
         assetTableBody.innerHTML = data.map(a => {
             const id = a.id || a.Asset_ID;
             const nome = a.nome || a.Asset_Name || 'N/D';
             const versione = a.versione || a.Software_Version || 'N/D';
             const criticita = a.criticita || a.Criticity_Level || 'Bassa';
-            
-            // Logica CSS per i badge di rischio
             const badgeClass = (criticita.toLowerCase() === 'critica' || criticita.toLowerCase() === 'alta') ? 'risk-high' : 'risk-none';
 
             return `
@@ -76,52 +97,42 @@ export async function loadAndRenderTable() {
             `;
         }).join('');
 
-        // Collega i listener per l'edit dinamicamente sui nuovi bottoni
         document.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
                 const asset = data.find(item => (item.id || item.Asset_ID) == id);
-                if (asset) {
-                    caricaAssetNelForm(asset);
-                }
+                if (asset) caricaAssetNelForm(asset);
             });
         });
 
     } catch (error) {
         console.error("Errore nel rendering:", error.message);
-        assetTableBody.innerHTML = `<tr><td colspan="5" class="error-msg">Errore di comunicazione col DB: ${error.message}</td></tr>`;
+        assetTableBody.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${error.message}</td></tr>`;
     }
 }
 
 export function caricaAssetNelForm(asset) {
-    // 1. Inserisce i dati nei campi input
     document.getElementById('asset-id').value = asset.id || asset.Asset_ID;
     document.getElementById('asset-nome').value = asset.nome || asset.Asset_Name || '';
     document.getElementById('asset-versione').value = asset.versione || asset.Software_Version || '';
     
-    // Normalizzazione Criticità per la tendina Select
     const currCrit = asset.criticita || asset.Criticity_Level || 'Bassa';
     const selectElem = document.getElementById('asset-criticita');
     if(selectElem) selectElem.value = currCrit.charAt(0).toUpperCase() + currCrit.slice(1).toLowerCase();
 
-    // 2. Modifica dinamicamente i testi della UI per indicare la modalità UPDATE
     const headerTitle = document.querySelector('#view-add-asset h2');
     const submitBtn = document.querySelector('#asset-form button[type="submit"]');
-    
     if (headerTitle) headerTitle.textContent = "Modifica Configurazione Asset";
     if (submitBtn) submitBtn.textContent = "Aggiorna Dati";
 
-    // 3. Sposta l'utente sulla vista del form
     switchView('add-asset');
 }
 
 export function resetAssetForm() {
     const form = document.getElementById('asset-form');
     if (form) {
-        form.reset(); // Pulisce tutti i campi
-        document.getElementById('asset-id').value = ''; // Svuota l'ID nascosto
-        
-        // Ripristina i testi originali per l'INSERT
+        form.reset();
+        document.getElementById('asset-id').value = '';
         const headerTitle = document.querySelector('#view-add-asset h2');
         const submitBtn = document.querySelector('#asset-form button[type="submit"]');
         if (headerTitle) headerTitle.textContent = "Inserimento Nuovo Asset";
@@ -148,11 +159,10 @@ export async function loadAndRenderSupplyChain() {
     if (!container) return;
 
     try {
-        container.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Estrazione dati Supply Chain in corso...</td></tr>';
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Estrazione dati in corso...</td></tr>';
         const data = await fetchSupplyChain();
-        
         if (!data || data.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Nessuna dipendenza registrata nel database.</td></tr>';
+            container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nessuna dipendenza registrata.</td></tr>';
             return;
         }
 
@@ -167,6 +177,6 @@ export async function loadAndRenderSupplyChain() {
         `).join('');
     } catch (err) {
         console.error("Errore rendering Supply Chain:", err);
-        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore di comunicazione col DB: ${err.message}</td></tr>`;
+        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${err.message}</td></tr>`;
     }
 }
