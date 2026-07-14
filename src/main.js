@@ -12,6 +12,9 @@ console.log("Sistema modulare ES6 caricato correttamente!");
 initTheme();
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Aggiorna l'header con l'utente (Funzione appena aggiunta in ui.js)
+    updateHeaderUser();
+
     // Riferimenti DOM
     const loginForm = document.getElementById('login-form');
     const loginView = document.getElementById('login-view');

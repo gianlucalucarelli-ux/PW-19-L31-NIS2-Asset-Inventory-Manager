@@ -181,6 +181,9 @@ export function mostraDashboardInterfaccia() {
     if (navMenuLinks) navMenuLinks.style.display = 'flex';
     if (logoutBtn) logoutBtn.style.display = 'block';
     
+    // Aggiorna l'utente nell'header dopo il login
+    updateHeaderUser(); 
+    
     loadAndRenderTable();
 }
 
@@ -208,5 +211,23 @@ export async function loadAndRenderSupplyChain() {
     } catch (err) {
         console.error("Errore rendering Supply Chain:", err);
         container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${err.message}</td></tr>`;
+    }
+}
+// --- NUOVA FUNZIONE PER VISUALIZZARE L'UTENTE LOGGATO ---
+export async function updateHeaderUser() {
+    try {
+        // Assumendo che 'supabase' sia disponibile globalmente o importato nel tuo main.js
+        const { data: { user } } = await supabase.auth.getUser();
+        const userDisplay = document.getElementById('user-display');
+        
+        if (userDisplay) {
+            if (user) {
+                userDisplay.innerText = `👤 ${user.email}`;
+            } else {
+                userDisplay.innerText = "Nessun utente loggato";
+            }
+        }
+    } catch (err) {
+        console.error("Errore nel recupero utente:", err);
     }
 }
