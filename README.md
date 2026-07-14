@@ -34,4 +34,5 @@ L'applicazione è consultabile online per la valutazione delle funzionalità imp
 *  Credenziali: Il sistema utilizza un'autenticazione tramite provider esterno. Per l'accesso in modalità semplice senza MFA per i docenti
     * Utenza: docentepegaso@gmail.com
     * password: 9P4UxeD2S$
+    * 
 L'autenticazione MFA è stata implementata ed è funzionante 
