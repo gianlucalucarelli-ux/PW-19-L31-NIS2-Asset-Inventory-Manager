@@ -7,9 +7,7 @@ Registro centralizzato per la modellazione di asset e servizi critici secondo la
 ---
 
 ## 1. Descrizione del Progetto
-Il progetto risponde all'esigenza delle organizzazioni soggette alla direttiva NIS2 (UE 2022/2555) di censire in modo strutturato gli asset, i servizi critici e le dipendenze verso fornitori terzi.  
-L'obiettivo è la progettazione e realizzazione di un database relazionale centralizzato che consenta di modellare le relazioni gerarchiche tra asset e servizi, 
-i rispettivi responsabili e i metadati richiesti dall'Agenzia per la Cybersicurezza Nazionale (ACN) per la generazione dei profili di sicurezza.  
+Il presente Project Work nasce dall'esigenza di affrontare una sfida reale e stringente per le infrastrutture critiche del settore pubblico e privato: la gestione sicura e censita degli asset informativi in conformità con la direttiva NIS2 e le linee guida dell'Agenzia per la Cybersicurezza Nazionale (ACN). Il lavoro si inserisce nel percorso accademico presso l'Università Telematica Pegaso, a completamento del Corso di Laurea Triennale in Informatica per le aziende digitali (L-31), traducendo i modelli teorici in un prototipo funzionale di Asset Management. L'architettura proposta non si limita a catalogare le risorse hardware e software, ma implementa un sistema di gestione del dato basato su criteri di tracciabilità, integrità e sicurezza, offrendo un modello scalabile e conforme ai moderni standard di cybersecurity. Attraverso lo sviluppo di questo prototipo, l'elaborato intende dimostrare come l'adozione di metodologie di sviluppo agili e di piattaforme cloud native possa rispondere efficacemente alla complessità normativa, garantendo al contempo una gestione operativa semplificata e rigorosa per le aziende.
 
 ## 2. Architettura e Tecnologie
 Il sistema è sviluppato seguendo i criteri di normalizzazione e sicurezza richiesti in ambito progettuale e professionale:
