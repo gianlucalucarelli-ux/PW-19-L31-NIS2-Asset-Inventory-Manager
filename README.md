@@ -1,8 +1,8 @@
-# PW-19-L31-NIS2-Asset-Inventory-Manager
-Registro centralizzato per la modellazione di asset e servizi critici secondo la direttiva NIS2 e tassonomia ACN.
-# PW-19-L31-NIS2-Asset-Inventory-Manager
-## Registro Centralizzato Asset e Servizi Critici (Direttiva NIS2 / ACN)
-### Progetto di Project Work - Corso di Laurea L31 in Informatica - Università Pegaso
+# Univerità Telemati Pegaso
+# Laurea Triennale in Informatica per le aziende digitali L-31
+# Tema n. 2 Privacy e sicurezza aziendale
+## PW 19. Progettare e realizzare una base dati relazionale per catalogare asset, servizi, dipendenze e responsabilità utili alla compilazione dei profili richiesti dall'ACN nell'ambito della NIS2
+### Registro Centralizzato Asset e Servizi Critici (Direttiva NIS2 / ACN)
 
 ---
 
