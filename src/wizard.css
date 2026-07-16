@@ -1,66 +1,31 @@
-// src/wizard.js
-import { fetchTassonomiaByPasso, salvaSelezioneIncidente } from './incidentService.js';
-
-let passoCorrente = 1;
-let eventoId = 1; // In un sistema reale, questo ID verrebbe generato all'inizio del wizard
-
-const container = document.getElementById('step-content');
-const title = document.getElementById('step-title');
-
-// Mappatura passi -> Dati database
-const stepsConfig = {
-    1: { title: "Passo 1: Baseline Characterization (Impatto)", area: "BC", cat: "Impatto" },
-    2: { title: "Passo 2: Baseline Characterization (Causa)", area: "BC", cat: "Causa" },
-    3: { title: "Passo 3: Baseline Characterization (Severità)", area: "BC", cat: "Severità" },
-    4: { title: "Passo 4: Tipo Minaccia", area: "TT", cat: null },
-    5: { title: "Passo 5: Threat Actor", area: "TA", cat: null },
-    6: { title: "Passo 6: Additional Context", area: "AC", cat: null }
-};
-
-async function renderPasso() {
-    const cfg = stepsConfig[passoCorrente];
-    if (!cfg) return;
-
-    title.innerText = cfg.title;
-    container.innerHTML = 'Caricamento dati...';
-
-    try {
-        const options = await fetchTassonomiaByPasso(cfg.area, cfg.cat);
-        
-        container.innerHTML = options.map(opt => `
-            <label class="checkbox-item">
-                <input type="checkbox" value="${opt.id}"> ${opt.nome_esteso}
-            </label>
-        `).join('');
-    } catch (err) {
-        container.innerHTML = "Errore nel caricamento dei dati.";
-        console.error(err);
-    }
+/* src/wizard.css */
+.wizard-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 800px;
+    margin: 20px auto;
 }
 
-document.getElementById('btn-avanti').addEventListener('click', async () => {
-    // 1. Salva le scelte
-    const selezionati = container.querySelectorAll('input:checked');
-    for (let input of selezionati) {
-        await salvaSelezioneIncidente(eventoId, input.value, passoCorrente);
-    }
+.wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
 
-    // 2. Passa al passo successivo
-    if (passoCorrente < 6) {
-        passoCorrente++;
-        renderPasso();
-    } else {
-        alert("Wizard completato!");
-    }
-});
+.checkbox-item {
+    display: block;
+    padding: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
 
-// Avvia il wizard
-renderPasso();
-
-// Inserito listener in fondo a src/wizard.js
-document.getElementById('btn-indietro').addEventListener('click', () => {
-    if (passoCorrente > 1) {
-        passoCorrente--;
-        renderPasso();
-    }
-});
+.checkbox-item:hover { 
+    background: rgba(56, 189, 248, 0.05); 
+}
