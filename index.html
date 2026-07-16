@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NIS2 Asset Inventory Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/wizard.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="src/style.css">
     <script type="module" src="src/main.js"></script>
+    <script type="module" src="src/wizard.js"></script>
 </head>
 <body>
 
@@ -157,13 +159,19 @@
                     </table>
                 </div>
 
-                <div id="view-incidenti" class="view-section card" style="display:none;">
-                    <h2>Gestione Incidenti</h2>
-                    <p>Wizard per la segnalazione di eventi di sicurezza.</p>
-                </div>
-
-            </section>
+                <div id="view-incidenti" class="view-section" style="display:none;">
+    <div id="wizard-container" class="card">
+        <h2 id="step-title" style="margin-bottom: 20px;">Passo 1: Baseline Characterization</h2>
+        <div id="step-content">
+            </div>
+        <div class="wizard-nav" style="display: flex; justify-content: space-between; margin-top: 30px;">
+            <button id="btn-indietro" class="btn-action btn-logout">Indietro</button>
+            <button id="btn-avanti" class="btn-action btn-add">Avanti</button>
         </div>
+    </div>
+</div>
+</section>
+</div>
     </main>
 
     <section class="card" id="info-container" style="display: none; margin-top: 20px; padding: 30px;">
