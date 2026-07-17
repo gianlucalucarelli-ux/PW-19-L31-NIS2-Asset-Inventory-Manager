@@ -34,3 +34,20 @@ export async function fetchTassonomiaByPasso(macroArea, sottoCategoria = null) {
     if (error) throw error;
     return data;
 }
+
+// NUOVA FUNZIONE: Recupera tutte le selezioni di un incidente per il report finale
+export async function fetchReportIncidente(eventoId) {
+    const { data, error } = await supabase
+        .from('evento_tassonomia_acn')
+        .select(`
+            passo_wizard,
+            tassonomia_incidenti_acn (nome_esteso, codice_acn)
+        `)
+        .eq('evento_id', eventoId);
+
+    if (error) {
+        console.error("Errore fetchReportIncidente:", error);
+        throw error;
+    }
+    return data;
+}
