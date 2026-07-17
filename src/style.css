@@ -60,8 +60,9 @@ header {
 
 nav {
     display: flex;
-    gap: 15px;
+    flex-direction: row; /* Forza l'orizzontalità */
     align-items: center;
+    gap: 15px;           /* Spazio tra i bottoni */
 }
 
 a {
@@ -78,11 +79,15 @@ button {
 }
 
 .btn-success {
-    background: var(--primary);
-    color: #000;
+    background: var(--primary); /* Azzurro (da root) */
+    color: var(--bg-main);      /* Contrasto corretto */
     width: 100%;
     padding: 10px;
     margin-top: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 6px;
 }
 
 .btn-logout {
