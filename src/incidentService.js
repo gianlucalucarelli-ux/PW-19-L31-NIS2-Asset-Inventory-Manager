@@ -21,7 +21,7 @@ export async function startIncidente(payload) {
  * Salva una selezione specifica del Wizard nella tabella di giunzione.
  * Utilizziamo upsert per permettere all'utente di cambiare idea durante i passaggi.
  */
-export async function saveTassonomiaScelta(eventoId, tassonomiaId, passo) {
+export async function salvaSelezioneIncidente(eventoId, tassonomiaId, passo) {
     const { data, error } = await supabase
         .from('evento_tassonomia_acn')
         .upsert([
