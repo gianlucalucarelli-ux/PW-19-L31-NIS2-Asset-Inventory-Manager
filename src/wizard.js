@@ -1,3 +1,4 @@
+// src/wizard.js
 import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente, updateIncidente } from './incidentService.js';
 
 let passoCorrente = 1;
@@ -17,16 +18,16 @@ const stepsConfig = {
 async function initWizard() {
     container.innerHTML = 'Avvio sessione incidente...';
     try {
-        // Campi obbligatori per il DB (inizio e severita)
         const nuovoIncidente = await startIncidente({ 
             inizio: new Date().toISOString(),
             severita: 'Media' 
         });
         eventoId = nuovoIncidente.id;
+        console.log("Incidente inizializzato con ID:", eventoId);
         renderPasso(); 
     } catch (err) {
         console.error("Errore initWizard:", err);
-        container.innerHTML = "Errore critico: verifica la tabella evento_servizio.";
+        container.innerHTML = "Errore critico: verifica le policy RLS su Supabase.";
     }
 }
 
@@ -44,6 +45,7 @@ async function renderPasso() {
     const cfg = stepsConfig[passoCorrente];
     if (!cfg) return;
     title.innerText = cfg.title;
+    container.innerHTML = 'Caricamento dati...';
     try {
         const options = await fetchTassonomiaByPasso(cfg.area, cfg.cat);
         container.innerHTML = options.map(opt => `
@@ -55,15 +57,25 @@ async function renderPasso() {
 }
 
 document.getElementById('btn-avanti').addEventListener('click', async () => {
+    if (!eventoId) {
+        alert("Errore: Il wizard non è stato inizializzato correttamente.");
+        return;
+    }
+
     try {
-        // Logica specifica passo 1: aggiorna il record creato
         if (passoCorrente === 1) {
-            const val = document.querySelector('input[name="tipologia"]:checked').value;
-            await updateIncidente(eventoId, { tipologia: val });
+            const selectedRadio = document.querySelector('input[name="tipologia"]:checked');
+            if (!selectedRadio) {
+                alert("Seleziona una tipologia.");
+                return;
+            }
+            await updateIncidente(eventoId, { tipologia: selectedRadio.value });
         } else {
-            // Salvataggio passi 2-6
             const selezionati = container.querySelectorAll('input:checked');
-            if (selezionati.length === 0) return alert("Seleziona almeno un'opzione.");
+            if (selezionati.length === 0) {
+                alert("Seleziona almeno un'opzione.");
+                return;
+            }
             for (let input of selezionati) {
                 await salvaSelezioneIncidente(eventoId, input.value, passoCorrente);
             }
@@ -76,6 +88,7 @@ document.getElementById('btn-avanti').addEventListener('click', async () => {
             alert("Wizard completato!");
         }
     } catch (err) {
+        console.error("Errore salvataggio:", err);
         alert("Errore salvataggio: " + err.message);
     }
 });
