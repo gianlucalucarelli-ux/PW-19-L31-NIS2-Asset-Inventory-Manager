@@ -5,14 +5,29 @@ import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAnd
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
 import { exportToExcel, parseExcelFile } from './importExport.js';
+import { supabase } from './supabase.js'; // AGGIUNTO: Necessario per il check sessione
 
 console.log("Sistema modulare ES6 caricato correttamente!");
 
 // Esecuzione immediata per prevenire sfarfallii visivi
 initTheme();
 
-document.addEventListener('DOMContentLoaded', () => {
-// Riferimenti DOM
+document.addEventListener('DOMContentLoaded', async () => {
+    // --- LOGICA PERSISTENZA SESSIONE ---
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        console.log("Sessione rilevata, accesso automatico alla Dashboard.");
+        mostraDashboardInterfaccia();
+    }
+
+    // Listener per gestire logout o cambiamenti stato
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+            window.location.reload();
+        }
+    });
+
+    // Riferimenti DOM
     const loginForm = document.getElementById('login-form');
     const loginView = document.getElementById('login-view');
     const mfaView = document.getElementById('mfa-view');
@@ -109,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODULI OPERATIVI: CRUD ASSET & IMPORT/EXPORT (NIS2 Compliance)
     // =========================================================================
 
-    // 1. Gestione Sottomissione Form (Nuovo Asset / Modifica)
     const formAsset = document.getElementById('asset-form');
     if (formAsset) {
         formAsset.addEventListener('submit', async (e) => {
@@ -148,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Esportazione Dati (XLSX)
+    // Esportazione Dati (XLSX)
     const btnExportXls = document.getElementById('btn-export-xls');
     if (btnExportXls) {
         btnExportXls.addEventListener('click', async () => {
@@ -162,15 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. Importazione Dati Massiva (XLSX/CSV)
+    // Importazione Dati Massiva (XLSX/CSV)
     const btnTriggerImport = document.getElementById('btn-trigger-import');
     const fileInput = document.getElementById('import-xls-input');
 
     if (btnTriggerImport && fileInput) {
-        // Simula il click nativo sull'input hidden
         btnTriggerImport.addEventListener('click', () => fileInput.click());
 
-        // Intercetta il caricamento del file
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -196,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Errore Parsing XLS:", err);
                 alert("Anomalia durante l'analisi del file. Verificare integrità e formato.");
             } finally {
-                fileInput.value = ''; // Pulisce il buffer del file per consentire re-importazioni
+                fileInput.value = '';
             }
         });
     }
