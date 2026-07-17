@@ -39,7 +39,7 @@ body {
 }
 
 /* =========================================
-   HEADER E NAVIGAZIONE (OTTIMIZZATO)
+   HEADER E NAVIGAZIONE
    ========================================= */
 header {
     display: flex;
@@ -58,12 +58,17 @@ header {
     color: var(--primary);
 }
 
-/* Allineamento orizzontale bottoni header */
-header nav {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 15px !important;
+nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+    width: 100%; /* Occupa lo spazio disponibile per gestire gli allineamenti */
+}
+
+/* Questo spinge i bottoni a destra lasciando i link a sinistra */
+nav button:first-of-type {
+    margin-left: auto !important;
 }
 
 a {
@@ -95,7 +100,6 @@ button {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-high);
-    padding: 8px 12px;
 }
 
 /* =========================================
@@ -165,30 +169,99 @@ th {
 .risk-none { background: rgba(16, 185, 129, 0.2); color: var(--success); }
 
 /* =========================================
-   LAYOUT DASHBOARD (UNIFICATO E OTTIMIZZATO)
+   DASHBOARD LAYOUT & SIDEBAR
    ========================================= */
 .dashboard-layout {
-    display: flex !important;
-    gap: 20px !important;
-    margin-top: 20px !important;
-    min-height: 70vh !important;
-    align-items: flex-start !important;
-    width: 100% !important;
+    display: flex;
+    gap: 25px;
+    margin-top: 20px;
+    min-height: 70vh;
+    align-items: flex-start;
 }
 
 .sidebar {
-    width: 250px !important;
-    background: var(--bg-card, #1e293b);
-    border: 1px solid var(--border, #334155);
+    width: 260px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px 15px;
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
 }
 
 .sidebar-menu { 
     display: flex; 
     flex-direction: column; 
     gap: 10px; 
+}
+
+.menu-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-low);
+    padding: 12px 15px;
+    text-align: left;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.menu-btn:hover { background: rgba(56, 189, 248, 0.1); color: var(--primary); }
+.menu-btn.active { background: var(--primary); color: var(--bg-main); }
+
+.content-view { 
+    flex-grow: 1; 
+    width: 100%;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.action-group { display: flex; gap: 15px; }
+
+.btn-action {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.btn-action:hover { filter: brightness(1.1); }
+.btn-add { background: var(--primary); color: var(--bg-main); }
+.btn-export { background: #10b981; color: white; }
+
+.form-card { 
+    padding: 30px; 
+    max-width: 600px; 
+    margin: 0 auto; 
+}
+
+/* =========================================
+   INTEGRAZIONE STILI DASHBOARD E CRUD
+   ========================================= */
+.dashboard-layout {
+    display: flex;
+    gap: 25px;
+    margin-top: 20px;
+    align-items: flex-start;
+}
+
+.sidebar {
+    width: 250px;
+    background: var(--bg-card, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: 12px;
+    padding: 20px 15px;
+    flex-shrink: 0;
 }
 
 .menu-btn {
@@ -215,8 +288,8 @@ th {
 }
 
 .content-view { 
-    flex-grow: 1 !important; 
-    width: 100% !important;
+    flex-grow: 1; 
+    width: 100%;
 }
 
 .view-header {
@@ -245,6 +318,26 @@ th {
     padding: 30px; 
     max-width: 600px; 
     margin: 0 auto; 
+}
+
+/* =========================================
+   FIX ALLINEAMENTO LAYOUT DASHBOARD E HEADER
+   ========================================= */
+.dashboard-layout {
+    display: flex !important;
+    gap: 20px !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+}
+
+.sidebar {
+    width: 250px !important;
+    flex-shrink: 0 !important;
+}
+
+.content-view {
+    flex-grow: 1 !important;
+    width: 100% !important;
 }
 
 #presentation-header {
