@@ -356,3 +356,24 @@ th {
     align-items: flex-start !important;
     gap: 8px !important;
 }
+
+/* =========================================
+   FIX ALLINEAMENTO BOTTONI HEADER
+   ========================================= */
+header nav, 
+.nav-menu, 
+.nav-container {
+    display: flex !important;
+    flex-direction: row !important;      /* Forza la disposizione in linea */
+    align-items: center !important;      /* Allinea verticalmente al centro */
+    justify-content: flex-end !important; /* Spinge i bottoni a destra */
+    gap: 12px !important;                /* Spazio standardizzato tra i bottoni */
+}
+
+/* Forzatura elementi interni per evitare collassi */
+#theme-toggle, 
+#logout-btn {
+    display: inline-block !important;
+    margin: 0 !important;
+    white-space: nowrap !important;      /* Impedisce al testo di andare a capo */
+}
