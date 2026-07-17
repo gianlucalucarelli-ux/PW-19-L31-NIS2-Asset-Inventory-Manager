@@ -51,3 +51,13 @@ export async function fetchReportIncidente(eventoId) {
     }
     return data;
 }
+
+// Aggiungi queste due funzioni in fondo al file incidentService.js
+
+export async function checkSessione() {
+    return await supabase.auth.getSession();
+}
+
+export function ascoltaSessione(callback) {
+    return supabase.auth.onAuthStateChange(callback);
+}

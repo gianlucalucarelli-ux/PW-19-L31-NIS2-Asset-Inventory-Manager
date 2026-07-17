@@ -1,6 +1,5 @@
 // src/wizard.js
-import { supabase } from './supabase.js';
-import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente, updateIncidente, fetchReportIncidente } from './incidentService.js';
+import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente, updateIncidente, fetchReportIncidente, checkSessione, ascoltaSessione } from './incidentService.js';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -16,22 +15,22 @@ const stepsConfig = {
     6: { title: "Passo 6: Threat Actor", area: "TA", cat: null }
 };
 
-// Funzione principale di inizializzazione con attesa di sicurezza
+// Funzione principale di inizializzazione con attesa di sicurezza delegata al service
 async function initWizard() {
     container.innerHTML = 'Attesa autorizzazione di sicurezza...';
     
     try {
-        // 1. Controllo immediato: vediamo se la sessione c'è già
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // 1. Controllo immediato: interroghiamo la sessione tramite incidentService
+        const { data: { session }, error } = await checkSessione();
         
         if (session) {
-            // Utente già loggato, partiamo subito
+            // Utente già loggato, avvio immediato
             await avviaWizard();
         } else {
-            // 2. Se non c'è, restiamo in ascolto. Appena il token arriva, partiamo.
-            const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+            // 2. Se non c'è, restiamo in ascolto del token tramite incidentService
+            const { data: authListener } = ascoltaSessione(async (event, newSession) => {
                 if (newSession) {
-                    authListener.subscription.unsubscribe(); // Stacchiamo l'ascoltatore per evitare duplicati
+                    authListener.subscription.unsubscribe(); // Stacchiamo l'ascoltatore per evitare race conditions e loop
                     await avviaWizard();
                 }
             });
@@ -89,7 +88,7 @@ async function generaReportFinale() {
     try {
         const reportData = await fetchReportIncidente(eventoId);
         
-        // Funzione helper per mappare Nome Esteso + Codice ACN (Es. "azioni malevole intenzionali BC:RO_MA")
+        // Funzione helper per mappare Nome Esteso + Codice ACN
         const formatData = (passo) => {
             const items = reportData.filter(d => d.passo_wizard === passo);
             if (items.length === 0) return "[dato non inserito]";
