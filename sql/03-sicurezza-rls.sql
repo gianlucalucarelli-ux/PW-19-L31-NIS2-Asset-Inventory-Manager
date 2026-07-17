@@ -1,9 +1,9 @@
 -- =========================================================================
--- FILE: sql/03-sicurezza-rls.sql (VERSIONE AGGIORNATA - NUOVO DOCENTE)
+-- FILE: sql/03-sicurezza-rls.sql (VERSIONE DEFINITIVA)
 -- DESCRIZIONE: Abilitazione RLS e Policy (MFA AAL2 + Accesso Docente Pegaso)
 -- =========================================================================
 
--- 1. Abilitazione forzata della RLS su tutte le tabelle
+-- 1. Abilitazione forzata della RLS su tutte le 23 tabelle (AGGIUNTA evento_tassonomia_acn)
 ALTER TABLE public.organizzazione ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categoria_asset ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tipo_servizio ENABLE ROW LEVEL SECURITY;
@@ -26,19 +26,20 @@ ALTER TABLE public.esito_impatto ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.servizio_componente ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.evento_servizio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.evento_tassonomia_acn ENABLE ROW LEVEL SECURITY; -- AGGIUNTA
 
 -- 2. Blocco procedurale per la gestione delle policy
 DO $$ 
 DECLARE 
     t text;
-    docente_email text := 'docentepegaso@gmail.com'; -- Email corretta aggiornata
+    docente_email text := 'docentepegaso@gmail.com'; 
     tables text[] := ARRAY[
         'organizzazione', 'categoria_asset', 'tipo_servizio', 'tipo_fornitore', 
         'ruolo_organigramma', 'responsabile', 'ruolo', 'responsabile_ruolo', 
         'vulnerabilita', 'asset', 'asset_vulnerabilita', 'fornitore', 'stato_servizio',
         'servizio', 'tipo_dipendenza_servizio', 'servizio_dipendenza_asset', 
         'servizio_dipendenza_fornitore', 'tipo_dipendenza', 'esito_impatto', 
-        'servizio_componente', 'evento_servizio', 'audit_log'
+        'servizio_componente', 'evento_servizio', 'audit_log', 'evento_tassonomia_acn' -- AGGIUNTA
     ];
 BEGIN
     FOREACH t IN ARRAY tables LOOP
@@ -47,9 +48,8 @@ BEGIN
         EXECUTE format('DROP POLICY IF EXISTS "Insert_Admin_Policy" ON public.%I', t);
         EXECUTE format('DROP POLICY IF EXISTS "Update_Admin_Policy" ON public.%I', t);
         EXECUTE format('DROP POLICY IF EXISTS "Delete_Admin_Policy" ON public.%I', t);
-        EXECUTE format('DROP POLICY IF EXISTS "Write_Admin_Policy" ON public.%I', t);
 
-        -- BINARIO A (Lettura): MFA AAL2 OR Email Docente Corretta
+        -- BINARIO A (Lettura)
         EXECUTE format('
             CREATE POLICY "Read_All_Policy" ON public.%I FOR SELECT TO authenticated 
             USING ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L))', 
