@@ -58,12 +58,10 @@ header {
     color: var(--primary);
 }
 
-/* Allineamento orizzontale dei bottoni Header */
-header nav {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 15px !important;
+nav {
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
 
 a {
@@ -79,16 +77,12 @@ button {
     font-weight: bold;
 }
 
-/* Stilizzazione del bottone Entra nel Sistema */
 .btn-success {
-    background: var(--primary) !important;
-    color: var(--bg-main) !important;
+    background: var(--primary);
+    color: #000;
     width: 100%;
     padding: 10px;
     margin-top: 10px;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
 }
 
 .btn-logout {
@@ -164,24 +158,23 @@ th {
 .risk-none { background: rgba(16, 185, 129, 0.2); color: var(--success); }
 
 /* =========================================
-   DASHBOARD LAYOUT E FIX
+   DASHBOARD LAYOUT & SIDEBAR
    ========================================= */
 .dashboard-layout {
-    display: flex !important;
-    gap: 20px !important;
+    display: flex;
+    gap: 25px;
     margin-top: 20px;
-    align-items: flex-start !important;
-    width: 100% !important;
     min-height: 70vh;
+    align-items: flex-start;
 }
 
 .sidebar {
-    width: 250px !important;
+    width: 260px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px 15px;
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
 }
 
 .sidebar-menu { 
@@ -192,7 +185,7 @@ th {
 
 .menu-btn {
     background: transparent;
-    border: 1px solid transparent;
+    border: none;
     color: var(--text-low);
     padding: 12px 15px;
     text-align: left;
@@ -207,8 +200,90 @@ th {
 .menu-btn.active { background: var(--primary); color: var(--bg-main); }
 
 .content-view { 
-    flex-grow: 1 !important; 
-    width: 100% !important;
+    flex-grow: 1; 
+    width: 100%;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.action-group { display: flex; gap: 15px; }
+
+.btn-action {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.2s;
+}
+
+.btn-action:hover { filter: brightness(1.1); }
+.btn-add { background: var(--primary); color: var(--bg-main); }
+.btn-export { background: #10b981; color: white; }
+
+.form-card { 
+    padding: 30px; 
+    max-width: 600px; 
+    margin: 0 auto; 
+}
+/* =========================================
+   INTEGRAZIONE STILI DASHBOARD E CRUD
+   ========================================= */
+.dashboard-layout {
+    display: flex;
+    gap: 25px;
+    margin-top: 20px;
+    align-items: flex-start;
+}
+
+.sidebar {
+    width: 250px;
+    background: var(--bg-card, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: 12px;
+    padding: 20px 15px;
+    flex-shrink: 0;
+}
+
+.sidebar-menu { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+}
+
+.menu-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-low, #94a3b8);
+    padding: 12px 15px;
+    text-align: left;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.menu-btn:hover { 
+    background: rgba(56, 189, 248, 0.1); 
+    color: var(--primary, #38bdf8); 
+}
+
+.menu-btn.active { 
+    background: var(--primary, #38bdf8); 
+    color: var(--bg-main, #0f172a); 
+}
+
+.content-view { 
+    flex-grow: 1; 
+    width: 100%;
 }
 
 .view-header {
@@ -216,7 +291,7 @@ th {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border, #334155);
     padding-bottom: 15px;
 }
 
@@ -230,13 +305,44 @@ th {
     cursor: pointer;
 }
 
-.btn-add { background: var(--primary); color: var(--bg-main); }
+.btn-add { background: var(--primary, #38bdf8); color: var(--bg-main, #0f172a); }
 .btn-export { background: #10b981; color: white; }
 
 .form-card { 
     padding: 30px; 
     max-width: 600px; 
     margin: 0 auto; 
+}
+/* =========================================
+   FIX ALLINEAMENTO LAYOUT DASHBOARD E HEADER
+   ========================================= */
+.dashboard-layout {
+    display: flex !important;
+    gap: 20px !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+}
+
+.sidebar {
+    width: 250px !important;
+    flex-shrink: 0 !important;
+}
+
+.content-view {
+    flex-grow: 1 !important;
+    width: 100% !important;
+}
+
+.nav-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.nav-menu {
+    display: flex !important;
+    gap: 20px !important;
 }
 
 #presentation-header {
