@@ -3,24 +3,17 @@
 // ===================================================================================================
 import { supabase } from './supabase.js';
 
-/**
- * Inizializza un nuovo incidente nella tabella "evento_servizio".
- * Restituisce l'ID del nuovo evento creato.
- */
 export async function startIncidente(payload) {
     const { data, error } = await supabase
         .from('evento_servizio')
         .insert([payload])
-        .select('id'); // Recuperiamo l'ID appena generato
+        .select('id');
         
     if (error) throw error;
     return data[0]; 
 }
 
-/**
- * Salva una selezione specifica del Wizard nella tabella di giunzione.
- * Utilizziamo upsert per permettere all'utente di cambiare idea durante i passaggi.
- */
+// Questa è la funzione che serve a wizard.js
 export async function salvaSelezioneIncidente(eventoId, tassonomiaId, passo) {
     const { data, error } = await supabase
         .from('evento_tassonomia_acn')
@@ -36,26 +29,17 @@ export async function salvaSelezioneIncidente(eventoId, tassonomiaId, passo) {
     return data;
 }
 
-/**
- * Recupera i dati della tassonomia filtrati per passo e macro-area
- * (Usata per popolare le checkbox del Wizard)
- */
 export async function fetchTassonomiaByPasso(macroArea, sottoCategoria = null) {
     let query = supabase.from('tassonomia_incidenti_acn').select('*');
-    
     query = query.eq('macro_area', macroArea);
     if (sottoCategoria) {
         query = query.eq('sotto_categoria', sottoCategoria);
     }
-    
     const { data, error } = await query;
     if (error) throw error;
     return data;
 }
 
-/**
- * Genera il riepilogo finale con i codici selezionati (Il Report per ACN)
- */
 export async function fetchReportIncidente(eventoId) {
     const { data, error } = await supabase
         .from('evento_tassonomia_acn')
