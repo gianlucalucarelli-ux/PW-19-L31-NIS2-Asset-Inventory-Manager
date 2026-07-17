@@ -1,13 +1,13 @@
 // src/wizard.js
-import { fetchTassonomiaByPasso, salvaSelezioneIncidente } from './incidentService.js';
+import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente } from './incidentService.js';
 
 let passoCorrente = 1;
-let eventoId = 1; 
+let eventoId = null; // Inizializzato a null, verrà creato all'avvio
 
 const container = document.getElementById('step-content');
 const title = document.getElementById('step-title');
 
-// Configurazione solo per i passi dinamici (dal 2 al 6)
+// Configurazione passi (2-6)
 const stepsConfig = {
     2: { title: "Passo 2: Baseline Characterization (Impatto)", area: "BC", cat: "Impatto" },
     3: { title: "Passo 3: Baseline Characterization (Causa)", area: "BC", cat: "Causa" },
@@ -16,9 +16,24 @@ const stepsConfig = {
     6: { title: "Passo 6: Threat Actor", area: "TA", cat: null }
 };
 
-async function renderPasso() {
-    container.innerHTML = 'Caricamento...';
+// Funzione di inizializzazione: crea l'evento nel DB per ottenere l'ID
+async function initWizard() {
+    container.innerHTML = 'Creazione nuovo incidente...';
+    try {
+        const nuovoIncidente = await startIncidente({ 
+            data_apertura: new Date().toISOString(),
+            stato: 'aperto' 
+        });
+        eventoId = nuovoIncidente.id;
+        console.log("Incidente inizializzato con ID:", eventoId);
+        renderPasso(); 
+    } catch (err) {
+        console.error("Errore initWizard:", err);
+        container.innerHTML = "Errore critico: impossibile avviare un nuovo incidente.";
+    }
+}
 
+async function renderPasso() {
     // 1. GESTIONE PASSO 1 (STATICO)
     if (passoCorrente === 1) {
         title.innerText = "Step 1: Tipologia Soggetto";
@@ -43,11 +58,10 @@ async function renderPasso() {
     if (!cfg) return;
 
     title.innerText = cfg.title;
+    container.innerHTML = 'Caricamento dati...';
 
     try {
         const options = await fetchTassonomiaByPasso(cfg.area, cfg.cat);
-        console.log(`Dati ricevuti per passo ${passoCorrente}:`, options);
-        
         container.innerHTML = options.map(opt => `
             <label class="checkbox-item">
                 <input type="checkbox" value="${opt.id}"> ${opt.nome_esteso}
@@ -61,36 +75,30 @@ async function renderPasso() {
 
 // LOGICA AVANTI
 document.getElementById('btn-avanti').addEventListener('click', async () => {
-    console.log("Cliccato Avanti. Passo attuale:", passoCorrente);
+    if (!eventoId) return; // Blocco di sicurezza
 
     try {
-        // Se siamo al passo 1, non salviamo su DB (o salviamo in una tabella dedicata se vuoi)
-        if (passoCorrente === 1) {
-            console.log("Passo 1 superato.");
-        } else {
-            // Salvataggio passi 2-6
+        if (passoCorrente > 1) {
             const selezionati = container.querySelectorAll('input:checked');
             if (selezionati.length === 0) {
-                alert("Seleziona almeno un'opzione per proseguire.");
+                alert("Seleziona almeno un'opzione.");
                 return;
             }
             
             for (let input of selezionati) {
                 await salvaSelezioneIncidente(eventoId, input.value, passoCorrente);
-                console.log("Salvato ID:", input.value);
             }
         }
 
-        // Passaggio passo
         if (passoCorrente < 6) {
             passoCorrente++;
             renderPasso();
         } else {
-            alert("Wizard completato!");
+            alert("Wizard completato! Report generato.");
         }
     } catch (err) {
-        console.error("Errore salvataggio:", err);
-        alert("Errore durante il salvataggio. Controlla la console.");
+        console.error("Errore durante il salvataggio:", err);
+        alert("Errore salvataggio: " + err.message);
     }
 });
 
@@ -102,5 +110,5 @@ document.getElementById('btn-indietro').addEventListener('click', () => {
     }
 });
 
-// Avvio
-renderPasso();
+// Avvia l'inizializzazione invece di renderPasso diretto
+initWizard();
