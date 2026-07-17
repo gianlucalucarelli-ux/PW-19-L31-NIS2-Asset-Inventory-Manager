@@ -161,18 +161,27 @@
                 </div>
 
                 <div id="view-incidenti" class="view-section" style="display:none;">
-    <div id="wizard-container" class="card">
-        <h2 id="step-title" style="margin-bottom: 20px;">Passo 1: Baseline Characterization</h2>
-        <div id="step-content">
-            </div>
-        <div class="wizard-nav" style="display: flex; justify-content: space-between; margin-top: 30px;">
-            <button id="btn-indietro" class="btn-action btn-logout">Indietro</button>
-            <button id="btn-avanti" class="btn-action btn-add">Avanti</button>
+                    <div id="wizard-container" class="card">
+                        <h2 id="step-title" style="margin-bottom: 20px;">Passo 1: Baseline Characterization</h2>
+                        <div id="step-content"></div>
+                        <div class="wizard-nav" style="display: flex; justify-content: space-between; margin-top: 30px;">
+                            <button id="btn-indietro" class="btn-action btn-logout">Indietro</button>
+                            <button id="btn-avanti" class="btn-action btn-add">Avanti</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-riepilogo" class="view-section card" style="display:none;">
+                    <h2 style="margin-bottom: 20px;">Riepilogo Report ACN (NIS2)</h2>
+                    <textarea id="report-output" rows="10" style="width: 100%; padding: 15px; font-family: monospace; border: 1px solid var(--border-color); border-radius: 8px; background: #f8fafc; color: #0f172a; resize: vertical;" readonly></textarea>
+                    <div style="margin-top: 20px; display: flex; gap: 15px;">
+                        <button id="btn-copia" class="btn-primary">📋 Copia negli Appunti</button>
+                        <button class="btn-logout" onclick="window.location.reload()">Chiudi e Nuovo Incidente</button>
+                    </div>
+                </div>
+
+            </section>
         </div>
-    </div>
-</div>
-</section>
-</div>
     </main>
 
     <section class="card" id="info-container" style="display: none; margin-top: 20px; padding: 30px;">

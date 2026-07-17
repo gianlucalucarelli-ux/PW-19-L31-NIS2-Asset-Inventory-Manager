@@ -1,5 +1,5 @@
 // src/wizard.js
-import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente, updateIncidente } from './incidentService.js';
+import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente, updateIncidente, fetchReportIncidente } from './incidentService.js';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -35,7 +35,7 @@ async function renderPasso() {
     if (passoCorrente === 1) {
         title.innerText = "Step 1: Tipologia Soggetto";
         container.innerHTML = `
-            <p>Indica la tipologia soggetto (NIS2):</p>
+            <p style="margin-bottom:15px;">Indica la tipologia soggetto (NIS2):</p>
             <label class="checkbox-item"><input type="radio" name="tipologia" value="essenziale" checked> Soggetto Essenziale</label>
             <label class="checkbox-item"><input type="radio" name="tipologia" value="importante"> Soggetto Importante</label>
         `;
@@ -52,7 +52,38 @@ async function renderPasso() {
             <label class="checkbox-item"><input type="checkbox" value="${opt.id}"> ${opt.nome_esteso}</label>
         `).join('');
     } catch (err) {
-        container.innerHTML = "Errore nel caricamento.";
+        container.innerHTML = "Errore nel caricamento dei dati.";
+    }
+}
+
+async function generaReportFinale() {
+    try {
+        const reportData = await fetchReportIncidente(eventoId);
+        
+        // Funzione helper per mappare Nome Esteso + Codice ACN (Es. "azioni malevole intenzionali BC:RO_MA")
+        const formatData = (passo) => {
+            const items = reportData.filter(d => d.passo_wizard === passo);
+            if (items.length === 0) return "[dato non inserito]";
+            return items.map(d => `${d.tassonomia_incidenti_acn.nome_esteso} ${d.tassonomia_incidenti_acn.codice_acn}`).join(', ');
+        };
+
+        const impatti = formatData(2);
+        const cause = formatData(3);
+        const severita = formatData(4);
+        const minacce = formatData(5);
+        const attori = formatData(6);
+
+        // Generazione del testo narrativo
+        const testoReport = `L'incidente ha comportato ${impatti}, causato da ${cause}. La severità è stata valutata come ${severita}. L'attacco è stato caratterizzato da minacce di tipo ${minacce} ad opera di attori classificabili come ${attori}.`;
+
+        // Passaggio visuale
+        document.getElementById('view-incidenti').style.display = 'none';
+        document.getElementById('view-riepilogo').style.display = 'block';
+        document.getElementById('report-output').value = testoReport;
+
+    } catch (err) {
+        console.error("Errore generazione report:", err);
+        alert("Impossibile generare il report narrativo.");
     }
 }
 
@@ -85,12 +116,21 @@ document.getElementById('btn-avanti').addEventListener('click', async () => {
             passoCorrente++;
             renderPasso();
         } else {
-            alert("Wizard completato!");
+            // Generazione del Report Finale
+            await generaReportFinale();
         }
     } catch (err) {
         console.error("Errore salvataggio:", err);
         alert("Errore salvataggio: " + err.message);
     }
+});
+
+// Listener globale per copia negli appunti
+document.getElementById('btn-copia').addEventListener('click', () => {
+    const copyText = document.getElementById("report-output");
+    copyText.select();
+    document.execCommand("copy");
+    alert("Testo copiato negli appunti!");
 });
 
 document.getElementById('btn-indietro').addEventListener('click', () => {
