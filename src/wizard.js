@@ -1,4 +1,5 @@
 // src/wizard.js
+import { supabase } from './supabase.js';
 import { fetchTassonomiaByPasso, salvaSelezioneIncidente, startIncidente, updateIncidente, fetchReportIncidente } from './incidentService.js';
 
 let passoCorrente = 1;
@@ -15,34 +16,47 @@ const stepsConfig = {
     6: { title: "Passo 6: Threat Actor", area: "TA", cat: null }
 };
 
-// src/wizard.js
-// ... (mantenere gli import)
-
+// Funzione principale di inizializzazione con attesa di sicurezza
 async function initWizard() {
-    container.innerHTML = 'Verifica autenticazione in corso...';
+    container.innerHTML = 'Attesa autorizzazione di sicurezza...';
     
     try {
-        // Aggiungiamo un check per attendere la sessione Supabase
-        const { data: { session } } = await supabase.auth.getSession();
+        // 1. Controllo immediato: vediamo se la sessione c'è già
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!session) {
-            container.innerHTML = "Accesso non autorizzato. Effettua il login.";
-            return;
+        if (session) {
+            // Utente già loggato, partiamo subito
+            await avviaWizard();
+        } else {
+            // 2. Se non c'è, restiamo in ascolto. Appena il token arriva, partiamo.
+            const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+                if (newSession) {
+                    authListener.subscription.unsubscribe(); // Stacchiamo l'ascoltatore per evitare duplicati
+                    await avviaWizard();
+                }
+            });
         }
+    } catch (err) {
+        console.error("Errore verifica sessione:", err);
+        container.innerHTML = "Errore di connessione al sistema di autenticazione.";
+    }
+}
 
-        // Ora che siamo sicuri di avere una sessione, inizializziamo
+// Funzione helper operativa per creare fisicamente l'incidente
+async function avviaWizard() {
+    container.innerHTML = 'Avvio sessione incidente...';
+    try {
         const nuovoIncidente = await startIncidente({ 
             inizio: new Date().toISOString(),
             severita: 'Media' 
         });
         
         eventoId = nuovoIncidente.id;
-        console.log("Incidente inizializzato con ID:", eventoId);
+        console.log("Incidente inizializzato in sicurezza con ID:", eventoId);
         renderPasso(); 
     } catch (err) {
-        console.error("Errore initWizard:", err);
-        // Se l'errore è 401, probabilmente la sessione sta ancora arrivando
-        container.innerHTML = "Errore di connessione: attendi qualche secondo o ricarica.";
+        console.error("Errore avviaWizard:", err);
+        container.innerHTML = "Errore: impossibile avviare l'incidente. Verifica le policy RLS.";
     }
 }
 
@@ -152,4 +166,5 @@ document.getElementById('btn-indietro').addEventListener('click', () => {
     if (passoCorrente > 1) { passoCorrente--; renderPasso(); }
 });
 
+// Avvio
 initWizard();
