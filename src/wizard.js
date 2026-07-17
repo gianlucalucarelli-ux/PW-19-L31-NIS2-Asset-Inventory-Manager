@@ -15,19 +15,34 @@ const stepsConfig = {
     6: { title: "Passo 6: Threat Actor", area: "TA", cat: null }
 };
 
+// src/wizard.js
+// ... (mantenere gli import)
+
 async function initWizard() {
-    container.innerHTML = 'Avvio sessione incidente...';
+    container.innerHTML = 'Verifica autenticazione in corso...';
+    
     try {
+        // Aggiungiamo un check per attendere la sessione Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+            container.innerHTML = "Accesso non autorizzato. Effettua il login.";
+            return;
+        }
+
+        // Ora che siamo sicuri di avere una sessione, inizializziamo
         const nuovoIncidente = await startIncidente({ 
             inizio: new Date().toISOString(),
             severita: 'Media' 
         });
+        
         eventoId = nuovoIncidente.id;
         console.log("Incidente inizializzato con ID:", eventoId);
         renderPasso(); 
     } catch (err) {
         console.error("Errore initWizard:", err);
-        container.innerHTML = "Errore critico: verifica le policy RLS su Supabase.";
+        // Se l'errore è 401, probabilmente la sessione sta ancora arrivando
+        container.innerHTML = "Errore di connessione: attendi qualche secondo o ricarica.";
     }
 }
 
