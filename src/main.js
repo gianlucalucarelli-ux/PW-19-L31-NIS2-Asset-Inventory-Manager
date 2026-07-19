@@ -1,5 +1,5 @@
 // ===============================================================================================================
-// FILE: src/main.js - VERSIONE DEFINITIVA E PULITA
+// FILE: src/main.js - VERSIONE DEFINITIVA E IN PRODUZIONE
 // ===============================================================================================================
 import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable } from './ui.js';
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
