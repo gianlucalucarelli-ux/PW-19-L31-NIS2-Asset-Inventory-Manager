@@ -13,6 +13,8 @@ initTheme();
 
 document.addEventListener('DOMContentLoaded', async () => {
     // --- LOGICA PERSISTENZA SESSIONE ---
+    console.log("MAIN.JS CARICATO CORRETTAMENTE - TEST ATTIVO");
+        alert("Main.js sta girando!");
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
         console.log("Sessione rilevata, accesso automatico alla Dashboard.");

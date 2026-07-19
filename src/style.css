@@ -351,3 +351,14 @@ th {
     align-items: flex-start !important;
     gap: 8px !important;
 }
+
+/* --- DEBUG TEST: Se non vedi il rosso, il file non è collegato --- */
+.nav-menu {
+    background-color: red !important;
+    border: 5px solid yellow !important;
+}
+
+.nav-link {
+    background-color: white !important;
+    color: black !important;
+}
