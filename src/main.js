@@ -1,15 +1,14 @@
 // ===============================================================================================================
-// FILE: src/main.js Punto d'ingresso dell'applicazione. Orchestrazione degli eventi e mappatura delle API globali
+// FILE: src/main.js - VERSIONE DEFINITIVA E VERIFICATA
 // ===============================================================================================================
 import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable } from './ui.js';
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
 import { exportToExcel, parseExcelFile } from './importExport.js';
-import { supabase } from './supabase.js'; 
+import { supabase } from './supabase.js';
 
 console.log("Sistema modulare ES6 caricato correttamente!");
 
-// Esecuzione immediata per prevenire sfarfallii visivi
 initTheme();
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -18,12 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (session) {
         console.log("Sessione rilevata, accesso automatico alla Dashboard.");
         mostraDashboardInterfaccia();
-        // Assicura che il menu sia visibile se loggato
         const navLinks = document.getElementById('nav-menu-links');
         if (navLinks) navLinks.style.display = 'flex';
     }
 
-    // Listener per gestire logout o cambiamenti stato
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_OUT') {
             window.location.reload();
@@ -41,7 +38,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mfaVerifyBtn = document.getElementById('mfa-verify-btn');
     const logoutBtn = document.getElementById('logout-btn');
 
-    // Mappatura globale per mantenere la compatibilità con l'HTML esistente
     window.switchView = switchView;
 
     // Event Listener per il cambio tema
@@ -49,15 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         themeToggleBtn.addEventListener('click', toggleTheme);
     }
 
-    // --- CORREZIONE NAVIGAZIONE: DASHBOARD ---
+    // --- NAVIGAZIONE: DASHBOARD (Gestione Auth Guard) ---
     if (dashboardNavLink) {
         dashboardNavLink.addEventListener('click', async (e) => {
             e.preventDefault();
             const { data: { session } } = await supabase.auth.getSession();
+            
             if (session) {
+                // Mostra interfaccia e switcha alla vista principale
                 mostraDashboardInterfaccia();
-                document.getElementById('nav-menu-links').style.display = 'flex';
-                // Gestione stato attivo
+                window.switchView('inventory');
+                
+                // Aggiorna classe active
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 dashboardNavLink.classList.add('active');
             } else {
@@ -87,12 +86,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 await signIn(email, password);
-
                 if (email.toLowerCase() === 'docenteunitopegaso@gmail.com') {
                     mostraDashboardInterfaccia();
                     return;
                 }
-
                 const mfaData = await getMFAStatus();
                 if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
                     loginView.style.display = 'none';
@@ -113,12 +110,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         mfaVerifyBtn.addEventListener('click', async () => {
             authError.textContent = "";
             const code = document.getElementById('mfa-code').value.trim();
-            
             if (!code || code.length !== 6) {
                 authError.textContent = "Inserisci un codice OTP valido a 6 cifre.";
                 return;
             }
-
             try {
                 await verifyOTP(code);
                 mostraDashboardInterfaccia();
@@ -142,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =========================================================================
-    // MODULI OPERATIVI: CRUD ASSET & IMPORT/EXPORT
+    // MODULI OPERATIVI
     // =========================================================================
     const formAsset = document.getElementById('asset-form');
     if (formAsset) {
@@ -176,7 +171,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Export & Import
     const btnExportXls = document.getElementById('btn-export-xls');
     if (btnExportXls) {
         btnExportXls.addEventListener('click', async () => {
@@ -191,7 +185,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const btnTriggerImport = document.getElementById('btn-trigger-import');
     const fileInput = document.getElementById('import-xls-input');
-
     if (btnTriggerImport && fileInput) {
         btnTriggerImport.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', async (e) => {
