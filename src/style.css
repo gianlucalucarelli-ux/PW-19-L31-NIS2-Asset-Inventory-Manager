@@ -41,41 +41,52 @@ body {
 /* =========================================
    HEADER E NAVIGAZIONE
    ========================================= */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
+/* =========================================
+   HEADER E NAVIGAZIONE (CORRETTO E STABILE)
+   ========================================= */
+/* Il contenitore principale che gestisce la spaziatura */
+.nav-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    padding: 10px 20px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 8px;
     margin-bottom: 20px;
 }
 
-.logo {
+/* Logo a sinistra */
+.nav-logo {
     font-size: 1.2rem;
     font-weight: bold;
     color: var(--primary);
+    white-space: nowrap;
 }
 
-nav {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 15px;
-    width: 100%; /* Occupa lo spazio disponibile per gestire gli allineamenti */
+/* Menu (Dashboard/Info) - Allineato a sinistra/centro */
+.nav-menu {
+    display: flex !important;
+    gap: 15px !important;
+    margin-left: 20px; /* Distanza dal logo */
 }
 
-/* Questo spinge i bottoni a destra lasciando i link a sinistra */
-nav button:first-of-type {
-    margin-left: auto !important;
+/* Azioni (Bottoni Modalità/Logout) - Spinti a destra */
+.nav-actions {
+    display: flex !important;
+    gap: 10px !important;
+    margin-left: auto !important; /* Forza tutto a destra */
 }
 
-a {
+/* Stili link */
+.nav-link {
     color: var(--primary);
     text-decoration: none;
+    font-weight: 600;
 }
 
+/* Pulsanti */
 button {
     cursor: pointer;
     border: none;
@@ -97,6 +108,12 @@ button {
 }
 
 .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-high);
+}
+
+.btn-theme {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-high);
