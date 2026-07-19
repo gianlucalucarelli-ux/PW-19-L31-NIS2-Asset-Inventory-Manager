@@ -39,7 +39,7 @@ body {
 }
 
 /* =========================================
-   HEADER E NAVIGAZIONE - DEFINITIVO
+   HEADER E NAVIGAZIONE
    ========================================= */
 .nav-container {
     display: flex !important;
@@ -53,7 +53,6 @@ body {
     margin-bottom: 20px !important;
 }
 
-/* Logo a sinistra */
 .nav-logo {
     font-size: 1.2rem;
     font-weight: bold;
@@ -62,12 +61,11 @@ body {
     flex: 0 0 auto;
 }
 
-/* Centro: Dashboard e Info (Centrati) */
 .nav-menu {
     flex: 1 !important;
     display: flex !important;
     justify-content: center !important;
-    gap: 30px !important; 
+    gap: 30px !important;
 }
 
 .nav-link {
@@ -91,7 +89,6 @@ body {
     color: var(--bg-main);
 }
 
-/* Destra: Bottoni */
 .nav-actions {
     display: flex !important;
     gap: 10px !important;

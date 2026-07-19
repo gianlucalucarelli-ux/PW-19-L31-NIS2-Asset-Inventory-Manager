@@ -1,5 +1,5 @@
 // ===============================================================================================================
-// FILE: src/main.js - VERSIONE DEFINITIVA E VERIFICATA
+// FILE: src/main.js - VERSIONE DEFINITIVA E PULITA
 // ===============================================================================================================
 import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAndRenderTable } from './ui.js';
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
@@ -13,8 +13,6 @@ initTheme();
 
 document.addEventListener('DOMContentLoaded', async () => {
     // --- LOGICA PERSISTENZA SESSIONE ---
-    console.log("MAIN.JS CARICATO CORRETTAMENTE - TEST ATTIVO");
-        alert("Main.js sta girando!");
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
         console.log("Sessione rilevata, accesso automatico alla Dashboard.");
@@ -47,18 +45,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         themeToggleBtn.addEventListener('click', toggleTheme);
     }
 
-    // --- NAVIGAZIONE: DASHBOARD (Gestione Auth Guard) ---
+    // --- NAVIGAZIONE: DASHBOARD ---
     if (dashboardNavLink) {
         dashboardNavLink.addEventListener('click', async (e) => {
             e.preventDefault();
             const { data: { session } } = await supabase.auth.getSession();
             
             if (session) {
-                // Mostra interfaccia e switcha alla vista principale
                 mostraDashboardInterfaccia();
                 window.switchView('inventory');
                 
-                // Aggiorna classe active
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 dashboardNavLink.classList.add('active');
             } else {
