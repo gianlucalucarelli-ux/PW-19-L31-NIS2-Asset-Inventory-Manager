@@ -38,8 +38,8 @@ body {
     line-height: 1.5;
 }
 
-/* /* =========================================
-   HEADER E NAVIGAZIONE (LOGICA A 3 BLOCCHI)
+/* =========================================
+   HEADER E NAVIGAZIONE - DEFINITIVO
    ========================================= */
 .nav-container {
     display: flex !important;
@@ -53,7 +53,7 @@ body {
     margin-bottom: 20px !important;
 }
 
-/* 1. SINISTRA: Logo */
+/* Logo a sinistra */
 .nav-logo {
     font-size: 1.2rem;
     font-weight: bold;
@@ -62,12 +62,12 @@ body {
     flex: 0 0 auto;
 }
 
-/* 2. CENTRO: Dashboard e Info (come Bottoni distanziati) */
+/* Centro: Dashboard e Info (Centrati) */
 .nav-menu {
     flex: 1 !important;
     display: flex !important;
     justify-content: center !important;
-    gap: 40px !important; /* Aumenta questo valore per distanziarli di più */
+    gap: 30px !important; 
 }
 
 .nav-link {
@@ -86,7 +86,12 @@ body {
     border-color: var(--primary);
 }
 
-/* 3. DESTRA: Bottoni */
+.nav-link.active {
+    background: var(--primary);
+    color: var(--bg-main);
+}
+
+/* Destra: Bottoni */
 .nav-actions {
     display: flex !important;
     gap: 10px !important;
