@@ -41,70 +41,71 @@ body {
 /* =========================================
    HEADER E NAVIGAZIONE
    ========================================= */
-/* =========================================
-   HEADER E NAVIGAZIONE (CORRETTO E STABILE)
-   ========================================= */
-/* Il contenitore principale che gestisce la spaziatura */
+
 .nav-container {
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    width: 100% !important;
-    padding: 10px 20px;
+    padding: 15px 20px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 8px;
     margin-bottom: 20px;
+    position: relative;
 }
 
-/* Logo a sinistra */
+/* Logo a sinistra (fisso) */
 .nav-logo {
     font-size: 1.2rem;
     font-weight: bold;
     color: var(--primary);
     white-space: nowrap;
+    margin-right: 20px;
 }
 
-/* Menu (Dashboard/Info) - Allineato a sinistra/centro */
+/* Menu centrale (I link-bottoni) */
 .nav-menu {
+    flex: 1 !important; /* Prende tutto lo spazio centrale disponibile */
     display: flex !important;
-    gap: 15px !important;
-    margin-left: 20px; /* Distanza dal logo */
+    justify-content: center !important; /* Forza la centratura esatta */
+    gap: 20px !important; /* Spazio tra i due bottoni */
 }
 
-/* Azioni (Bottoni Modalità/Logout) - Spinti a destra */
+/* Stile dei link come Bottoni */
+.nav-link {
+    color: var(--text-high);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 6px;
+    background: rgba(56, 189, 248, 0.05); /* Sfondo leggero */
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--primary);
+}
+
+.nav-link.active {
+    background: var(--primary);
+    color: var(--bg-main);
+}
+
+/* Bottoni a destra */
 .nav-actions {
     display: flex !important;
     gap: 10px !important;
-    margin-left: auto !important; /* Forza tutto a destra */
+    margin-left: auto !important; /* Spinge tutto a destra */
 }
 
-/* Stili link */
-.nav-link {
-    color: var(--primary);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-/* Pulsanti */
+/* Stili Bottoni esistenti */
 button {
     cursor: pointer;
     border: none;
     border-radius: 6px;
     padding: 8px 12px;
     font-weight: bold;
-}
-
-.btn-success {
-    background: var(--primary);
-    color: var(--bg-main);
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 6px;
 }
 
 .btn-logout {
