@@ -38,46 +38,45 @@ body {
     line-height: 1.5;
 }
 
-/* =========================================
-   HEADER E NAVIGAZIONE
+/* /* =========================================
+   HEADER E NAVIGAZIONE (LOGICA A 3 BLOCCHI)
    ========================================= */
-
 .nav-container {
     display: flex !important;
     align-items: center !important;
-    padding: 15px 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 20px;
-    position: relative;
+    justify-content: space-between !important;
+    width: 100% !important;
+    padding: 15px 20px !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    margin-bottom: 20px !important;
 }
 
-/* Logo a sinistra (fisso) */
+/* 1. SINISTRA: Logo */
 .nav-logo {
     font-size: 1.2rem;
     font-weight: bold;
     color: var(--primary);
     white-space: nowrap;
-    margin-right: 20px;
+    flex: 0 0 auto;
 }
 
-/* Menu centrale (I link-bottoni) */
+/* 2. CENTRO: Dashboard e Info (come Bottoni distanziati) */
 .nav-menu {
-    flex: 1 !important; /* Prende tutto lo spazio centrale disponibile */
+    flex: 1 !important;
     display: flex !important;
-    justify-content: center !important; /* Forza la centratura esatta */
-    gap: 20px !important; /* Spazio tra i due bottoni */
+    justify-content: center !important;
+    gap: 40px !important; /* Aumenta questo valore per distanziarli di più */
 }
 
-/* Stile dei link come Bottoni */
 .nav-link {
     color: var(--text-high);
     text-decoration: none;
     font-weight: 600;
     padding: 8px 20px;
     border-radius: 6px;
-    background: rgba(56, 189, 248, 0.05); /* Sfondo leggero */
+    background: rgba(56, 189, 248, 0.05);
     border: 1px solid transparent;
     transition: all 0.2s ease;
 }
@@ -87,19 +86,13 @@ body {
     border-color: var(--primary);
 }
 
-.nav-link.active {
-    background: var(--primary);
-    color: var(--bg-main);
-}
-
-/* Bottoni a destra */
+/* 3. DESTRA: Bottoni */
 .nav-actions {
     display: flex !important;
     gap: 10px !important;
-    margin-left: auto !important; /* Spinge tutto a destra */
+    flex: 0 0 auto;
 }
 
-/* Stili Bottoni esistenti */
 button {
     cursor: pointer;
     border: none;
@@ -108,13 +101,7 @@ button {
     font-weight: bold;
 }
 
-.btn-logout {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-high);
-}
-
-.btn-theme {
+.btn-logout, .btn-theme {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-high);
