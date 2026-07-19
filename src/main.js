@@ -5,7 +5,7 @@ import { initTheme, toggleTheme, switchView, mostraDashboardInterfaccia, loadAnd
 import { signIn, getMFAStatus, verifyOTP, signOut } from './auth.js';
 import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
 import { exportToExcel, parseExcelFile } from './importExport.js';
-import { supabase } from './supabase.js'; // AGGIUNTO: Necessario per il check sessione
+import { supabase } from './supabase.js'; 
 
 console.log("Sistema modulare ES6 caricato correttamente!");
 
@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (session) {
         console.log("Sessione rilevata, accesso automatico alla Dashboard.");
         mostraDashboardInterfaccia();
+        // Assicura che il menu sia visibile se loggato
+        const navLinks = document.getElementById('nav-menu-links');
+        if (navLinks) navLinks.style.display = 'flex';
     }
 
     // Listener per gestire logout o cambiamenti stato
@@ -33,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mfaView = document.getElementById('mfa-view');
     const authError = document.getElementById('auth-error');
     const themeToggleBtn = document.getElementById('theme-toggle'); 
+    const dashboardNavLink = document.querySelector('a[href="#dashboard-section"]');
     const infoNavLink = document.querySelector('a[href="#info-section"]');
     const mfaVerifyBtn = document.getElementById('mfa-verify-btn');
     const logoutBtn = document.getElementById('logout-btn');
@@ -43,6 +47,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event Listener per il cambio tema
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    // --- CORREZIONE NAVIGAZIONE: DASHBOARD ---
+    if (dashboardNavLink) {
+        dashboardNavLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                mostraDashboardInterfaccia();
+                document.getElementById('nav-menu-links').style.display = 'flex';
+                // Gestione stato attivo
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                dashboardNavLink.classList.add('active');
+            } else {
+                alert("Effettua il login per accedere alla Dashboard.");
+            }
+        });
     }
 
     // Navigazione Info Progetto
@@ -121,48 +142,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =========================================================================
-    // MODULI OPERATIVI: CRUD ASSET & IMPORT/EXPORT (NIS2 Compliance)
+    // MODULI OPERATIVI: CRUD ASSET & IMPORT/EXPORT
     // =========================================================================
-
     const formAsset = document.getElementById('asset-form');
     if (formAsset) {
         formAsset.addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const id = document.getElementById('asset-id').value;
             const nome = document.getElementById('asset-nome').value.trim();
             const versione = document.getElementById('asset-versione').value.trim();
             const criticita = document.getElementById('asset-criticita').value;
 
             if (!nome) {
-                alert("Attenzione: Il nome dell'asset è un campo obbligatorio per la catalogazione.");
+                alert("Attenzione: Il nome dell'asset è un campo obbligatorio.");
                 return;
             }
 
             const payload = { nome, versione, criticita };
-
             try {
                 if (id) {
                     await updateAsset(id, payload);
-                    alert("Configurazione asset aggiornata con successo.");
+                    alert("Configurazione asset aggiornata.");
                 } else {
                     await insertAsset(payload);
-                    alert("Nuovo asset registrato a sistema.");
+                    alert("Nuovo asset registrato.");
                 }
-                
                 window.switchView('inventory');
-                
-                if (typeof loadAndRenderTable === 'function') {
-                    loadAndRenderTable();
-                }
+                if (typeof loadAndRenderTable === 'function') loadAndRenderTable();
             } catch (err) {
-                console.error("Errore Transazione DB:", err);
-                alert("Errore operativo durante il salvataggio: " + err.message);
+                console.error("Errore DB:", err);
+                alert("Errore operativo: " + err.message);
             }
         });
     }
 
-    // Esportazione Dati (XLSX)
+    // Export & Import
     const btnExportXls = document.getElementById('btn-export-xls');
     if (btnExportXls) {
         btnExportXls.addEventListener('click', async () => {
@@ -170,43 +184,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const data = await fetchAssets();
                 exportToExcel(data);
             } catch (err) {
-                console.error("Errore Export:", err);
-                alert("Impossibile esportare i dati: errore di query al database.");
+                alert("Errore export database.");
             }
         });
     }
 
-    // Importazione Dati Massiva (XLSX/CSV)
     const btnTriggerImport = document.getElementById('btn-trigger-import');
     const fileInput = document.getElementById('import-xls-input');
 
     if (btnTriggerImport && fileInput) {
         btnTriggerImport.addEventListener('click', () => fileInput.click());
-
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             try {
                 const parsedData = await parseExcelFile(file);
-
-                if (!parsedData || parsedData.length === 0) {
-                    alert("Errore: Il file non contiene righe valide o le intestazioni non corrispondono.");
-                    return;
-                }
-
-                const conferma = confirm(`Rilevati ${parsedData.length} asset conformi. Procedere con la transazione Bulk Insert a database?`);
+                const conferma = confirm(`Procedere con l'importazione di ${parsedData.length} asset?`);
                 if (conferma) {
                     await bulkInsertAssets(parsedData);
-                    alert("Importazione massiva conclusa positivamente.");
-                    
-                    if (typeof loadAndRenderTable === 'function') {
-                        loadAndRenderTable();
-                    }
+                    if (typeof loadAndRenderTable === 'function') loadAndRenderTable();
                 }
             } catch (err) {
-                console.error("Errore Parsing XLS:", err);
-                alert("Anomalia durante l'analisi del file. Verificare integrità e formato.");
+                alert("Anomalia durante l'analisi del file.");
             } finally {
                 fileInput.value = '';
             }
