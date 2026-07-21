@@ -1,4 +1,4 @@
-# Univerità Telematica Pegaso
+# Università Telematica Pegaso
 ## Laurea Triennale in Informatica per le aziende digitali L-31
 ## Tema n. 2 Privacy e sicurezza aziendale
 ## PW 19. Progettare e realizzare una base dati relazionale per catalogare asset, servizi, dipendenze e responsabilità utili alla compilazione dei profili richiesti dall'ACN nell'ambito della NIS2
@@ -18,15 +18,20 @@ Il sistema è sviluppato seguendo i criteri di normalizzazione e sicurezza richi
 
 ## 3. Struttura del Repository
 Il progetto è organizzato in modo modulare per garantire manutenibilità e scansionabilità:
-*   `/sql`: Script DDL di creazione del database (`schema.sql`) e dataset di test.  
+*   `/sql`: Script SQL produttivi numerati da `01` a `14` e toolkit diagnostico numerato da `X1` a `X10`.  
 *   `/src`: Codice sorgente dell'interfaccia web e logica di interfacciamento.  
 *   `/docs`: Documentazione tecnica, Diagrammi ER (Entity-Relationship) e specifiche ACN.  
 
 ## 4. Funzionalità Implementate
-*   Modellazione Asset/Servizi: Gestione delle relazioni molti-a-molti tra infrastruttura tecnologica e servizi erogati.  
-*   Supply Chain Management: Mappatura delle dipendenze da fornitori terzi con vincoli di integrità referenziale.  
-*   Auditing & Versioning: Sistema di log automatico tramite Trigger PL/pgSQL per la tracciabilità delle modifiche agli asset critici.  
-*   Export Strutturato: Predisposizione per l'esportazione di dati in formato CSV conforme ai requisiti di notifica ACN.
+
+*   **Modellazione relazionale:** base dati PostgreSQL composta da 26 tabelle, progettata secondo criteri di normalizzazione e integrità referenziale.
+*   **Gestione di asset e servizi:** catalogazione degli asset tecnologici, dei servizi aziendali, delle responsabilità e delle relative dipendenze.
+*   **Gerarchie multilivello:** rappresentazione di servizi e sottoservizi e di asset e sotto-asset, con prevenzione di autorelazioni e cicli.
+*   **Supply Chain Management:** mappatura delle dipendenze tra servizi, asset e fornitori terzi.
+*   **Tassonomia ACN:** classificazione degli asset e degli eventi mediante domini e codici coerenti con il contesto NIS2/ACN.
+*   **Auditing:** registrazione automatica delle operazioni sugli asset mediante funzione e trigger PL/pgSQL.
+*   **Sicurezza:** Row Level Security, autenticazione MFA, accesso docente dedicato e applicazione del principio del minimo privilegio.
+*   **Importazione ed esportazione:** gestione dei dati tramite file XLS e viste relazionali dedicate al reporting.
 
 ## 5. Note Operative e Roadmap di Sviluppo
 L'applicazione è consultabile online per la valutazione delle funzionalità implementate:
