@@ -1,10 +1,10 @@
 -- =========================================================================
 -- FILE: sql/14-Hardening-Gerarchia-Asset-v1.0.sql
--- TARGET ARCHITETTURALE: ER V4.0 - SUPPLY CHAIN MULTILIVELLO
+-- TARGET ARCHITETTURALE: ER V4.0 - FASE 2 GERARCHIA ASSET
 -- DESCRIZIONE: Introduzione dei codici stabili degli asset, del dominio
 --              delle relazioni tra asset e della gerarchia storicizzabile
 --              asset-sotto-asset con controllo delle ciclicità
--- TIPO SCRIPT: Produttivo - modifica struttura, vincoli, indici e trigger
+-- TIPO SCRIPT: Produttivo - struttura, vincoli, indici, trigger, RLS e DCL
 -- =========================================================================
 
 /*
@@ -38,26 +38,33 @@
        - duplicati attivi;
        - più padri primari attivi;
        - cicli come A -> B -> C -> A;
+       - riattivazione di relazioni storiche chiuse;
        - cancellazioni a cascata.
 
     SICUREZZA INIZIALE
 
-    Le nuove tabelle saranno consultabili dagli utenti autenticati,
-    ma non saranno ancora modificabili dal frontend.
+    Le nuove tabelle saranno disponibili in sola lettura:
 
-    Le policy di scrittura saranno introdotte soltanto dopo
-    l'estensione dell'audit generalizzato, così da non consentire
-    operazioni applicative non tracciate.
+    - agli utenti personali con sessione MFA aal2;
+    - all'utenza docentepegaso@gmail.com.
+
+    INSERT e UPDATE sulla gerarchia saranno abilitati soltanto dopo
+    l'estensione dell'audit generalizzato alle relazioni.
 */
 
 BEGIN;
 
 -- =========================================================================
--- 1. CONTROLLO DI PRECONDIZIONE
+-- 1. CONTROLLI DI PRECONDIZIONE
 -- =========================================================================
 
 DO $$
 BEGIN
+    IF to_regclass('public.asset') IS NULL THEN
+        RAISE EXCEPTION
+            'La tabella public.asset non esiste. Migrazione annullata.';
+    END IF;
+
     IF EXISTS (
         SELECT 1
         FROM information_schema.columns
@@ -102,8 +109,10 @@ ALTER TABLE public.asset
     leggibile a partire dal nome.
 
     Se il nome normalizzato è vuoto, duplicato o non conforme,
-    viene utilizzato un codice legacy basato sull'identificativo
-    esistente.
+    viene utilizzato un codice legacy basato sull'identificativo.
+
+    L'UPDATE genera eventi di audit con utente SYSTEM_CORE:
+    si tratta del comportamento atteso per una migrazione amministrativa.
 */
 
 WITH nomi_normalizzati AS (
@@ -257,7 +266,8 @@ CREATE TABLE public.asset_componente (
 
     descrizione text,
 
-    attiva boolean NOT NULL DEFAULT true,
+    attiva boolean
+        NOT NULL DEFAULT true,
 
     valido_dal timestamp with time zone
         NOT NULL DEFAULT now(),
@@ -434,16 +444,22 @@ BEGIN
     END IF;
 
     /*
-        La chiusura logica valorizza automaticamente valido_al.
+        La chiusura logica:
+
+        - valorizza automaticamente valido_al;
+        - rimuove l'indicazione di padre primario.
+
+        In questo modo la chiusura non entra in conflitto con il vincolo
+        che permette una relazione primaria soltanto quando è attiva.
     */
 
-    IF NEW.attiva = false
-       AND NEW.valido_al IS NULL
-    THEN
-        NEW.valido_al := now();
-    END IF;
-
     IF NEW.attiva = false THEN
+        IF NEW.valido_al IS NULL THEN
+            NEW.valido_al := now();
+        END IF;
+
+        NEW.relazione_primaria := false;
+
         RETURN NEW;
     END IF;
 
@@ -458,7 +474,7 @@ BEGIN
         i suoi discendenti attivi.
 
         Se tra i discendenti compare il nuovo asset padre,
-        l inserimento produrrebbe un ciclo.
+        l'inserimento o l'aggiornamento produrrebbe un ciclo.
     */
 
     WITH RECURSIVE discendenti AS (
@@ -511,8 +527,20 @@ COMMENT ON FUNCTION public.fn_check_asset_componente_cycle() IS
     'Impedisce autorelazioni e cicli nella gerarchia asset-sotto-asset.';
 
 -- =========================================================================
--- 8. TRIGGER DI VALIDAZIONE
+-- 8. PROTEZIONE DELLA FUNZIONE E TRIGGER DI VALIDAZIONE
 -- =========================================================================
+
+/*
+    La funzione SECURITY DEFINER deve essere utilizzata esclusivamente
+    dal trigger e non richiamata liberamente dai client applicativi.
+*/
+
+REVOKE ALL
+ON FUNCTION public.fn_check_asset_componente_cycle()
+FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS trg_check_asset_componente_cycle
+ON public.asset_componente;
 
 CREATE TRIGGER trg_check_asset_componente_cycle
 BEFORE INSERT OR UPDATE
@@ -520,16 +548,26 @@ ON public.asset_componente
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_check_asset_componente_cycle();
 
+COMMENT ON TRIGGER trg_check_asset_componente_cycle
+ON public.asset_componente IS
+    'Valida stato temporale, autorelazioni e cicli della gerarchia asset.';
+
 -- =========================================================================
--- 9. SICUREZZA RLS INIZIALE
+-- 9. SICUREZZA DELLE NUOVE TABELLE: RLS E DCL
 -- =========================================================================
 
 /*
-    Le tabelle sono inizialmente disponibili in sola lettura agli utenti
-    autenticati.
+    Questo è il capitolo interno numero 9 dello script 14.
+    Non è lo script 09-tassonomia-incidenti-acn.sql.
 
-    INSERT e UPDATE saranno abilitati soltanto quando il nuovo audit
-    generalizzato sarà pronto a tracciare anche le relazioni.
+    Le nuove tabelle sono inizialmente disponibili in sola lettura.
+
+    La lettura è consentita:
+
+    - agli utenti con sessione MFA aal2;
+    - all'utenza docentepegaso@gmail.com.
+
+    Non vengono create policy INSERT, UPDATE o DELETE.
 */
 
 ALTER TABLE public.tipo_relazione_asset
@@ -538,38 +576,134 @@ ALTER TABLE public.tipo_relazione_asset
 ALTER TABLE public.asset_componente
     ENABLE ROW LEVEL SECURITY;
 
+-- -------------------------------------------------------------------------
+-- 9.1 Rimozione preventiva delle policy omonime
+-- -------------------------------------------------------------------------
+
 DROP POLICY IF EXISTS "Read_All_Policy"
 ON public.tipo_relazione_asset;
-
-CREATE POLICY "Read_All_Policy"
-ON public.tipo_relazione_asset
-FOR SELECT
-TO authenticated
-USING (true);
 
 DROP POLICY IF EXISTS "Read_All_Policy"
 ON public.asset_componente;
 
+-- -------------------------------------------------------------------------
+-- 9.2 Policy di lettura sul dominio delle relazioni
+-- -------------------------------------------------------------------------
+
+CREATE POLICY "Read_All_Policy"
+ON public.tipo_relazione_asset
+FOR SELECT
+TO authenticated
+USING (
+    (auth.jwt() ->> 'aal') = 'aal2'
+    OR lower(
+        COALESCE(
+            auth.jwt() ->> 'email',
+            ''
+        )
+    ) = lower('docentepegaso@gmail.com')
+);
+
+-- -------------------------------------------------------------------------
+-- 9.3 Policy di lettura sulla gerarchia asset
+-- -------------------------------------------------------------------------
+
 CREATE POLICY "Read_All_Policy"
 ON public.asset_componente
 FOR SELECT
 TO authenticated
-USING (true);
+USING (
+    (auth.jwt() ->> 'aal') = 'aal2'
+    OR lower(
+        COALESCE(
+            auth.jwt() ->> 'email',
+            ''
+        )
+    ) = lower('docentepegaso@gmail.com')
+);
+
+-- -------------------------------------------------------------------------
+-- 9.4 Revoca dei privilegi applicativi
+-- -------------------------------------------------------------------------
 
 REVOKE ALL PRIVILEGES
-ON public.tipo_relazione_asset
+ON TABLE public.tipo_relazione_asset
+FROM PUBLIC;
+
+REVOKE ALL PRIVILEGES
+ON TABLE public.asset_componente
+FROM PUBLIC;
+
+REVOKE ALL PRIVILEGES
+ON TABLE public.tipo_relazione_asset
 FROM anon;
 
 REVOKE ALL PRIVILEGES
-ON public.asset_componente
+ON TABLE public.asset_componente
 FROM anon;
 
+REVOKE ALL PRIVILEGES
+ON TABLE public.tipo_relazione_asset
+FROM authenticated;
+
+REVOKE ALL PRIVILEGES
+ON TABLE public.asset_componente
+FROM authenticated;
+
+-- -------------------------------------------------------------------------
+-- 9.5 Concessione del solo privilegio SELECT
+-- -------------------------------------------------------------------------
+
 GRANT SELECT
-ON public.tipo_relazione_asset
+ON TABLE public.tipo_relazione_asset
 TO authenticated;
 
 GRANT SELECT
-ON public.asset_componente
+ON TABLE public.asset_componente
 TO authenticated;
+
+-- -------------------------------------------------------------------------
+-- 9.6 Revoca dell'utilizzo delle sequenze ai ruoli applicativi
+-- -------------------------------------------------------------------------
+
+/*
+    Le tabelle sono in sola lettura, quindi anon e authenticated non
+    devono utilizzare le sequenze identity.
+
+    I privilegi verranno concessi esplicitamente quando sarà introdotta
+    la gestione in scrittura con audit generalizzato.
+*/
+
+DO $$
+DECLARE
+    v_sequenza text;
+BEGIN
+    v_sequenza :=
+        pg_get_serial_sequence(
+            'public.tipo_relazione_asset',
+            'id'
+        );
+
+    IF v_sequenza IS NOT NULL THEN
+        EXECUTE format(
+            'REVOKE ALL PRIVILEGES ON SEQUENCE %s FROM PUBLIC, anon, authenticated',
+            v_sequenza
+        );
+    END IF;
+
+    v_sequenza :=
+        pg_get_serial_sequence(
+            'public.asset_componente',
+            'id'
+        );
+
+    IF v_sequenza IS NOT NULL THEN
+        EXECUTE format(
+            'REVOKE ALL PRIVILEGES ON SEQUENCE %s FROM PUBLIC, anon, authenticated',
+            v_sequenza
+        );
+    END IF;
+END
+$$;
 
 COMMIT;
