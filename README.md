@@ -33,7 +33,45 @@ Il progetto è organizzato in modo modulare per garantire manutenibilità e scan
 *   **Sicurezza:** Row Level Security, autenticazione MFA, accesso docente dedicato e applicazione del principio del minimo privilegio.
 *   **Importazione ed esportazione:** gestione dei dati tramite file XLS e viste relazionali dedicate al reporting.
 
-## 5. Note Operative e Roadmap di Sviluppo
+## 5. Documentazione tecnica
+
+La documentazione tecnica del progetto raccoglie le relazioni di approfondimento, il modello Entity-Relationship, i diagrammi della pipeline SQL, gli strumenti diagnostici e la documentazione di riferimento utilizzata durante lo sviluppo.
+
+### 5.1 Relazione tecnica del backend e del database
+
+- [Relazione Tecnica Backend e Database](./docs/Relazione_Tecnica_Backend_Database.pdf)  
+  Descrive l’architettura del backend dati, la pipeline produttiva SQL 01–14, il toolkit diagnostico X1–X10, il sistema di audit, il modello di sicurezza RLS/DCL e le gerarchie multilivello di servizi e asset.
+
+### 5.2 Modello Entity-Relationship
+
+- [Diagramma ER versione 4.0](./docs/Diagramma%20ER%20Ver4.0.pdf)  
+  Rappresentazione del modello relazionale aggiornato, composto attualmente da 26 tabelle.
+
+- [Codice del diagramma ER versione 4.0](./docs/Codice%20diagramma%20ER%20ver%204.0.pdf)  
+  Codice sorgente utilizzato per generare il diagramma Entity-Relationship.
+
+### 5.3 Pipeline delle migrazioni SQL
+
+- [Diagramma Core Migration Pipeline](./docs/Core%20Migration%20Pipeline.png)  
+  Rappresentazione della pipeline produttiva composta dagli script SQL numerati da 01 a 14.
+
+- [Codice del diagramma Core Migration Pipeline](./docs/Codice_diagramma_Core_Migration_Pipeline.pdf)  
+  Codice PlantUML utilizzato per generare il diagramma della pipeline produttiva.
+
+### 5.4 Toolkit diagnostico e di supporto
+
+- [Diagramma Diagnostic & Patch Toolkit](./docs/Diagnostic%20Patch%20ToolKit.png)  
+  Rappresentazione degli script diagnostici, di bonifica e di prototipazione numerati da X1 a X10.
+
+- [Codice del diagramma Diagnostic & Patch Toolkit](./docs/Codice_diagramma_Diagnostic_Patch_Toolkit_X.puml.pdf)  
+  Codice PlantUML utilizzato per generare il diagramma del toolkit diagnostico.
+
+### 5.5 Documentazione di riferimento
+
+- [Tassonomia Cyber ACN](./docs/ACN_Tassonomia_Cyber_CLEAR.pdf)  
+  Documento di riferimento utilizzato per la classificazione degli incidenti cyber secondo la tassonomia dell’Agenzia per la Cybersicurezza Nazionale.
+
+## 6. Note Operative e Roadmap di Sviluppo
 L'applicazione è consultabile online per la valutazione delle funzionalità implementate:
 *  URL: https://gianlucalucarelli-ux.github.io/PW-19-L31-NIS2-Asset-Inventory-Manager/
 *  Credenziali: Il sistema utilizza un'autenticazione tramite provider esterno. Per l'accesso in modalità semplice senza MFA per i docenti
