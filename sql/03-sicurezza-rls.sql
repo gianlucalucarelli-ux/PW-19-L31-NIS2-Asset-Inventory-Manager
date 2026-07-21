@@ -1,82 +1,249 @@
 -- =========================================================================
--- FILE: sql/03-sicurezza-rls.sql (VERSIONE DEFINITIVA)
--- DESCRIZIONE: Abilitazione RLS e Policy (MFA AAL2 + Accesso Docente Pegaso)
+-- FILE: sql/03-sicurezza-rls.sql
+-- TARGET ARCHITETTURALE: BASELINE ER V3.7 - 24 TABELLE
+-- DESCRIZIONE: Configurazione iniziale della Row Level Security sulle
+--              tabelle applicative esistenti, con lettura riservata a
+--              sessioni MFA o all'utenza docente e scrittura MFA controllata
+-- TIPO SCRIPT: Produttivo di configurazione RLS iniziale
 -- =========================================================================
 
--- 1. Abilitazione forzata della RLS su tutte le 23 tabelle (AGGIUNTA evento_tassonomia_acn)
-ALTER TABLE public.organizzazione ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.categoria_asset ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tipo_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tipo_fornitore ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ruolo_organigramma ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.responsabile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ruolo ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.responsabile_ruolo ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vulnerabilita ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.asset ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.asset_vulnerabilita ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fornitore ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stato_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tipo_dipendenza_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.servizio_dipendenza_asset ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.servizio_dipendenza_fornitore ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tipo_dipendenza ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.esito_impatto ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.servizio_componente ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.evento_servizio ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.evento_tassonomia_acn ENABLE ROW LEVEL SECURITY; -- AGGIUNTA
+/*
+    SCOPO
 
--- 2. Blocco procedurale per la gestione delle policy
-DO $$ 
-DECLARE 
-    t text;
-    docente_email text := 'docentepegaso@gmail.com'; 
-    tables text[] := ARRAY[
-        'organizzazione', 'categoria_asset', 'tipo_servizio', 'tipo_fornitore', 
-        'ruolo_organigramma', 'responsabile', 'ruolo', 'responsabile_ruolo', 
-        'vulnerabilita', 'asset', 'asset_vulnerabilita', 'fornitore', 'stato_servizio',
-        'servizio', 'tipo_dipendenza_servizio', 'servizio_dipendenza_asset', 
-        'servizio_dipendenza_fornitore', 'tipo_dipendenza', 'esito_impatto', 
-        'servizio_componente', 'evento_servizio', 'audit_log', 'evento_tassonomia_acn' -- AGGIUNTA
+    Lo script configura la Row Level Security per le tabelle appartenenti
+    alla baseline relazionale del progetto.
+
+    PRINCIPI APPLICATI
+
+    1. L'accesso anonimo non viene autorizzato da alcuna policy.
+
+    2. La lettura iniziale è consentita:
+       - agli utenti autenticati con livello MFA aal2;
+       - all'utenza docentepegaso@gmail.com utilizzata per la valutazione.
+
+    3. INSERT e UPDATE sono consentiti esclusivamente agli utenti
+       autenticati con livello MFA aal2 e soltanto sulle tabelle operative.
+
+    4. Non viene creata alcuna policy DELETE.
+       La cancellazione fisica non fa parte del modello applicativo;
+       la dismissione sarà gestita mediante archiviazione logica.
+
+    5. audit_log rimane inizialmente in sola lettura.
+       La policy necessaria al relativo meccanismo di audit viene
+       configurata successivamente dallo script 06.
+
+    6. Le tabelle di dominio e tassonomia rimangono in sola lettura
+       per i client applicativi. Il relativo popolamento viene effettuato
+       dagli script SQL amministrativi.
+
+    7. Lo script 08 sostituirà successivamente Read_All_Policy con una
+       policy SELECT aperta a tutti gli utenti autenticati.
+
+    8. Le tabelle introdotte da migrazioni successive devono configurare
+       la propria RLS nello stesso script che le crea.
+
+    AVVERTENZA
+
+    Questo file appartiene alla ricostruzione sequenziale del database
+    e deve essere eseguito nella posizione 03 della pipeline.
+
+    Non deve essere rieseguito direttamente sull'istanza Supabase già
+    migrata attraverso gli script 06, 08, 10, 13 e successivi, perché
+    rimuoverebbe le policy introdotte dalle migrazioni posteriori.
+*/
+
+BEGIN;
+
+DO $$
+DECLARE
+    v_tabella text;
+    v_policy record;
+
+    v_email_docente constant text :=
+        'docentepegaso@gmail.com';
+
+    /*
+        Elenco delle 24 tabelle appartenenti alla baseline applicativa.
+
+        La presenza viene controllata singolarmente: una tabella non ancora
+        disponibile viene segnalata mediante NOTICE senza interrompere la
+        pipeline. Le migrazioni che introducono nuovi oggetti configurano
+        autonomamente la loro sicurezza.
+    */
+    v_tabelle_progetto constant text[] := ARRAY[
+        'asset',
+        'asset_vulnerabilita',
+        'audit_log',
+        'categoria_asset',
+        'esito_impatto',
+        'evento_servizio',
+        'evento_tassonomia_acn',
+        'fornitore',
+        'organizzazione',
+        'responsabile',
+        'responsabile_ruolo',
+        'ruolo',
+        'ruolo_organigramma',
+        'servizio',
+        'servizio_componente',
+        'servizio_dipendenza_asset',
+        'servizio_dipendenza_fornitore',
+        'stato_servizio',
+        'tassonomia_incidenti_acn',
+        'tipo_dipendenza',
+        'tipo_dipendenza_servizio',
+        'tipo_fornitore',
+        'tipo_servizio',
+        'vulnerabilita'
     ];
+
+    /*
+        Tabelle operative modificabili dall'applicazione esclusivamente
+        tramite sessioni MFA aal2.
+
+        audit_log non è incluso: la sua scrittura viene configurata nello
+        script 06 ed è normalmente eseguita dal trigger di audit.
+    */
+    v_tabelle_scrivibili constant text[] := ARRAY[
+        'asset',
+        'asset_vulnerabilita',
+        'evento_servizio',
+        'evento_tassonomia_acn',
+        'fornitore',
+        'responsabile',
+        'responsabile_ruolo',
+        'servizio',
+        'servizio_componente',
+        'servizio_dipendenza_asset',
+        'servizio_dipendenza_fornitore'
+    ];
+
 BEGIN
-    FOREACH t IN ARRAY tables LOOP
-        -- Rimozione preventiva
-        EXECUTE format('DROP POLICY IF EXISTS "Read_All_Policy" ON public.%I', t);
-        EXECUTE format('DROP POLICY IF EXISTS "Insert_Admin_Policy" ON public.%I', t);
-        EXECUTE format('DROP POLICY IF EXISTS "Update_Admin_Policy" ON public.%I', t);
-        EXECUTE format('DROP POLICY IF EXISTS "Delete_Admin_Policy" ON public.%I', t);
+    FOREACH v_tabella IN ARRAY v_tabelle_progetto
+    LOOP
+        -- -----------------------------------------------------------------
+        -- La tabella potrebbe essere introdotta da una migrazione seguente.
+        -- In tal caso lo script non deve fallire.
+        -- -----------------------------------------------------------------
 
-        -- BINARIO A (Lettura)
-        EXECUTE format('
-            CREATE POLICY "Read_All_Policy" ON public.%I FOR SELECT TO authenticated 
-            USING ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L))', 
-            t, 'aal', 'aal2', 'email', docente_email);
+        IF to_regclass(
+            format('public.%I', v_tabella)
+        ) IS NULL THEN
+            RAISE NOTICE
+                'Tabella public.% non presente: configurazione RLS rinviata.',
+                v_tabella;
 
-        -- BINARIO B (Scrittura)
-        IF t = 'audit_log' THEN
-            EXECUTE format('
-                CREATE POLICY "Insert_Admin_Policy" ON public.%I FOR INSERT TO authenticated 
-                WITH CHECK ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L))', 
-                t, 'aal', 'aal2', 'email', docente_email);
-        ELSE
-            EXECUTE format('
-                CREATE POLICY "Insert_Admin_Policy" ON public.%I FOR INSERT TO authenticated 
-                WITH CHECK ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L))', 
-                t, 'aal', 'aal2', 'email', docente_email);
+            CONTINUE;
+        END IF;
 
-            EXECUTE format('
-                CREATE POLICY "Update_Admin_Policy" ON public.%I FOR UPDATE TO authenticated 
-                USING ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L)) 
-                WITH CHECK ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L))', 
-                t, 'aal', 'aal2', 'email', docente_email, 'aal', 'aal2', 'email', docente_email);
+        -- -----------------------------------------------------------------
+        -- Abilitazione della Row Level Security.
+        -- -----------------------------------------------------------------
 
-            EXECUTE format('
-                CREATE POLICY "Delete_Admin_Policy" ON public.%I FOR DELETE TO authenticated 
-                USING ((auth.jwt() ->> %L = %L) OR (auth.jwt() ->> %L = %L))', 
-                t, 'aal', 'aal2', 'email', docente_email);
+        EXECUTE format(
+            'ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY',
+            v_tabella
+        );
+
+        -- -----------------------------------------------------------------
+        -- Ripristino deterministico delle policy della tabella.
+        --
+        -- Lo script 03 è la configurazione iniziale della pipeline:
+        -- eventuali policy residue vengono eliminate prima di applicare
+        -- la baseline corretta.
+        -- -----------------------------------------------------------------
+
+        FOR v_policy IN
+            SELECT
+                policyname
+            FROM pg_policies
+            WHERE schemaname = 'public'
+              AND tablename = v_tabella
+        LOOP
+            EXECUTE format(
+                'DROP POLICY IF EXISTS %I ON public.%I',
+                v_policy.policyname,
+                v_tabella
+            );
+        END LOOP;
+
+        -- -----------------------------------------------------------------
+        -- Policy iniziale di lettura.
+        --
+        -- L'indirizzo e-mail viene confrontato in forma normalizzata.
+        -- -----------------------------------------------------------------
+
+        EXECUTE format(
+            $policy$
+                CREATE POLICY "Read_All_Policy"
+                ON public.%I
+                FOR SELECT
+                TO authenticated
+                USING (
+                    (auth.jwt() ->> 'aal') = 'aal2'
+                    OR lower(
+                        COALESCE(
+                            auth.jwt() ->> 'email',
+                            ''
+                        )
+                    ) = lower(%L)
+                )
+            $policy$,
+            v_tabella,
+            v_email_docente
+        );
+
+        -- -----------------------------------------------------------------
+        -- Le tabelle di dominio, tassonomia e audit rimangono in sola
+        -- lettura. Le policy di scrittura vengono create soltanto per le
+        -- tabelle operative esplicitamente elencate.
+        -- -----------------------------------------------------------------
+
+        IF v_tabella = ANY(v_tabelle_scrivibili) THEN
+
+            -- -------------------------------------------------------------
+            -- Inserimento consentito soltanto con autenticazione MFA aal2.
+            -- -------------------------------------------------------------
+
+            EXECUTE format(
+                $policy$
+                    CREATE POLICY "Insert_MFA_Policy"
+                    ON public.%I
+                    FOR INSERT
+                    TO authenticated
+                    WITH CHECK (
+                        (auth.jwt() ->> 'aal') = 'aal2'
+                    )
+                $policy$,
+                v_tabella
+            );
+
+            -- -------------------------------------------------------------
+            -- Aggiornamento consentito soltanto con autenticazione MFA aal2.
+            --
+            -- USING controlla le righe modificabili.
+            -- WITH CHECK controlla il nuovo stato della riga.
+            -- -------------------------------------------------------------
+
+            EXECUTE format(
+                $policy$
+                    CREATE POLICY "Update_MFA_Policy"
+                    ON public.%I
+                    FOR UPDATE
+                    TO authenticated
+                    USING (
+                        (auth.jwt() ->> 'aal') = 'aal2'
+                    )
+                    WITH CHECK (
+                        (auth.jwt() ->> 'aal') = 'aal2'
+                    )
+                $policy$,
+                v_tabella
+            );
+
         END IF;
     END LOOP;
-END $$;
+END
+$$;
+
+COMMIT;
