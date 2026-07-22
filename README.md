@@ -228,7 +228,6 @@ Le diagnostiche `X1–X17` accompagnano la pipeline e documentano lo stato del d
 ### Diagramma ER
 
 - [Sorgente DBML del diagramma ER V5.0](docs/Diagramma_ER_V5.0_30_tabelle.dbml)
-- [Esportazione PDF del sorgente DBML](docs/Diagramma_ER_V5.0_30_tabelle.dbml.pdf)
 - [Diagramma ER finale a 30 tabelle](docs/Diagramma_ER_V5.0_30_tabelle.pdf)
 
 ### Tassonomia ACN
