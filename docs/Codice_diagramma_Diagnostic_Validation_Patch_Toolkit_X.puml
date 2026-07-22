@@ -1,0 +1,61 @@
+@startuml
+' =========================================================================
+' FILE: docs/Diagramma_Diagnostic_Patch_Toolkit_X.puml
+' TARGET ARCHITETTURALE: DIAGNOSTIC, VALIDATION & PATCH TOOLKIT X1-X17
+' DESCRIZIONE: Classificazione degli script diagnostici, di bonifica,
+'              prototipazione, readiness e verifica finale del database
+' NOTA: Codice aggiornato per riprodurre il diagramma inserito nella
+'       Relazione_Tecnica_Backend_Database.pdf
+' =========================================================================
+
+scale 950 width
+
+title <size:21>DIAGNOSTIC, VALIDATION & PATCH TOOLKIT (X1–X17)</size>\n<size:13><color:#607D8B>Controlli progressivi sul database live e verifiche di readiness</color></size>
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 18
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam ArrowColor #78909C
+skinparam ArrowThickness 1.4
+skinparam linetype ortho
+
+skinparam rectangle {
+    BorderColor #607D8B
+    FontColor #263E52
+    FontSize 13
+}
+
+top to bottom direction
+
+rectangle "<size:15>ISPEZIONE STRUTTURALE E SICUREZZA</size>\n\nX1 schema e colonne\nX2 colonne delle viste\nX6 trigger e funzioni\nX7 vincoli\nX9 viste e privilegi\nX10 policy RLS e grant" as A #EAF2FB
+
+rectangle "<size:15>BONIFICA E PROTOTIPAZIONE CONTROLLATA</size>\n\nX3 allineamento servizi\nX4 completamento dataset supply chain\nX5 prototipo audit JSON" as B #F7F1E5
+
+rectangle "<size:15>READINESS DEL MODELLO</size>\n\nX8 duplicati e organizzazioni\nX11–X12 verifiche preliminari per fornitori e relazione asset–fornitore\nX13 supply chain multilivello" as C #EEF6EE
+
+rectangle "<size:15>VALIDAZIONE FINALE</size>\n\nX14 reporting servizi critici\nX15 sistema di audit\nX16 archiviazione logica\nX17 verifica finale del backend" as D #F4ECF7
+
+' -------------------------------------------------------------------------
+' Allineamento 2 x 2
+' -------------------------------------------------------------------------
+
+A -[hidden]right-> B
+C -[hidden]right-> D
+
+A -[hidden]down-> C
+B -[hidden]down-> D
+
+' -------------------------------------------------------------------------
+' Collegamenti visibili, coerenti con il diagramma della relazione
+' -------------------------------------------------------------------------
+
+A -right-> B
+A -down-> C
+B -down-> D
+C -right-> D
+
+caption <size:11><color:#263E52>Esito conclusivo di X17: VERIFICA_FINALE_BACKEND_SUPERATA</color></size>\n<size:10><color:#78909C>Il toolkit documenta sia l’evoluzione progettuale sia le evidenze tecniche usate per autorizzare le migrazioni produttive.</color></size>
+
+@enduml
