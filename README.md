@@ -144,7 +144,7 @@ Il modello di accesso separa privilegi PostgreSQL e policy RLS.
 - Le viste principali utilizzano `security_invoker`.
 - La tabella `audit_log` è leggibile dagli utenti autorizzati, ma non è scrivibile direttamente dal frontend.
 
-Le credenziali di accesso non sono pubblicate nel repository e vengono fornite separatamente ai soggetti autorizzati.
+Le credenziali riportate nella sezione dedicata all’accesso sono pubblicate temporaneamente per consentire ai docenti la valutazione dell’applicativo. Saranno rimosse dal repository dopo il loro inserimento nella versione definitiva del documento di Project Work consegnato tramite la piattaforma Pegaso.
 
 ---
 
@@ -251,7 +251,16 @@ L’applicazione è pubblicata tramite GitHub Pages:
 
 [NIS2 Asset Inventory Manager](https://gianlucalucarelli-ux.github.io/PW-19-L31-NIS2-Asset-Inventory-Manager/)
 
-L’accesso richiede autenticazione. Le credenziali destinate alla valutazione vengono comunicate separatamente e non sono conservate nel repository pubblico.
+### Accesso riservato alla valutazione
+
+Le seguenti credenziali consentono ai docenti di accedere all’applicativo durante la fase di valutazione:
+
+- Utenza: `docentepegaso@gmail.com`
+- Password: `9P4UxeD2S$`
+
+L’utenza docente è configurata per l’accesso semplificato senza MFA. L’autenticazione MFA è comunque implementata e funzionante per le utenze operative abilitate.
+
+Le credenziali saranno rimosse dal repository pubblico dopo il loro inserimento nella versione definitiva del documento di Project Work consegnato tramite la piattaforma Pegaso.
 
 Stato attuale:
 
