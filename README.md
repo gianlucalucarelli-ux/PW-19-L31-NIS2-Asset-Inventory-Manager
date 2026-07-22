@@ -164,7 +164,7 @@ Le credenziali riportate nella sezione dedicata all’accesso sono pubblicate te
     ├── ACN_Tassonomia_Cyber_CLEAR.pdf
     ├── Codice_diagramma_Core_Migration_Pipeline.puml
     ├── Codice_diagramma_Diagnostic_Validation_Patch_Toolkit_X.puml
-    ├── Core migratio pipeline.png
+    ├── Core_Migration_Pipeline.png
     ├── Diagramma_Diagnostic_Patch_Toolkit.png
     ├── Diagramma_ER_V5.0_30_tabelle.dbml
     ├── Diagramma_ER_V5.0_30_tabelle.dbml.pdf
