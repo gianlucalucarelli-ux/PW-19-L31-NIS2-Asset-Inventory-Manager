@@ -218,7 +218,7 @@ Le diagnostiche `X1–X17` accompagnano la pipeline e documentano lo stato del d
 ### Core Migration Pipeline
 
 - [Sorgente PlantUML della Core Migration Pipeline](docs/Codice_diagramma_Core_Migration_Pipeline.puml)
-- [Immagine della Core Migration Pipeline](docs/Core%20migratio%20pipeline.png)
+- [Immagine della Core Migration Pipeline](docs/Core_Migration_Pipeline.png)
 
 ### Diagnostic, Validation & Patch Toolkit
 
