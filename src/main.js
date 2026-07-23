@@ -12,12 +12,12 @@ import {
     showAuthenticatedInterface,
     setAuthBusy,
     setAuthError
-} from './ui.js?v=5';
+} from './ui.js?v=7';
 import {
     initializeRouter,
     navigateTo,
     refreshCurrentRoute
-} from './router.js?v=1';
+} from './router.js?v=3';
 import {
     signIn,
     getCurrentSession,
@@ -26,7 +26,7 @@ import {
     observeAuthState,
     signOut
 } from './auth.js';
-import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js';
+import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=3';
 import { exportToExcel, parseExcelFile } from './importExport.js';
 
 initTheme();
@@ -36,6 +36,19 @@ let activeAccessState = null;
 let lastAuthorizedSignature = null;
 let accessSyncSequence = 0;
 let routerReady = false;
+
+/**
+ * Conclude la fase di avvio soltanto dopo che la sessione iniziale è stata verificata.
+ * In questo modo la pagina di accesso non appare per un istante agli utenti già autenticati.
+ */
+function completeInitialBoot() {
+    document.documentElement.classList.remove('app-booting');
+
+    const bootScreen = document.getElementById('app-boot-screen');
+    if (bootScreen) {
+        bootScreen.remove();
+    }
+}
 
 /**
  * Verifica se la sessione corrente ha completato il flusso di autorizzazione.
@@ -130,6 +143,7 @@ async function closeCurrentSession() {
         setAuthError('Non è stato possibile completare la disconnessione.');
     } finally {
         await synchronizeApplicationAccess(null);
+        await navigateTo('dashboard', { replace: true });
     }
 }
 
@@ -167,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         onUnauthorized: () => {
             // La navigazione protetta rimane sospesa fino al completamento di login e MFA.
         },
-        defaultRoute: 'inventory'
+        defaultRoute: 'dashboard'
     });
     routerReady = true;
 
@@ -249,6 +263,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Errore nel recupero della sessione iniziale:', error);
         showSignedOutInterface();
         setAuthError('Impossibile recuperare la sessione salvata. Effettua nuovamente l’accesso.');
+    } finally {
+        completeInitialBoot();
     }
 
     // =========================================================================

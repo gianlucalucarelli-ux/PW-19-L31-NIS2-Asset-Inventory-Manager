@@ -3,8 +3,8 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchSupplyChain, fetchAuditLogs } from './database.js';
-import { navigateTo } from './router.js?v=1';
+import { fetchAssets, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=3';
+import { navigateTo } from './router.js?v=3';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -199,6 +199,7 @@ export function clearHeaderUser() {
 }
 
 const ROUTE_TO_VIEW = {
+    dashboard: 'dashboard',
     inventory: 'inventory',
     'add-asset': 'add-asset',
     'supply-chain': 'supply-chain',
@@ -209,6 +210,11 @@ const ROUTE_TO_VIEW = {
 };
 
 const ROUTE_METADATA = {
+    dashboard: {
+        section: 'Panoramica',
+        label: 'DASHBOARD',
+        title: 'Dashboard operativa'
+    },
     inventory: {
         section: 'Inventario',
         label: 'INVENTARIO',
@@ -254,7 +260,7 @@ function updateNavigationState(route) {
         const controlRoute = control.dataset.route;
         const navigationGroup = control.dataset.navGroup;
         const isActive = navigationGroup === 'dashboard'
-            ? route !== 'info'
+            ? route === 'dashboard'
             : navigationGroup === 'info'
                 ? route === 'info'
                 : controlRoute === route;
@@ -273,7 +279,7 @@ function updateNavigationState(route) {
  * Aggiorna titolo, breadcrumb e titolo della scheda del browser.
  */
 function updateWorkspaceHeader(route) {
-    const metadata = ROUTE_METADATA[route] || ROUTE_METADATA.inventory;
+    const metadata = ROUTE_METADATA[route] || ROUTE_METADATA.dashboard;
     const breadcrumbSection = document.getElementById('breadcrumb-section');
     const breadcrumbCurrent = document.getElementById('breadcrumb-current');
     const pageSectionLabel = document.getElementById('page-section-label');
@@ -305,7 +311,9 @@ export async function activateApplicationRoute(route) {
     updateNavigationState(route);
     updateWorkspaceHeader(route);
 
-    if (route === 'inventory') {
+    if (route === 'dashboard') {
+        await loadAndRenderDashboard();
+    } else if (route === 'inventory') {
         await loadAndRenderTable();
         resetAssetForm();
     } else if (route === 'add-asset') {
@@ -320,6 +328,286 @@ export async function activateApplicationRoute(route) {
     } else if (route === 'incidenti') {
         // Il wizard viene inizializzato solo all'apertura esplicita della vista.
         document.dispatchEvent(new CustomEvent('incident:wizard:open'));
+    }
+}
+
+// =========================================================================
+// DASHBOARD OPERATIVA
+// =========================================================================
+
+/**
+ * Scrive un valore testuale in modo sicuro, mantenendo un trattino quando il dato non è disponibile.
+ */
+function impostaTesto(id, valore) {
+    const elemento = document.getElementById(id);
+    if (!elemento) return;
+    elemento.textContent = valore === null || valore === undefined ? '—' : String(valore);
+}
+
+/**
+ * Estrae il primo valore valorizzato tra i possibili nomi di colonna restituiti dalle viste.
+ */
+function leggiCampo(record, nomi, valorePredefinito = '') {
+    for (const nome of nomi) {
+        const valore = record?.[nome];
+        if (valore !== null && valore !== undefined && String(valore).trim() !== '') {
+            return valore;
+        }
+    }
+    return valorePredefinito;
+}
+
+/**
+ * Normalizza una criticità per il rendering coerente di badge e distribuzioni.
+ */
+function normalizzaCriticita(valore) {
+    const normalizzata = String(valore || 'Bassa').trim().toLowerCase();
+    if (normalizzata === 'critica') return 'Critica';
+    if (normalizzata === 'alta') return 'Alta';
+    if (normalizzata === 'media') return 'Media';
+    return 'Bassa';
+}
+
+/**
+ * Restituisce la classe grafica associata a una criticità.
+ */
+function classeCriticita(valore) {
+    const normalizzata = normalizzaCriticita(valore).toLowerCase();
+    if (normalizzata === 'critica') return 'risk-critical';
+    if (normalizzata === 'alta') return 'risk-high';
+    if (normalizzata === 'media') return 'risk-medium';
+    return 'risk-low';
+}
+
+/**
+ * Crea un messaggio vuoto o di caricamento per i pannelli della Dashboard.
+ */
+function creaStatoDashboard(messaggio) {
+    const elemento = document.createElement('p');
+    elemento.className = 'dashboard-empty';
+    elemento.textContent = messaggio;
+    return elemento;
+}
+
+/**
+ * Disegna la distribuzione della criticità degli asset senza dipendenze grafiche esterne.
+ */
+function renderDistribuzioneCriticita(asset) {
+    const contenitore = document.getElementById('dashboard-criticality');
+    if (!contenitore) return;
+    contenitore.replaceChildren();
+
+    if (!Array.isArray(asset) || asset.length === 0) {
+        contenitore.appendChild(creaStatoDashboard('Nessun asset disponibile per la distribuzione.'));
+        return;
+    }
+
+    const conteggi = { Critica: 0, Alta: 0, Media: 0, Bassa: 0 };
+    asset.forEach((record) => {
+        const criticita = leggiCampo(record, [
+            'classificazione_criticita',
+            'criticita',
+            'Criticity_Level',
+            'CRITICITÀ NIS2'
+        ], 'Bassa');
+        conteggi[normalizzaCriticita(criticita)] += 1;
+    });
+
+    const massimo = Math.max(...Object.values(conteggi), 1);
+
+    Object.entries(conteggi).forEach(([etichetta, valore]) => {
+        const riga = document.createElement('div');
+        riga.className = 'criticality-row';
+
+        const intestazione = document.createElement('div');
+        intestazione.className = 'criticality-row__header';
+
+        const badge = document.createElement('span');
+        badge.className = `badge ${classeCriticita(etichetta)}`;
+        badge.textContent = etichetta;
+
+        const conteggio = document.createElement('strong');
+        conteggio.textContent = String(valore);
+
+        const progresso = document.createElement('progress');
+        progresso.className = `criticality-progress ${classeCriticita(etichetta)}`;
+        progresso.max = massimo;
+        progresso.value = valore;
+        progresso.setAttribute('aria-label', `${etichetta}: ${valore} asset`);
+
+        intestazione.append(badge, conteggio);
+        riga.append(intestazione, progresso);
+        contenitore.appendChild(riga);
+    });
+}
+
+/**
+ * Riepiloga la copertura della Supply Chain usando i dati aggregati della vista di reporting.
+ */
+function renderRiepilogoSupplyChain(righe) {
+    const dati = Array.isArray(righe) ? righe : [];
+    const nomiServizi = new Set();
+    let conAsset = 0;
+    let conFornitori = 0;
+
+    dati.forEach((record) => {
+        const servizio = leggiCampo(record, ['Service_Name', 'servizio_nome', 'nome_servizio']);
+        const asset = leggiCampo(record, ['Dependent_Asset', 'asset_dipendenti', 'asset']);
+        const fornitore = leggiCampo(record, ['Vendor_Partner', 'fornitori', 'fornitore']);
+
+        if (servizio) nomiServizi.add(String(servizio));
+        if (asset && String(asset).toUpperCase() !== 'N/D') conAsset += 1;
+        if (fornitore && String(fornitore).toUpperCase() !== 'N/D') conFornitori += 1;
+    });
+
+    impostaTesto('supply-services-count', nomiServizi.size || dati.length);
+    impostaTesto('supply-assets-count', conAsset);
+    impostaTesto('supply-suppliers-count', conFornitori);
+
+    const nota = document.getElementById('supply-summary-note');
+    if (!nota) return;
+
+    if (dati.length === 0) {
+        nota.textContent = 'Nessuna dipendenza disponibile nella vista di reporting.';
+        return;
+    }
+
+    nota.textContent = `${dati.length} record di reporting analizzati. Le viste multilivello saranno integrate nella fase dedicata alle relazioni.`;
+}
+
+/**
+ * Inserisce nel pannello gli incidenti più recenti con severità e stato temporale.
+ */
+function renderIncidentiRecenti(incidenti) {
+    const contenitore = document.getElementById('dashboard-incidents');
+    if (!contenitore) return;
+    contenitore.replaceChildren();
+
+    if (!Array.isArray(incidenti) || incidenti.length === 0) {
+        contenitore.appendChild(creaStatoDashboard('Nessun incidente registrato.'));
+        return;
+    }
+
+    incidenti.forEach((incidente) => {
+        const riga = document.createElement('article');
+        riga.className = 'dashboard-list-item';
+
+        const contenuto = document.createElement('div');
+        contenuto.className = 'dashboard-list-item__content';
+
+        const titolo = document.createElement('strong');
+        const tipologia = leggiCampo(incidente, ['tipologia'], 'Incidente');
+        titolo.textContent = `${tipologia} #${incidente.id}`;
+
+        const dettaglio = document.createElement('span');
+        const inizio = incidente.inizio ? new Date(incidente.inizio).toLocaleString('it-IT') : 'Data non disponibile';
+        const stato = incidente.fine ? 'Chiuso' : 'Aperto';
+        dettaglio.textContent = `${inizio} · ${stato}`;
+
+        const badge = document.createElement('span');
+        badge.className = `badge ${classeCriticita(incidente.severita)}`;
+        badge.textContent = normalizzaCriticita(incidente.severita);
+
+        contenuto.append(titolo, dettaglio);
+        riga.append(contenuto, badge);
+        contenitore.appendChild(riga);
+    });
+}
+
+/**
+ * Inserisce nel pannello le attività di audit più recenti con contesto leggibile.
+ */
+function renderAuditRecente(logs) {
+    const contenitore = document.getElementById('dashboard-audit');
+    if (!contenitore) return;
+    contenitore.replaceChildren();
+
+    if (!Array.isArray(logs) || logs.length === 0) {
+        contenitore.appendChild(creaStatoDashboard('Nessuna attività di audit disponibile.'));
+        return;
+    }
+
+    logs.forEach((log) => {
+        const riga = document.createElement('article');
+        riga.className = 'dashboard-list-item';
+
+        const contenuto = document.createElement('div');
+        contenuto.className = 'dashboard-list-item__content';
+
+        const titolo = document.createElement('strong');
+        const entita = leggiCampo(log, ['nome_record', 'codice_record', 'tipo_entita', 'tabella'], 'Record applicativo');
+        titolo.textContent = `${log.operazione || 'OPERAZIONE'} · ${entita}`;
+
+        const dettaglio = document.createElement('span');
+        const data = log.data_modifica ? new Date(log.data_modifica).toLocaleString('it-IT') : 'Data non disponibile';
+        const utente = leggiCampo(log, ['utente_email', 'utente'], 'Sistema');
+        dettaglio.textContent = `${data} · ${utente}`;
+
+        const tipo = document.createElement('span');
+        tipo.className = 'dashboard-list-item__tag';
+        tipo.textContent = String(log.tabella || log.tipo_entita || 'audit');
+
+        contenuto.append(titolo, dettaglio);
+        riga.append(contenuto, tipo);
+        contenitore.appendChild(riga);
+    });
+}
+
+/**
+ * Carica e visualizza tutti i pannelli della Dashboard operativa.
+ */
+export async function loadAndRenderDashboard() {
+    const stato = document.getElementById('dashboard-status');
+    const refreshButton = document.getElementById('dashboard-refresh-btn');
+
+    if (refreshButton && !refreshButton.dataset.bound) {
+        refreshButton.dataset.bound = 'true';
+        refreshButton.addEventListener('click', () => loadAndRenderDashboard());
+    }
+
+    if (refreshButton) {
+        refreshButton.disabled = true;
+        refreshButton.textContent = 'Aggiornamento…';
+    }
+
+    if (stato) stato.textContent = 'Aggiornamento degli indicatori in corso…';
+
+    ['metric-assets-active', 'metric-assets-critical', 'metric-services-active',
+        'metric-suppliers-active', 'metric-vulnerabilities-open', 'metric-incidents-open']
+        .forEach((id) => impostaTesto(id, '…'));
+
+    try {
+        const dati = await fetchDashboardData();
+
+        impostaTesto('metric-assets-active', dati.metriche.assetAttivi);
+        impostaTesto('metric-assets-critical', dati.metriche.assetCritici);
+        impostaTesto('metric-services-active', dati.metriche.serviziAttivi);
+        impostaTesto('metric-suppliers-active', dati.metriche.fornitoriAttivi);
+        impostaTesto('metric-vulnerabilities-open', dati.metriche.vulnerabilitaAperte);
+        impostaTesto('metric-incidents-open', dati.metriche.incidentiAperti);
+
+        renderDistribuzioneCriticita(dati.asset);
+        renderRiepilogoSupplyChain(dati.supplyChain);
+        renderIncidentiRecenti(dati.incidentiRecenti);
+        renderAuditRecente(dati.auditRecente);
+
+        if (stato) {
+            stato.textContent = dati.errori.length > 0
+                ? `Dashboard aggiornata con ${dati.errori.length} sorgente/i non disponibili.`
+                : `Dashboard aggiornata alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}.`;
+            stato.classList.toggle('dashboard-status--warning', dati.errori.length > 0);
+        }
+    } catch (error) {
+        console.error('Errore durante il caricamento della Dashboard:', error);
+        if (stato) {
+            stato.textContent = `Impossibile aggiornare la Dashboard: ${error.message}`;
+            stato.classList.add('dashboard-status--warning');
+        }
+    } finally {
+        if (refreshButton) {
+            refreshButton.disabled = false;
+            refreshButton.textContent = 'Aggiorna dati';
+        }
     }
 }
 

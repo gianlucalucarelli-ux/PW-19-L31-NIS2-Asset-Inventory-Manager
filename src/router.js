@@ -4,6 +4,7 @@
 // ===============================================================================================================
 
 const ROTTE_VALIDE = new Set([
+    'dashboard',
     'inventory',
     'add-asset',
     'supply-chain',
@@ -14,9 +15,8 @@ const ROTTE_VALIDE = new Set([
 ]);
 
 const ALIAS_ROTTE = {
-    '': 'inventory',
-    dashboard: 'inventory',
-    'dashboard-section': 'inventory',
+    '': 'dashboard',
+    'dashboard-section': 'dashboard',
     assets: 'inventory',
     'new-asset': 'add-asset',
     audit: 'audit-log',
@@ -41,7 +41,7 @@ function normalizzaRotta(valore = '') {
         .toLowerCase();
 
     const risolta = ALIAS_ROTTE[pulita] || pulita;
-    return ROTTE_VALIDE.has(risolta) ? risolta : 'inventory';
+    return ROTTE_VALIDE.has(risolta) ? risolta : 'dashboard';
 }
 
 /**
@@ -77,7 +77,7 @@ export async function initializeRouter(options = {}) {
         isAuthorized,
         onRouteChange,
         onUnauthorized,
-        defaultRoute = 'inventory'
+        defaultRoute = 'dashboard'
     } = options;
 
     verificaAutorizzazione = typeof isAuthorized === 'function'
