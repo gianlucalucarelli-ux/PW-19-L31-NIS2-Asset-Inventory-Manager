@@ -1137,6 +1137,25 @@ tbody tr:last-child td {
     margin-bottom: 7px;
 }
 
+.dashboard-hero__controls {
+    display: grid;
+    flex: 0 0 auto;
+    justify-items: end;
+    gap: 9px;
+}
+
+.dashboard-last-updated {
+    margin: 0;
+    color: var(--text-low);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: right;
+}
+
+.dashboard-last-updated--warning {
+    color: var(--warning);
+}
+
 .dashboard-metrics {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1448,6 +1467,18 @@ tbody tr:last-child td {
 
 .dashboard-status--warning {
     color: var(--warning);
+}
+
+
+@media (max-width: 720px) {
+    .dashboard-hero__controls {
+        width: 100%;
+        justify-items: stretch;
+    }
+
+    .dashboard-last-updated {
+        text-align: left;
+    }
 }
 
 /* ---------------------------------------------------------------------------------------------------------------

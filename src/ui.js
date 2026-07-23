@@ -3,7 +3,7 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=3';
+import { fetchAssets, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=4';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -558,6 +558,7 @@ function renderAuditRecente(logs) {
  */
 export async function loadAndRenderDashboard() {
     const stato = document.getElementById('dashboard-status');
+    const ultimoAggiornamento = document.getElementById('dashboard-last-updated');
     const refreshButton = document.getElementById('dashboard-refresh-btn');
 
     if (refreshButton && !refreshButton.dataset.bound) {
@@ -571,6 +572,7 @@ export async function loadAndRenderDashboard() {
     }
 
     if (stato) stato.textContent = 'Aggiornamento degli indicatori in corso…';
+    if (ultimoAggiornamento) ultimoAggiornamento.textContent = 'Aggiornamento in corso…';
 
     ['metric-assets-active', 'metric-assets-critical', 'metric-services-active',
         'metric-suppliers-active', 'metric-vulnerabilities-open', 'metric-incidents-open']
@@ -591,14 +593,38 @@ export async function loadAndRenderDashboard() {
         renderIncidentiRecenti(dati.incidentiRecenti);
         renderAuditRecente(dati.auditRecente);
 
+        const dataAggiornamento = new Date();
+        const dataOraFormattata = dataAggiornamento.toLocaleString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        const aggiornamentoParziale = dati.errori.length > 0;
+        const messaggioCompatto = aggiornamentoParziale
+            ? `Aggiornamento parziale: ${dataOraFormattata}`
+            : `Ultimo aggiornamento: ${dataOraFormattata}`;
+
+        if (ultimoAggiornamento) {
+            ultimoAggiornamento.textContent = messaggioCompatto;
+            ultimoAggiornamento.classList.toggle('dashboard-last-updated--warning', aggiornamentoParziale);
+        }
+
         if (stato) {
-            stato.textContent = dati.errori.length > 0
-                ? `Dashboard aggiornata con ${dati.errori.length} sorgente/i non disponibili.`
-                : `Dashboard aggiornata alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}.`;
-            stato.classList.toggle('dashboard-status--warning', dati.errori.length > 0);
+            stato.textContent = aggiornamentoParziale
+                ? `Dashboard aggiornata con ${dati.errori.length} sorgente/i non disponibili alle ${dataOraFormattata}.`
+                : `Dashboard aggiornata alle ${dataOraFormattata}.`;
+            stato.classList.toggle('dashboard-status--warning', aggiornamentoParziale);
         }
     } catch (error) {
         console.error('Errore durante il caricamento della Dashboard:', error);
+        if (ultimoAggiornamento) {
+            ultimoAggiornamento.textContent = 'Aggiornamento non riuscito';
+            ultimoAggiornamento.classList.add('dashboard-last-updated--warning');
+        }
         if (stato) {
             stato.textContent = `Impossibile aggiornare la Dashboard: ${error.message}`;
             stato.classList.add('dashboard-status--warning');

@@ -119,6 +119,22 @@ async function contaRighe(tabella, configuraQuery = null) {
 }
 
 /**
+ * Conta gli incidenti attivi, non chiusi e dotati di almeno una classificazione ACN attiva.
+ * In questo modo la Dashboard esclude record tecnici e compilazioni interrotte senza tassonomia.
+ */
+async function contaIncidentiClassificatiAperti() {
+    const { count, error } = await supabase
+        .from('evento_servizio')
+        .select('id, evento_tassonomia_acn!inner(id)', { count: 'exact', head: true })
+        .eq('attiva', true)
+        .is('fine', null)
+        .eq('evento_tassonomia_acn.attiva', true);
+
+    if (error) throw error;
+    return count ?? 0;
+}
+
+/**
  * Converte un risultato Promise.allSettled in un valore utilizzabile e registra eventuali errori parziali.
  */
 function estraiRisultato(risultato, valorePredefinito, chiave, errori) {
@@ -142,13 +158,15 @@ export async function fetchDashboardData() {
         contaRighe('servizio', (query) => query.eq('attiva', true)),
         contaRighe('fornitore', (query) => query.eq('attiva', true)),
         contaRighe('asset_vulnerabilita', (query) => query.eq('attiva', true).eq('stato_remediation', 'OPEN')),
-        contaRighe('evento_servizio', (query) => query.eq('attiva', true).is('fine', null)),
+        contaIncidentiClassificatiAperti(),
         fetchAssets(),
         fetchSupplyChain(),
         supabase
             .from('evento_servizio')
-            .select('id, inizio, fine, causa, severita, tipologia, servizio_id')
+            .select('id, inizio, fine, causa, severita, tipologia, servizio_id, evento_tassonomia_acn!inner(id)')
             .eq('attiva', true)
+            .is('fine', null)
+            .eq('evento_tassonomia_acn.attiva', true)
             .order('inizio', { ascending: false })
             .limit(5)
             .then(({ data, error }) => {
