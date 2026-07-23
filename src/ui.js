@@ -60,6 +60,7 @@ export function setAuthBusy(area, busy) {
 }
 
 export function showSignedOutInterface() {
+    const publicHome = document.getElementById('public-home');
     const authContainer = document.getElementById('auth-container');
     const loginView = document.getElementById('login-view');
     const mfaView = document.getElementById('mfa-view');
@@ -68,6 +69,7 @@ export function showSignedOutInterface() {
     const logoutBtn = document.getElementById('logout-btn');
     const userSession = document.getElementById('user-session');
 
+    setVisibility(publicHome, true);
     setVisibility(authContainer, true);
     setVisibility(loginView, true);
     setVisibility(mfaView, false);
@@ -85,6 +87,7 @@ export function showSignedOutInterface() {
 }
 
 export function showMfaInterface(session, accessState) {
+    const publicHome = document.getElementById('public-home');
     const authContainer = document.getElementById('auth-container');
     const loginView = document.getElementById('login-view');
     const mfaView = document.getElementById('mfa-view');
@@ -92,6 +95,7 @@ export function showMfaInterface(session, accessState) {
     const navMenuLinks = document.getElementById('nav-menu-links');
     const logoutBtn = document.getElementById('logout-btn');
 
+    setVisibility(publicHome, true);
     setVisibility(authContainer, true);
     setVisibility(loginView, false);
     setVisibility(mfaView, true);
@@ -113,11 +117,13 @@ export function showMfaInterface(session, accessState) {
 }
 
 export function showAuthenticatedInterface(session, accessState) {
+    const publicHome = document.getElementById('public-home');
     const authContainer = document.getElementById('auth-container');
     const dashboardContainer = document.getElementById('dashboard-container');
     const navMenuLinks = document.getElementById('nav-menu-links');
     const logoutBtn = document.getElementById('logout-btn');
 
+    setVisibility(publicHome, false);
     setVisibility(authContainer, false);
     setVisibility(dashboardContainer, true);
     setVisibility(navMenuLinks, true);
@@ -169,6 +175,44 @@ const ROUTE_TO_VIEW = {
     info: 'info'
 };
 
+const ROUTE_METADATA = {
+    inventory: {
+        section: 'Inventario',
+        label: 'INVENTARIO',
+        title: 'Inventario Asset'
+    },
+    'add-asset': {
+        section: 'Inventario',
+        label: 'INVENTARIO',
+        title: 'Nuovo Asset'
+    },
+    'supply-chain': {
+        section: 'Relazioni',
+        label: 'RELAZIONI',
+        title: 'Supply Chain'
+    },
+    'audit-log': {
+        section: 'Sicurezza e conformità',
+        label: 'SICUREZZA E CONFORMITÀ',
+        title: 'Audit Log'
+    },
+    incidenti: {
+        section: 'Sicurezza e conformità',
+        label: 'SICUREZZA E CONFORMITÀ',
+        title: 'Gestione Incidenti'
+    },
+    riepilogo: {
+        section: 'Sicurezza e conformità',
+        label: 'SICUREZZA E CONFORMITÀ',
+        title: 'Riepilogo incidente'
+    },
+    info: {
+        section: 'Supporto',
+        label: 'SUPPORTO',
+        title: 'Informazioni e guida'
+    }
+};
+
 /**
  * Aggiorna l'evidenziazione dei controlli di navigazione e gli attributi accessibili.
  */
@@ -193,21 +237,40 @@ function updateNavigationState(route) {
 }
 
 /**
+ * Aggiorna titolo, breadcrumb e titolo della scheda del browser.
+ */
+function updateWorkspaceHeader(route) {
+    const metadata = ROUTE_METADATA[route] || ROUTE_METADATA.inventory;
+    const breadcrumbSection = document.getElementById('breadcrumb-section');
+    const breadcrumbCurrent = document.getElementById('breadcrumb-current');
+    const pageSectionLabel = document.getElementById('page-section-label');
+    const pageTitle = document.getElementById('page-title');
+
+    if (breadcrumbSection) breadcrumbSection.textContent = metadata.section;
+    if (breadcrumbCurrent) breadcrumbCurrent.textContent = metadata.title;
+    if (pageSectionLabel) pageSectionLabel.textContent = metadata.label;
+    if (pageTitle) pageTitle.textContent = metadata.title;
+
+    document.title = `${metadata.title} | NIS2 Asset Inventory Manager`;
+}
+
+/**
  * Attiva una vista applicativa in base alla rotta risolta dal router centrale.
  */
 export async function activateApplicationRoute(route) {
     const viewId = ROUTE_TO_VIEW[route] || 'inventory';
 
     document.querySelectorAll('.view-section').forEach((section) => {
-        section.style.display = 'none';
+        section.classList.add('is-hidden');
     });
 
     const targetView = document.getElementById(`view-${viewId}`);
     if (targetView) {
-        targetView.style.display = 'block';
+        targetView.classList.remove('is-hidden');
     }
 
     updateNavigationState(route);
+    updateWorkspaceHeader(route);
 
     if (route === 'inventory') {
         await loadAndRenderTable();
