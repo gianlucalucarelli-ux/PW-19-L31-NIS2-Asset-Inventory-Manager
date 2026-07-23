@@ -119,19 +119,66 @@ async function contaRighe(tabella, configuraQuery = null) {
 }
 
 /**
- * Conta gli incidenti attivi, non chiusi e dotati di almeno una classificazione ACN attiva.
- * In questo modo la Dashboard esclude record tecnici e compilazioni interrotte senza tassonomia.
+ * Recupera gli identificativi degli eventi che possiedono almeno una
+ * classificazione ACN attiva.
+ *
+ * La lettura avviene direttamente dalla tabella associativa invece di
+ * affidarsi all'embedding automatico di PostgREST. Questa soluzione evita
+ * dipendenze dal nome della relazione esposta dall'API e rende la Dashboard
+ * compatibile con lo schema effettivamente pubblicato da Supabase.
+ */
+async function fetchEventoIdsClassificatiAttivi() {
+    const { data, error } = await supabase
+        .from('evento_tassonomia_acn')
+        .select('evento_id')
+        .eq('attiva', true);
+
+    if (error) throw error;
+
+    return [...new Set(
+        (data ?? [])
+            .map((record) => record.evento_id)
+            .filter((id) => id !== null && id !== undefined)
+    )];
+}
+
+/**
+ * Conta gli incidenti attivi, non chiusi e dotati di almeno una
+ * classificazione ACN attiva.
  */
 async function contaIncidentiClassificatiAperti() {
+    const eventoIds = await fetchEventoIdsClassificatiAttivi();
+    if (eventoIds.length === 0) return 0;
+
     const { count, error } = await supabase
         .from('evento_servizio')
-        .select('id, evento_tassonomia_acn!inner(id)', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('attiva', true)
         .is('fine', null)
-        .eq('evento_tassonomia_acn.attiva', true);
+        .in('id', eventoIds);
 
     if (error) throw error;
     return count ?? 0;
+}
+
+/**
+ * Legge gli incidenti classificati aperti più recenti.
+ */
+async function fetchIncidentiClassificatiRecenti(limit = 5) {
+    const eventoIds = await fetchEventoIdsClassificatiAttivi();
+    if (eventoIds.length === 0) return [];
+
+    const { data, error } = await supabase
+        .from('evento_servizio')
+        .select('id, inizio, fine, causa, severita, tipologia, servizio_id')
+        .eq('attiva', true)
+        .is('fine', null)
+        .in('id', eventoIds)
+        .order('inizio', { ascending: false })
+        .limit(limit);
+
+    if (error) throw error;
+    return data ?? [];
 }
 
 /**
@@ -161,18 +208,7 @@ export async function fetchDashboardData() {
         contaIncidentiClassificatiAperti(),
         fetchAssets(),
         fetchSupplyChain(),
-        supabase
-            .from('evento_servizio')
-            .select('id, inizio, fine, causa, severita, tipologia, servizio_id, evento_tassonomia_acn!inner(id)')
-            .eq('attiva', true)
-            .is('fine', null)
-            .eq('evento_tassonomia_acn.attiva', true)
-            .order('inizio', { ascending: false })
-            .limit(5)
-            .then(({ data, error }) => {
-                if (error) throw error;
-                return data ?? [];
-            }),
+        fetchIncidentiClassificatiRecenti(5),
         supabase
             .from('audit_log')
             .select('id, data_modifica, operazione, utente, utente_email, tabella, tipo_entita, record_id, codice_record, nome_record')

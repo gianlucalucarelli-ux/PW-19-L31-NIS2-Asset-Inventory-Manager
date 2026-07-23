@@ -3,7 +3,7 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=4';
+import { fetchAssets, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=5';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -484,7 +484,7 @@ function renderIncidentiRecenti(incidenti) {
     contenitore.replaceChildren();
 
     if (!Array.isArray(incidenti) || incidenti.length === 0) {
-        contenitore.appendChild(creaStatoDashboard('Nessun incidente registrato.'));
+        contenitore.appendChild(creaStatoDashboard('Nessun incidente classificato aperto.'));
         return;
     }
 

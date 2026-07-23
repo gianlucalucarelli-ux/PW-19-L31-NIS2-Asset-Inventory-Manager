@@ -12,7 +12,7 @@ import {
     showAuthenticatedInterface,
     setAuthBusy,
     setAuthError
-} from './ui.js?v=8';
+} from './ui.js?v=9';
 import {
     initializeRouter,
     navigateTo,
@@ -26,7 +26,7 @@ import {
     observeAuthState,
     signOut
 } from './auth.js';
-import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=4';
+import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=5';
 import { exportToExcel, parseExcelFile } from './importExport.js';
 
 initTheme();
