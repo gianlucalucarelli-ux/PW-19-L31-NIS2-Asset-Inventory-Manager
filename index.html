@@ -15,12 +15,12 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=8">
+    <link rel="stylesheet" href="src/style.css?v=9">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="src/main.js?v=9"></script>
+    <script type="module" src="src/main.js?v=10"></script>
     <script type="module" src="src/wizard.js?v=5"></script>
 </head>
 <body>
@@ -45,7 +45,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
             </a>
 
             <nav id="nav-menu-links" class="top-navigation is-hidden" aria-label="Navigazione principale">
-                <a href="#dashboard" class="nav-link active" data-route="dashboard" data-nav-group="dashboard">Dashboard</a>
+                <a href="#dashboard" class="nav-link active" data-route="dashboard" data-nav-group="dashboard">Dashboard operativa</a>
                 <a href="#info" class="nav-link" data-route="info" data-nav-group="info">Informazioni e guida</a>
             </nav>
 
@@ -234,9 +234,14 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                         incidenti, Supply Chain e attività di audit.
                                     </p>
                                 </div>
-                                <button id="dashboard-refresh-btn" class="btn-secondary" type="button">
-                                    Aggiorna dati
-                                </button>
+                                <div class="dashboard-hero__controls">
+                                    <p id="dashboard-last-updated" class="dashboard-last-updated" role="status" aria-live="polite">
+                                        In attesa di aggiornamento
+                                    </p>
+                                    <button id="dashboard-refresh-btn" class="btn-secondary" type="button">
+                                        Aggiorna dati
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="dashboard-metrics" aria-label="Indicatori principali">
@@ -283,9 +288,9 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <article class="metric-card metric-card--incident">
                                     <span class="metric-card__icon" aria-hidden="true">🚨</span>
                                     <div>
-                                        <p class="metric-card__label">Incidenti aperti</p>
+                                        <p class="metric-card__label">Incidenti classificati aperti</p>
                                         <p id="metric-incidents-open" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Eventi senza data di chiusura</p>
+                                        <p class="metric-card__detail">Classificazioni ACN senza data di chiusura</p>
                                     </div>
                                 </article>
                             </div>
