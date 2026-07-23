@@ -9,19 +9,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="src/style.css">
-    <script type="module" src="src/main.js?v=4"></script>
-    <script type="module" src="src/wizard.js?v=2"></script>
-    
+    <script type="module" src="src/main.js?v=5"></script>
+    <script type="module" src="src/wizard.js?v=3"></script>
 </head>
 <body>
 
 <nav class="main-nav">
     <div class="nav-container">
         <span class="nav-logo">🛡️ NIS2 Asset Manager</span>
-        
+
         <div class="nav-menu is-hidden" id="nav-menu-links">
-            <a href="#dashboard-section" class="nav-link active">Dashboard</a>
-            <a href="#info-section" class="nav-link">Info Progetto</a>
+            <a href="#inventory" class="nav-link active" data-route="inventory" data-nav-group="dashboard">Dashboard</a>
+            <a href="#info" class="nav-link" data-route="info" data-nav-group="info">Info Progetto</a>
         </div>
         <div class="nav-actions">
             <div id="user-session" class="user-session is-hidden" aria-live="polite">
@@ -66,20 +65,20 @@
 
     <main id="dashboard-container" class="is-hidden" style="margin-top: 20px;">
         <div class="dashboard-layout" style="display: flex; gap: 20px; align-items: flex-start;">
-            
+
             <aside class="sidebar card" style="width: 250px; flex-shrink: 0; padding: 15px;">
                 <div class="sidebar-menu" style="display: flex; flex-direction: column; gap: 10px;">
-                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('inventory')">📦 Inventario Asset</button>
-                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('add-asset')">➕ Nuovo Asset</button>
-                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('supply-chain')">🔗 Supply Chain</button>
+                    <button type="button" class="menu-btn active" data-route="inventory">📦 Inventario Asset</button>
+                    <button type="button" class="menu-btn" data-route="add-asset">➕ Nuovo Asset</button>
+                    <button type="button" class="menu-btn" data-route="supply-chain">🔗 Supply Chain</button>
                     <hr style="width: 100%; border: 0; border-top: 1px solid var(--border-color); margin: 5px 0;">
-                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('audit-log')">📋 Audit Log</button>
-                    <button class="btn-logout" style="text-align: left; border: none; padding: 10px;" onclick="window.switchView('incidenti')">🚨 Gestione Incidenti</button>
+                    <button type="button" class="menu-btn" data-route="audit-log">📋 Audit Log</button>
+                    <button type="button" class="menu-btn" data-route="incidenti">🚨 Gestione Incidenti</button>
                 </div>
             </aside>
 
             <section class="content-view" style="flex-grow: 1;">
-                
+
                 <div id="view-inventory" class="view-section card">
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <div>
@@ -87,9 +86,9 @@
                             <p style="margin-top: 5px; font-size: 0.9rem;">Area protetta da cifratura perimetrale e policy RLS.</p>
                         </div>
                         <div class="action-group" style="display: flex; gap: 10px;">
-                            <button class="btn-primary" onclick="window.switchView('add-asset')">Nuovo Asset</button>
-                            <button id="btn-export-xls" class="btn-primary" style="background: #10b981; border-color: #10b981;">Esporta XLS</button>
-                            <button id="btn-trigger-import" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">Importa XLS</button>
+                            <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
+                            <button id="btn-export-xls" class="btn-primary" type="button" style="background: #10b981; border-color: #10b981;">Esporta XLS</button>
+                            <button id="btn-trigger-import" class="btn-primary" type="button" style="background: #f59e0b; border-color: #f59e0b;">Importa XLS</button>
                             <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" style="display: none;">
                         </div>
                     </div>
@@ -134,11 +133,11 @@
                         </div>
                         <div style="display: flex; gap: 10px; margin-top: 25px;">
                             <button type="submit" class="btn-primary" style="flex: 1;">Salva Asset</button>
-                            <button type="button" class="btn-logout" style="flex: 1;" onclick="window.switchView('inventory')">Annulla</button>
+                            <button type="button" class="btn-logout" style="flex: 1;" data-route="inventory">Annulla</button>
                         </div>
                     </form>
                 </div>
-                
+
                 <div id="view-supply-chain" class="view-section card" style="display:none;">
                     <div class="card-header">
                         <h2>Mappatura Supply Chain & Servizi Critici</h2>
@@ -170,8 +169,8 @@
                         <h2 id="step-title" style="margin-bottom: 20px;">Passo 1: Baseline Characterization</h2>
                         <div id="step-content"></div>
                         <div class="wizard-nav" style="display: flex; justify-content: space-between; margin-top: 30px;">
-                            <button id="btn-indietro" class="btn-action btn-logout">Indietro</button>
-                            <button id="btn-avanti" class="btn-action btn-add">Avanti</button>
+                            <button id="btn-indietro" class="btn-action btn-logout" type="button">Indietro</button>
+                            <button id="btn-avanti" class="btn-action btn-add" type="button">Avanti</button>
                         </div>
                     </div>
                 </div>
@@ -180,20 +179,20 @@
                     <h2 style="margin-bottom: 20px;">Riepilogo Report ACN (NIS2)</h2>
                     <textarea id="report-output" rows="10" style="width: 100%; padding: 15px; font-family: monospace; border: 1px solid var(--border-color); border-radius: 8px; background: #f8fafc; color: #0f172a; resize: vertical;" readonly></textarea>
                     <div style="margin-top: 20px; display: flex; gap: 15px;">
-                        <button id="btn-copia" class="btn-primary">📋 Copia negli Appunti</button>
-                        <button class="btn-logout" onclick="window.location.reload()">Chiudi e Nuovo Incidente</button>
+                        <button id="btn-copia" class="btn-primary" type="button">📋 Copia negli Appunti</button>
+                        <button id="btn-restart-incident" class="btn-logout" type="button">Chiudi e nuovo incidente</button>
                     </div>
+                </div>
+
+                <div id="view-info" class="view-section card" style="display:none; padding: 30px;">
+                    <h2>Dettagli Architetturali del Progetto</h2>
+                    <p style="margin-top: 15px;">Questo applicativo rappresenta il frontend di un sistema di tracciamento asset conforme ai requisiti della Direttiva (UE) 2022/2555 (NIS2).</p>
+                    <p>Il database di backend è strutturato in Terza Forma Normale (3NF) per eliminare le ridondanze informative e garantire la consistenza dei dati relativi all'infrastruttura di un'azienda sanitaria.</p>
                 </div>
 
             </section>
         </div>
     </main>
-
-    <section class="card is-hidden" id="info-container" style="margin-top: 20px; padding: 30px;">
-        <h2>Dettagli Architetturali del Progetto</h2>
-        <p style="margin-top: 15px;">Questo applicativo rappresenta il frontend di un sistema di tracciamento asset conforme ai requisiti della **Direttiva (UE) 2022/2555 (NIS2)**.</p>
-        <p>Il database di backend è strutturato in **Terza Forma Normale (3NF)** per eliminare le ridondanze informative e garantire la consistenza dei dati relativi all'infrastruttura di un'azienda sanitaria.</p>
-    </section>
 
     <footer style="margin-top: 30px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
         Sviluppo conforme a Direttiva NIS2 e linee guida ACN per infrastrutture sanitarie critiche.
