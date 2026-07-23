@@ -2,10 +2,10 @@
 <!--
 ===============================================================================================================
 FILE: index.html
-DESCRIZIONE: Struttura HTML5 dell'area pubblica, dell'area autenticata e della Dashboard operativa.
+DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autenticata.
 ===============================================================================================================
 -->
-<html lang="it" data-theme="dark">
+<html lang="it" data-theme="dark" class="app-booting">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,20 +15,28 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica, dell'area autenticata e della D
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=6">
+    <link rel="stylesheet" href="src/style.css?v=8">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="src/main.js?v=7"></script>
+    <script type="module" src="src/main.js?v=9"></script>
     <script type="module" src="src/wizard.js?v=5"></script>
 </head>
 <body>
+    <div id="app-boot-screen" class="app-boot-screen" role="status" aria-live="polite" aria-label="Verifica della sessione in corso">
+        <div class="app-boot-screen__content">
+            <span class="app-boot-screen__mark" aria-hidden="true">🛡️</span>
+            <strong>NIS2 Asset Manager</strong>
+            <span>Verifica della sessione in corso…</span>
+        </div>
+    </div>
+
     <a class="skip-link" href="#main-content">Vai al contenuto principale</a>
 
     <header class="site-header">
         <div class="site-header__inner">
-            <a class="brand" href="#dashboard" data-route="dashboard" aria-label="NIS2 Asset Inventory Manager">
+            <a class="brand" href="#dashboard" aria-label="NIS2 Asset Inventory Manager">
                 <span class="brand__mark" aria-hidden="true">🛡️</span>
                 <span class="brand__text">
                     <span class="brand__name">NIS2 Asset Manager</span>
@@ -216,31 +224,36 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica, dell'area autenticata e della D
                     </header>
 
                     <section class="content-view" aria-live="polite">
-                        <section id="view-dashboard" class="view-section dashboard-view is-hidden">
-                            <section class="dashboard-hero card">
+                        <section id="view-dashboard" class="view-section dashboard-view is-hidden" aria-labelledby="dashboard-overview-title">
+                            <div class="dashboard-hero card">
                                 <div>
                                     <p class="eyebrow">PANORAMICA OPERATIVA</p>
-                                    <h2>Stato sintetico dell'inventario e della sicurezza</h2>
-                                    <p class="section-intro">Indicatori aggiornati da Supabase per asset, servizi, fornitori, vulnerabilità, incidenti, Supply Chain e audit.</p>
+                                    <h2 id="dashboard-overview-title">Stato sintetico dell’ambiente</h2>
+                                    <p class="section-intro">
+                                        Indicatori aggiornati da Supabase per asset, servizi, fornitori, vulnerabilità,
+                                        incidenti, Supply Chain e attività di audit.
+                                    </p>
                                 </div>
-                                <button id="dashboard-refresh-btn" class="btn-secondary" type="button">Aggiorna dati</button>
-                            </section>
+                                <button id="dashboard-refresh-btn" class="btn-secondary" type="button">
+                                    Aggiorna dati
+                                </button>
+                            </div>
 
-                            <section class="dashboard-metrics" aria-label="Indicatori principali">
+                            <div class="dashboard-metrics" aria-label="Indicatori principali">
                                 <article class="metric-card">
                                     <span class="metric-card__icon" aria-hidden="true">📦</span>
                                     <div>
                                         <p class="metric-card__label">Asset attivi</p>
                                         <p id="metric-assets-active" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Risorse censite e non archiviate</p>
+                                        <p class="metric-card__detail">Inventario operativo</p>
                                     </div>
                                 </article>
                                 <article class="metric-card metric-card--critical">
-                                    <span class="metric-card__icon" aria-hidden="true">🔴</span>
+                                    <span class="metric-card__icon" aria-hidden="true">⚠️</span>
                                     <div>
                                         <p class="metric-card__label">Asset critici</p>
                                         <p id="metric-assets-critical" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Asset con criticità massima</p>
+                                        <p class="metric-card__detail">Classificazione Critica</p>
                                     </div>
                                 </article>
                                 <article class="metric-card">
@@ -248,7 +261,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica, dell'area autenticata e della D
                                     <div>
                                         <p class="metric-card__label">Servizi attivi</p>
                                         <p id="metric-services-active" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Servizi operativi censiti</p>
+                                        <p class="metric-card__detail">Servizi censiti</p>
                                     </div>
                                 </article>
                                 <article class="metric-card">
@@ -256,15 +269,15 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica, dell'area autenticata e della D
                                     <div>
                                         <p class="metric-card__label">Fornitori attivi</p>
                                         <p id="metric-suppliers-active" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Fornitori e partner non archiviati</p>
+                                        <p class="metric-card__detail">Terze parti censite</p>
                                     </div>
                                 </article>
                                 <article class="metric-card metric-card--warning">
-                                    <span class="metric-card__icon" aria-hidden="true">⚠️</span>
+                                    <span class="metric-card__icon" aria-hidden="true">🛡️</span>
                                     <div>
                                         <p class="metric-card__label">Vulnerabilità aperte</p>
                                         <p id="metric-vulnerabilities-open" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Elementi ancora da risolvere</p>
+                                        <p class="metric-card__detail">Associazioni da trattare</p>
                                     </div>
                                 </article>
                                 <article class="metric-card metric-card--incident">
@@ -272,96 +285,103 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica, dell'area autenticata e della D
                                     <div>
                                         <p class="metric-card__label">Incidenti aperti</p>
                                         <p id="metric-incidents-open" class="metric-card__value">—</p>
-                                        <p class="metric-card__detail">Segnalazioni senza data di chiusura</p>
+                                        <p class="metric-card__detail">Eventi senza data di chiusura</p>
                                     </div>
                                 </article>
-                            </section>
+                            </div>
 
-                            <section class="dashboard-layout">
-                                <article class="dashboard-panel card">
-                                    <header class="dashboard-panel__header">
+                            <div class="dashboard-layout">
+                                <section class="dashboard-panel card" aria-labelledby="dashboard-criticality-title">
+                                    <div class="dashboard-panel__header">
                                         <div>
-                                            <h3>Distribuzione per criticità</h3>
-                                            <p class="section-intro">Composizione dell'inventario asset.</p>
+                                            <p class="eyebrow">CRITICITÀ</p>
+                                            <h3 id="dashboard-criticality-title">Distribuzione degli asset</h3>
                                         </div>
                                         <button type="button" class="btn-link" data-route="inventory">Apri inventario</button>
-                                    </header>
-                                    <div id="dashboard-criticality" class="criticality-chart">
-                                        <p class="dashboard-empty">Caricamento distribuzione…</p>
                                     </div>
-                                </article>
+                                    <div id="dashboard-criticality" class="criticality-chart" aria-live="polite"></div>
+                                </section>
 
-                                <article class="dashboard-panel card">
-                                    <header class="dashboard-panel__header">
+                                <section class="dashboard-panel card" aria-labelledby="dashboard-supply-title">
+                                    <div class="dashboard-panel__header">
                                         <div>
-                                            <h3>Copertura Supply Chain</h3>
-                                            <p class="section-intro">Sintesi delle dipendenze disponibili.</p>
+                                            <p class="eyebrow">RELAZIONI</p>
+                                            <h3 id="dashboard-supply-title">Copertura Supply Chain</h3>
                                         </div>
                                         <button type="button" class="btn-link" data-route="supply-chain">Apri relazioni</button>
-                                    </header>
+                                    </div>
                                     <dl class="supply-summary">
-                                        <div><dt>Servizi</dt><dd id="supply-services-count">—</dd></div>
-                                        <div><dt>Con asset</dt><dd id="supply-assets-count">—</dd></div>
-                                        <div><dt>Con fornitori</dt><dd id="supply-suppliers-count">—</dd></div>
+                                        <div>
+                                            <dt>Servizi mappati</dt>
+                                            <dd id="supply-services-count">—</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Con asset collegati</dt>
+                                            <dd id="supply-assets-count">—</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Con fornitori collegati</dt>
+                                            <dd id="supply-suppliers-count">—</dd>
+                                        </div>
                                     </dl>
-                                    <p id="supply-summary-note" class="dashboard-note">Caricamento riepilogo…</p>
-                                </article>
+                                    <p id="supply-summary-note" class="dashboard-note">Caricamento dello stato delle dipendenze…</p>
+                                </section>
 
-                                <article class="dashboard-panel dashboard-panel--wide card">
-                                    <header class="dashboard-panel__header">
+                                <section class="dashboard-panel card dashboard-panel--wide" aria-labelledby="dashboard-incidents-title">
+                                    <div class="dashboard-panel__header">
                                         <div>
-                                            <h3>Incidenti recenti</h3>
-                                            <p class="section-intro">Ultime segnalazioni registrate.</p>
+                                            <p class="eyebrow">SICUREZZA</p>
+                                            <h3 id="dashboard-incidents-title">Incidenti recenti</h3>
                                         </div>
-                                        <button type="button" class="btn-link" data-route="incidenti">Apri incidenti</button>
-                                    </header>
-                                    <div id="dashboard-incidents" class="dashboard-list">
-                                        <p class="dashboard-empty">Caricamento incidenti…</p>
+                                        <button type="button" class="btn-link" data-route="incidenti">Gestione incidenti</button>
                                     </div>
-                                </article>
+                                    <div id="dashboard-incidents" class="dashboard-list" aria-live="polite"></div>
+                                </section>
 
-                                <article class="dashboard-panel dashboard-panel--wide card">
-                                    <header class="dashboard-panel__header">
+                                <section class="dashboard-panel card dashboard-panel--wide" aria-labelledby="dashboard-audit-title">
+                                    <div class="dashboard-panel__header">
                                         <div>
-                                            <h3>Attività di audit recenti</h3>
-                                            <p class="section-intro">Operazioni più recenti tracciate dal sistema.</p>
+                                            <p class="eyebrow">TRACCIABILITÀ</p>
+                                            <h3 id="dashboard-audit-title">Ultime attività di audit</h3>
                                         </div>
-                                        <button type="button" class="btn-link" data-route="audit-log">Apri audit</button>
-                                    </header>
-                                    <div id="dashboard-audit" class="dashboard-list">
-                                        <p class="dashboard-empty">Caricamento audit…</p>
+                                        <button type="button" class="btn-link" data-route="audit-log">Apri Audit Log</button>
                                     </div>
-                                </article>
-                            </section>
+                                    <div id="dashboard-audit" class="dashboard-list" aria-live="polite"></div>
+                                </section>
+                            </div>
 
-                            <section class="dashboard-actions card">
-                                <h3>Azioni rapide</h3>
-                                <p class="section-intro">Accesso diretto alle operazioni utilizzate più spesso.</p>
+                            <section class="dashboard-actions card" aria-labelledby="dashboard-actions-title">
+                                <div class="dashboard-panel__header">
+                                    <div>
+                                        <p class="eyebrow">AZIONI RAPIDE</p>
+                                        <h3 id="dashboard-actions-title">Operazioni frequenti</h3>
+                                    </div>
+                                </div>
                                 <div class="quick-action-grid">
                                     <button type="button" class="quick-action" data-route="add-asset">
                                         <span aria-hidden="true">➕</span>
                                         <strong>Nuovo Asset</strong>
-                                        <small>Registra una nuova risorsa.</small>
+                                        <small>Registra una nuova risorsa</small>
                                     </button>
                                     <button type="button" class="quick-action" data-route="incidenti">
                                         <span aria-hidden="true">🚨</span>
-                                        <strong>Gestione Incidenti</strong>
-                                        <small>Avvia o consulta una segnalazione.</small>
+                                        <strong>Nuova segnalazione</strong>
+                                        <small>Avvia il wizard ACN</small>
                                     </button>
                                     <button type="button" class="quick-action" data-route="supply-chain">
                                         <span aria-hidden="true">🔗</span>
                                         <strong>Supply Chain</strong>
-                                        <small>Consulta dipendenze e fornitori.</small>
+                                        <small>Consulta le dipendenze</small>
                                     </button>
                                     <button type="button" class="quick-action" data-route="audit-log">
                                         <span aria-hidden="true">📋</span>
                                         <strong>Audit Log</strong>
-                                        <small>Controlla le ultime operazioni.</small>
+                                        <small>Verifica le ultime modifiche</small>
                                     </button>
                                 </div>
                             </section>
 
-                            <p id="dashboard-status" class="dashboard-status" aria-live="polite"></p>
+                            <div id="dashboard-status" class="dashboard-status" role="status" aria-live="polite"></div>
                         </section>
 
                         <section id="view-inventory" class="view-section card">
