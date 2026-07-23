@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/wizard.css?v=2">
-    <link rel="stylesheet" href="src/style.css?v=4">
+    <link rel="stylesheet" href="src/style.css?v=5">
+    <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="src/main.js?v=6"></script>
-    <script type="module" src="src/wizard.js?v=4"></script>
+    <script type="module" src="src/main.js?v=7"></script>
+    <script type="module" src="src/wizard.js?v=5"></script>
 </head>
 <body>
     <a class="skip-link" href="#main-content">Vai al contenuto principale</a>
@@ -46,7 +46,10 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                     <span id="user-display" class="user-session__identity"></span>
                     <span id="user-access-level" class="user-session__status"></span>
                 </div>
-                <button id="theme-toggle" class="btn-theme" type="button" title="Cambia tema" aria-label="Cambia tema chiaro o scuro">🌓 Modalità</button>
+                <button id="theme-toggle" class="btn-theme" type="button" title="Passa al tema chiaro" aria-label="Passa al tema chiaro" aria-pressed="false">
+                    <span id="theme-toggle-icon" class="btn-theme__icon" aria-hidden="true">☀️</span>
+                    <span id="theme-toggle-label">Tema chiaro</span>
+                </button>
                 <button id="logout-btn" class="btn-logout is-hidden" type="button">Logout</button>
             </div>
         </div>
@@ -70,7 +73,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                         </div>
                         <div>
                             <dt>Corso</dt>
-                            <dd>Informatica per le aziende digitali (L-31)</dd>
+                            <dd>Informatica per le aziende digitali <span class="no-wrap">(L-31)</span></dd>
                         </div>
                         <div>
                             <dt>Ambito</dt>
@@ -360,7 +363,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 </article>
                                 <article class="info-panel">
                                     <h3>Project Work</h3>
-                                    <p>Progetto sviluppato per il corso di Informatica per le aziende digitali (L-31), con impostazione generale e non vincolata a uno specifico settore produttivo.</p>
+                                    <p>Progetto sviluppato per il corso di Informatica per le aziende digitali <span class="no-wrap">(L-31)</span>, con impostazione generale e non vincolata a uno specifico settore produttivo.</p>
                                 </article>
                             </div>
                         </section>
