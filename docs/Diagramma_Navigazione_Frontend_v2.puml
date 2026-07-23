@@ -1,0 +1,117 @@
+@startuml
+' =========================================================================
+' FILE: docs/Diagramma_Navigazione_Frontend.puml
+' DESCRIZIONE: Architettura di navigazione frontend del progetto
+'              NIS2 Asset Inventory Manager
+' =========================================================================
+
+title ARCHITETTURA DI NAVIGAZIONE FRONTEND\nNIS2 Asset Inventory Manager — Home pubblica, autenticazione e area applicativa
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ArrowColor #607D8B
+skinparam ArrowThickness 1.3
+skinparam packageStyle rectangle
+
+skinparam rectangle {
+  BorderColor #90A4AE
+  FontColor #263238
+}
+
+top to bottom direction
+
+' =========================
+' AREA PUBBLICA
+' =========================
+rectangle "HOME PUBBLICA\n\n• Presentazione del progetto\n• Funzionalità principali\n• Sicurezza e conformità\n• Logo e identità visiva\n• Lingua IT / EN\n• Tema chiaro / scuro" as HOME #E3F2FD
+
+rectangle "ACCESSO RISERVATO\n\n• E-mail e password\n• Mostra / nascondi password\n• Messaggi di errore\n• Stato di caricamento" as LOGIN #E3F2FD
+
+HOME -right-> LOGIN
+
+
+' =========================
+' AUTENTICAZIONE E SESSIONE
+' =========================
+rectangle "AUTENTICAZIONE SUPABASE\n\nVerifica credenziali\n e recupero della sessione" as AUTH #FFF8E1
+
+rectangle "VERIFICA IDENTITÀ E LIVELLO AAL\n\n• Utente autenticato\n• Fattore MFA disponibile\n• Livello AAL corrente\n• Livello AAL raggiungibile" as CHECK_AAL #FFF8E1
+
+rectangle "ACCESSO DIRETTO\n\nEsito: MFA non richiesta\n\nUtente autorizzato\nsenza secondo fattore" as DIRECT #E8F5E9
+
+rectangle "VERIFICA MFA\n\nEsito: MFA richiesta\n\nInserimento codice TOTP\nper gli utenti soggetti a MFA" as MFA #FFF3E0
+
+LOGIN -down-> AUTH
+AUTH -down-> CHECK_AAL
+CHECK_AAL -left-> DIRECT
+CHECK_AAL -right-> MFA
+
+
+' =========================
+' LAYOUT APPLICATIVO
+' =========================
+rectangle "LAYOUT APPLICATIVO RESPONSIVE\n\nBarra superiore\n• Logo e nome applicazione\n• Breadcrumb\n• IT / EN\n• Tema chiaro / scuro\n• Utente collegato e stato MFA / AAL\n• Logout\n\nNavigazione laterale\n• Desktop: estesa\n• Tablet: comprimibile\n• Smartphone: menu apribile" as LAYOUT #E8F5E9
+
+DIRECT -down-> LAYOUT
+MFA -down-> LAYOUT
+
+
+' =========================
+' DASHBOARD E MENU
+' =========================
+rectangle "DASHBOARD\n\n• Indicatori principali\n• Asset e servizi critici\n• Fornitori\n• Incidenti recenti\n• Ultime attività di audit\n• Stato Supply Chain\n• Azioni rapide" as DASHBOARD #E8F5E9
+
+rectangle "MENU PRINCIPALE" as MENU #CFD8DC
+
+LAYOUT -down-> DASHBOARD
+DASHBOARD -down-> MENU
+
+
+' =========================
+' AREE APPLICATIVE
+' =========================
+rectangle "INVENTARIO\n\nASSET\n• Elenco, filtri e dettaglio\n• Inserimento, modifica e archiviazione\n• Relazioni e audit dei record\n\nSERVIZI\n• Elenco, dipendenze e sottoservizi\n• Inserimento, modifica e archiviazione\n\nFORNITORI\n• Elenco, subfornitori e collegamenti\n• Inserimento, modifica e archiviazione\n\nVULNERABILITÀ\n• Asset interessati, severità e remediation" as INVENTORY #E3F2FD
+
+rectangle "RELAZIONI E GERARCHIE\n\nSUPPLY CHAIN\n• Vista tabellare e gerarchica\n• Dipendenze dirette e derivate\n• Percorso multilivello\n\nGERARCHIE\n• Servizi e sottoservizi\n• Asset e sotto-asset\n• Fornitori e subfornitori" as RELATIONS #F3E5F5
+
+rectangle "SICUREZZA E CONFORMITÀ\n\nGESTIONE INCIDENTI\n• Elenco, bozze e nuova segnalazione\n• Wizard ACN e riepilogo report\n\nAUDIT\n• Elenco filtrabile\n• Dettaglio operazione\n• Stato precedente e successivo\n• Utente e livello AAL" as SECURITY #FCE4EC
+
+rectangle "OPERAZIONI\n\nIMPORTAZIONE MASSIVA\n• Asset, servizi, fornitori e relazioni\n• Anteprima, validazione e rapporto errori\n\nESPORTAZIONE\n• Dati filtrati, XLSX / CSV e modelli\n\nARCHIVIO\n• Entità archiviate e relazioni scadute" as OPERATIONS #FFF8E1
+
+rectangle "INFORMAZIONI E GUIDA\n\n• Finalità dell'applicazione\n• Guida rapida\n• Architettura del sistema\n• Documentazione tecnica\n• Informazioni sul Project Work" as INFO #ECEFF1
+
+MENU -left-> INVENTORY
+MENU -down-> RELATIONS
+MENU -right-> SECURITY
+MENU -down-> OPERATIONS
+MENU -right-> INFO
+
+
+' =========================
+' NOTE
+' =========================
+note right of OPERATIONS
+Comportamento responsive:
+- desktop: navigazione laterale estesa e tabelle complete;
+- tablet: navigazione comprimibile e filtri raggruppati;
+- smartphone: menu apribile, filtri in pannello,
+  tabelle trasformabili in schede e azioni a larghezza completa.
+end note
+
+legend bottom
+|= Colore |= Area |
+|<#E3F2FD>| Home pubblica e inventario |
+|<#FFF8E1>| Autenticazione e sessione |
+|<#E8F5E9>| Layout applicativo e Dashboard |
+|<#F3E5F5>| Relazioni e gerarchie |
+|<#FCE4EC>| Sicurezza, incidenti e audit |
+|<#FFF8E1>| Operazioni massive e archivio |
+|<#ECEFF1>| Informazioni e supporto |
+endlegend
+
+footer NIS2 Asset Inventory Manager — Home pubblica, autenticazione e area applicativa
+
+@enduml
