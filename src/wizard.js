@@ -11,6 +11,7 @@ import {
     fetchReportIncidente,
     verificaAccessoIncidenti
 } from './incidentService.js?v=2';
+import { navigateTo } from './router.js?v=1';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -263,13 +264,10 @@ async function generaReportFinale() {
         + `L'attacco è stato caratterizzato da minacce di tipo ${formatData(5)} `
         + `ad opera di attori classificabili come ${formatData(6)}.`;
 
-    const incidentView = document.getElementById('view-incidenti');
-    const summaryView = document.getElementById('view-riepilogo');
     const reportOutput = document.getElementById('report-output');
-
-    if (incidentView) incidentView.style.display = 'none';
-    if (summaryView) summaryView.style.display = 'block';
     if (reportOutput) reportOutput.value = testoReport;
+
+    await navigateTo('riepilogo', { force: true });
 }
 
 if (container) {
@@ -337,6 +335,14 @@ if (copyButton) {
         copyText.select();
         document.execCommand('copy');
         window.alert('Testo copiato negli appunti.');
+    });
+}
+
+const restartButton = document.getElementById('btn-restart-incident');
+if (restartButton) {
+    restartButton.addEventListener('click', async () => {
+        resetIncidentWizardState();
+        await navigateTo('incidenti', { force: true });
     });
 }
 

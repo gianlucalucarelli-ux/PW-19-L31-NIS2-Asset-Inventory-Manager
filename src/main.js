@@ -6,14 +6,18 @@
 import {
     initTheme,
     toggleTheme,
-    switchView,
+    activateApplicationRoute,
     showSignedOutInterface,
     showMfaInterface,
     showAuthenticatedInterface,
     setAuthBusy,
-    setAuthError,
-    loadAndRenderTable
-} from './ui.js?v=2';
+    setAuthError
+} from './ui.js?v=3';
+import {
+    initializeRouter,
+    navigateTo,
+    refreshCurrentRoute
+} from './router.js?v=1';
 import {
     signIn,
     getCurrentSession,
@@ -31,6 +35,14 @@ let activeSession = null;
 let activeAccessState = null;
 let lastAuthorizedSignature = null;
 let accessSyncSequence = 0;
+let routerReady = false;
+
+/**
+ * Verifica se la sessione corrente ha completato il flusso di autorizzazione.
+ */
+function isApplicationAuthorized() {
+    return Boolean(activeSession && activeAccessState?.status === 'authorized');
+}
 
 /**
  * Applica all'interfaccia lo stato reale della sessione Supabase.
@@ -88,11 +100,15 @@ async function synchronizeApplicationAccess(session, options = {}) {
             accessState.currentLevel
         ].join(':');
 
-        const loadInitialData = forceDataReload || signature !== lastAuthorizedSignature;
+        const shouldRefreshRoute = forceDataReload || signature !== lastAuthorizedSignature;
         lastAuthorizedSignature = signature;
 
-        showAuthenticatedInterface(session, accessState, { loadInitialData });
+        showAuthenticatedInterface(session, accessState);
         setAuthError('');
+
+        if (routerReady && shouldRefreshRoute) {
+            await refreshCurrentRoute();
+        }
     } catch (error) {
         console.error('Errore durante la sincronizzazione dell’accesso:', error);
         activeSession = null;
@@ -117,47 +133,46 @@ async function closeCurrentSession() {
     }
 }
 
+/**
+ * Collega tutti i controlli dichiarativi data-route al router centrale.
+ */
+function initializeNavigationControls() {
+    document.addEventListener('click', (event) => {
+        const routeControl = event.target.closest('[data-route]');
+        if (!routeControl) return;
+
+        event.preventDefault();
+
+        if (!isApplicationAuthorized()) {
+            setAuthError('Effettua l’accesso per aprire questa sezione.');
+            return;
+        }
+
+        navigateTo(routeControl.dataset.route, { force: true });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const loginForm = document.getElementById('login-form');
     const themeToggleBtn = document.getElementById('theme-toggle');
-    const dashboardNavLink = document.querySelector('a[href="#dashboard-section"]');
-    const infoNavLink = document.querySelector('a[href="#info-section"]');
     const mfaVerifyBtn = document.getElementById('mfa-verify-btn');
     const mfaCancelBtn = document.getElementById('mfa-cancel-btn');
     const logoutBtn = document.getElementById('logout-btn');
 
-    // Compatibilità temporanea con i pulsanti inline. Verrà eliminata nella Fase A3.
-    window.switchView = switchView;
+    initializeNavigationControls();
+
+    await initializeRouter({
+        isAuthorized: isApplicationAuthorized,
+        onRouteChange: activateApplicationRoute,
+        onUnauthorized: () => {
+            // La navigazione protetta rimane sospesa fino al completamento di login e MFA.
+        },
+        defaultRoute: 'inventory'
+    });
+    routerReady = true;
 
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', toggleTheme);
-    }
-
-    if (dashboardNavLink) {
-        dashboardNavLink.addEventListener('click', (event) => {
-            event.preventDefault();
-
-            if (!activeSession || activeAccessState?.status !== 'authorized') {
-                setAuthError('Effettua l’accesso per aprire la Dashboard.');
-                return;
-            }
-
-            showAuthenticatedInterface(activeSession, activeAccessState, { loadInitialData: false });
-            switchView('inventory');
-
-            document.querySelectorAll('.nav-link').forEach((link) => link.classList.remove('active'));
-            dashboardNavLink.classList.add('active');
-        });
-    }
-
-    if (infoNavLink) {
-        infoNavLink.addEventListener('click', (event) => {
-            event.preventDefault();
-            const infoContainer = document.getElementById('info-container');
-            if (infoContainer) {
-                infoContainer.classList.toggle('is-hidden');
-            }
-        });
     }
 
     if (loginForm) {
@@ -265,8 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     alert('Nuovo asset registrato.');
                 }
 
-                switchView('inventory');
-                loadAndRenderTable();
+                await navigateTo('inventory', { force: true });
             } catch (error) {
                 console.error('Errore database:', error);
                 alert(`Errore operativo: ${error.message}`);
@@ -303,7 +317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (confirmed) {
                     await bulkInsertAssets(parsedData);
-                    loadAndRenderTable();
+                    await navigateTo('inventory', { force: true });
                 }
             } catch (error) {
                 console.error('Errore durante l’importazione:', error);

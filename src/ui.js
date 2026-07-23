@@ -1,7 +1,10 @@
-// =========================================================================
-// FILE: src/ui.js Manipolazione del DOM, routing visivo e gestione del tema.
-// =========================================================================
+// ===============================================================================================================
+// FILE: src/ui.js
+// DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
+// ===============================================================================================================
+
 import { fetchAssets, fetchSupplyChain, fetchAuditLogs } from './database.js';
+import { navigateTo } from './router.js?v=1';
 
 export function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -109,8 +112,7 @@ export function showMfaInterface(session, accessState) {
     window.setTimeout(() => document.getElementById('mfa-code')?.focus(), 0);
 }
 
-export function showAuthenticatedInterface(session, accessState, options = {}) {
-    const { loadInitialData = true } = options;
+export function showAuthenticatedInterface(session, accessState) {
     const authContainer = document.getElementById('auth-container');
     const dashboardContainer = document.getElementById('dashboard-container');
     const navMenuLinks = document.getElementById('nav-menu-links');
@@ -122,10 +124,6 @@ export function showAuthenticatedInterface(session, accessState, options = {}) {
     setVisibility(logoutBtn, true);
 
     updateHeaderUser(session, accessState);
-
-    if (loadInitialData) {
-        loadAndRenderTable();
-    }
 }
 
 export function updateHeaderUser(session, accessState = {}) {
@@ -161,29 +159,69 @@ export function clearHeaderUser() {
     }
 }
 
-export function switchView(viewId) {
-    // Nascondi tutte le sezioni
-    document.querySelectorAll('.view-section').forEach(section => {
+const ROUTE_TO_VIEW = {
+    inventory: 'inventory',
+    'add-asset': 'add-asset',
+    'supply-chain': 'supply-chain',
+    'audit-log': 'audit-log',
+    incidenti: 'incidenti',
+    riepilogo: 'riepilogo',
+    info: 'info'
+};
+
+/**
+ * Aggiorna l'evidenziazione dei controlli di navigazione e gli attributi accessibili.
+ */
+function updateNavigationState(route) {
+    document.querySelectorAll('[data-route]').forEach((control) => {
+        const controlRoute = control.dataset.route;
+        const navigationGroup = control.dataset.navGroup;
+        const isActive = navigationGroup === 'dashboard'
+            ? route !== 'info'
+            : navigationGroup === 'info'
+                ? route === 'info'
+                : controlRoute === route;
+
+        control.classList.toggle('active', isActive);
+
+        if (isActive) {
+            control.setAttribute('aria-current', 'page');
+        } else {
+            control.removeAttribute('aria-current');
+        }
+    });
+}
+
+/**
+ * Attiva una vista applicativa in base alla rotta risolta dal router centrale.
+ */
+export async function activateApplicationRoute(route) {
+    const viewId = ROUTE_TO_VIEW[route] || 'inventory';
+
+    document.querySelectorAll('.view-section').forEach((section) => {
         section.style.display = 'none';
     });
-    
-    // Mostra la sezione selezionata
-    const targetView = document.getElementById('view-' + viewId);
-    if (targetView) targetView.style.display = 'block';
 
-    // Gestione logiche specifiche per vista
-    if (viewId === 'inventory') {
-        loadAndRenderTable();
+    const targetView = document.getElementById(`view-${viewId}`);
+    if (targetView) {
+        targetView.style.display = 'block';
+    }
+
+    updateNavigationState(route);
+
+    if (route === 'inventory') {
+        await loadAndRenderTable();
         resetAssetForm();
-    } else if (viewId === 'add-asset') {
-        if (!document.getElementById('asset-id').value) {
+    } else if (route === 'add-asset') {
+        const assetId = document.getElementById('asset-id');
+        if (!assetId?.value) {
             resetAssetForm();
         }
-    } else if (viewId === 'supply-chain') {
-        loadAndRenderSupplyChain();
-    } else if (viewId === 'audit-log') {
-        renderAuditLog();
-    } else if (viewId === 'incidenti') {
+    } else if (route === 'supply-chain') {
+        await loadAndRenderSupplyChain();
+    } else if (route === 'audit-log') {
+        await renderAuditLog();
+    } else if (route === 'incidenti') {
         // Il wizard viene inizializzato solo all'apertura esplicita della vista.
         document.dispatchEvent(new CustomEvent('incident:wizard:open'));
     }
@@ -295,7 +333,7 @@ export function caricaAssetNelForm(asset) {
     if (headerTitle) headerTitle.textContent = "Modifica Configurazione Asset";
     if (submitBtn) submitBtn.textContent = "Aggiorna Dati";
 
-    switchView('add-asset');
+    navigateTo('add-asset', { force: true });
 }
 
 export function resetAssetForm() {
@@ -310,8 +348,8 @@ export function resetAssetForm() {
     }
 }
 
-export function mostraDashboardInterfaccia(session, accessState, options = {}) {
-    showAuthenticatedInterface(session, accessState, options);
+export function mostraDashboardInterfaccia(session, accessState) {
+    showAuthenticatedInterface(session, accessState);
 }
 
 export async function loadAndRenderSupplyChain() {
