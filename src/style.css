@@ -325,8 +325,25 @@ h3 {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
+    gap: 18px;
     min-width: 0;
+}
+
+/* Raggruppa i comandi della sessione e mantiene una separazione fisica chiara tra tema e uscita. */
+.header-command-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 20px;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+
+.header-command-separator {
+    width: 1px;
+    height: 26px;
+    flex: 0 0 1px;
+    background: var(--border-strong);
+    opacity: 0.85;
 }
 
 .user-session {
@@ -410,11 +427,17 @@ h3 {
 }
 
 .btn-secondary:hover:not(:disabled),
-.btn-theme:hover:not(:disabled),
-.btn-logout:hover:not(:disabled) {
+.btn-theme:hover:not(:disabled) {
     color: var(--text-high);
     background: var(--bg-hover);
     border-color: var(--primary);
+}
+
+.btn-logout:hover:not(:disabled),
+.btn-logout:focus-visible:not(:disabled) {
+    color: #ffffff;
+    background: var(--error-strong);
+    border-color: var(--error-strong);
 }
 
 .btn-success {
@@ -458,34 +481,6 @@ h3 {
     justify-content: center;
     gap: 7px;
     white-space: nowrap;
-}
-
-
-/* Separa visivamente l'uscita dal controllo del tema per ridurre i clic involontari. */
-.site-header__actions .btn-logout {
-    position: relative;
-    margin-left: 16px;
-    color: var(--error);
-    background: var(--error-soft);
-    border-color: var(--error);
-}
-
-.site-header__actions .btn-logout::before {
-    position: absolute;
-    top: 7px;
-    bottom: 7px;
-    left: -14px;
-    width: 1px;
-    background: var(--border);
-    content: "";
-    pointer-events: none;
-}
-
-.site-header__actions .btn-logout:hover:not(:disabled),
-.site-header__actions .btn-logout:focus-visible:not(:disabled) {
-    color: #ffffff;
-    background: var(--error-strong);
-    border-color: var(--error-strong);
 }
 
 .btn-theme__icon {
@@ -1131,15 +1126,16 @@ tbody tr:last-child td {
     .site-header__actions {
         justify-content: flex-start;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 14px;
     }
 
-    .site-header__actions .btn-logout {
+    .header-command-group {
+        gap: 16px;
         margin-left: 0;
     }
 
-    .site-header__actions .btn-logout::before {
-        display: none;
+    .header-command-separator {
+        height: 24px;
     }
 
     .user-session {
@@ -1200,8 +1196,22 @@ tbody tr:last-child td {
         align-items: stretch;
     }
 
-    .site-header__actions > button {
-        flex: 1;
+    .header-command-group {
+        display: grid;
+        width: 100%;
+        grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .header-command-group .btn-theme,
+    .header-command-group .btn-logout {
+        width: 100%;
+    }
+
+    .header-command-separator {
+        align-self: stretch;
+        height: auto;
+        min-height: 40px;
     }
 
     .user-session {
