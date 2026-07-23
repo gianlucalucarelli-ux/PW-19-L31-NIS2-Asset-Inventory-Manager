@@ -460,6 +460,34 @@ h3 {
     white-space: nowrap;
 }
 
+
+/* Separa visivamente l'uscita dal controllo del tema per ridurre i clic involontari. */
+.site-header__actions .btn-logout {
+    position: relative;
+    margin-left: 16px;
+    color: var(--error);
+    background: var(--error-soft);
+    border-color: var(--error);
+}
+
+.site-header__actions .btn-logout::before {
+    position: absolute;
+    top: 7px;
+    bottom: 7px;
+    left: -14px;
+    width: 1px;
+    background: var(--border);
+    content: "";
+    pointer-events: none;
+}
+
+.site-header__actions .btn-logout:hover:not(:disabled),
+.site-header__actions .btn-logout:focus-visible:not(:disabled) {
+    color: #ffffff;
+    background: var(--error-strong);
+    border-color: var(--error-strong);
+}
+
 .btn-theme__icon {
     line-height: 1;
 }
@@ -1103,6 +1131,15 @@ tbody tr:last-child td {
     .site-header__actions {
         justify-content: flex-start;
         flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .site-header__actions .btn-logout {
+        margin-left: 0;
+    }
+
+    .site-header__actions .btn-logout::before {
+        display: none;
     }
 
     .user-session {
