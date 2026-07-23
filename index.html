@@ -1,202 +1,377 @@
 <!DOCTYPE html>
+<!--
+===============================================================================================================
+FILE: index.html
+DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autenticata.
+===============================================================================================================
+-->
 <html lang="it" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Applicazione dimostrativa per l'inventario degli asset, la Supply Chain, l'audit e la gestione degli incidenti in ambito NIS2.">
     <title>NIS2 Asset Inventory Manager</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/wizard.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="src/wizard.css?v=2">
+    <link rel="stylesheet" href="src/style.css?v=4">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="src/style.css">
-    <script type="module" src="src/main.js?v=5"></script>
-    <script type="module" src="src/wizard.js?v=3"></script>
+    <script type="module" src="src/main.js?v=6"></script>
+    <script type="module" src="src/wizard.js?v=4"></script>
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Vai al contenuto principale</a>
 
-<nav class="main-nav">
-    <div class="nav-container">
-        <span class="nav-logo">🛡️ NIS2 Asset Manager</span>
+    <header class="site-header">
+        <div class="site-header__inner">
+            <a class="brand" href="#inventory" aria-label="NIS2 Asset Inventory Manager">
+                <span class="brand__mark" aria-hidden="true">🛡️</span>
+                <span class="brand__text">
+                    <span class="brand__name">NIS2 Asset Manager</span>
+                    <span class="brand__descriptor">Asset Inventory &amp; Compliance</span>
+                </span>
+            </a>
 
-        <div class="nav-menu is-hidden" id="nav-menu-links">
-            <a href="#inventory" class="nav-link active" data-route="inventory" data-nav-group="dashboard">Dashboard</a>
-            <a href="#info" class="nav-link" data-route="info" data-nav-group="info">Info Progetto</a>
-        </div>
-        <div class="nav-actions">
-            <div id="user-session" class="user-session is-hidden" aria-live="polite">
-                <span id="user-display" class="user-session__identity"></span>
-                <span id="user-access-level" class="user-session__status"></span>
+            <nav id="nav-menu-links" class="top-navigation is-hidden" aria-label="Navigazione principale">
+                <a href="#inventory" class="nav-link active" data-route="inventory" data-nav-group="dashboard">Dashboard</a>
+                <a href="#info" class="nav-link" data-route="info" data-nav-group="info">Informazioni e guida</a>
+            </nav>
+
+            <div class="site-header__actions">
+                <div id="user-session" class="user-session is-hidden" aria-live="polite">
+                    <span id="user-display" class="user-session__identity"></span>
+                    <span id="user-access-level" class="user-session__status"></span>
+                </div>
+                <button id="theme-toggle" class="btn-theme" type="button" title="Cambia tema" aria-label="Cambia tema chiaro o scuro">🌓 Modalità</button>
+                <button id="logout-btn" class="btn-logout is-hidden" type="button">Logout</button>
             </div>
-            <button id="theme-toggle" class="btn-theme" type="button" title="Cambia tema">🌓 Modalità</button>
-            <button id="logout-btn" class="btn-logout is-hidden" type="button">Logout</button>
         </div>
-    </div>
-</nav>
-
-<div class="app-container">
-    <header class="main-header" id="presentation-header">
-        <p class="uni-tag">UNIVERSITÀ TELEMATICA PEGASO</p>
-        <h1 style="font-size: 2rem; font-weight: 700;">NIS2 Asset Inventory Manager</h1>
-        <p class="meta-tag">Candidato: <strong>Gianluca Lucarelli</strong> | Corso: Informatica per le aziende digitali (L-31) | Tema n. 2: Privacy e sicurezza aziendale</p>
     </header>
 
-    <div id="auth-container" class="card" style="max-width: 450px; margin: 0 auto; padding: 30px;">
-        <div id="login-view">
-            <h2 style="margin-bottom: 20px; font-size: 1.2rem;">Accesso Riservato Personale Autorizzato</h2>
-            <form id="login-form">
-                <input type="email" id="auth-email" placeholder="Email istituzionale" autocomplete="username" required class="form-input">
-                <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" required class="form-input">
-                <button type="submit" id="login-submit-btn" class="btn-primary">Entra nel sistema</button>
-            </form>
-        </div>
+    <main id="main-content" class="site-main">
+        <section id="public-home" class="public-home" aria-labelledby="public-title">
+            <div class="public-hero">
+                <div class="public-hero__content">
+                    <p class="eyebrow">UNIVERSITÀ TELEMATICA PEGASO · PROJECT WORK L-31</p>
+                    <h1 id="public-title">NIS2 Asset Inventory Manager</h1>
+                    <p class="public-hero__lead">
+                        Applicazione web per censire asset e dipendenze, rappresentare la Supply Chain,
+                        tracciare le operazioni e supportare la gestione guidata degli incidenti.
+                    </p>
 
-        <div id="mfa-view" class="is-hidden" style="text-align: center;">
-            <h2 id="mfa-title" style="margin-bottom: 15px;">Sicurezza 2FA</h2>
-            <p id="mfa-desc" style="font-size: 0.9rem; margin-bottom: 20px;"></p>
-            <div id="mfa-setup-area" style="display:none; margin-bottom:20px; background: #e2e8f0; color: #0f172a; padding: 15px; border-radius: 8px;">
-                <p style="font-size: 0.8rem; font-weight: bold; word-break: break-all;" id="mfa-secret"></p>
-            </div>
-            <input type="text" id="mfa-code" placeholder="Codice OTP" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" class="form-input text-center large-input">
-            <button id="mfa-verify-btn" class="btn-success" type="button">Verifica identità</button>
-            <button id="mfa-cancel-btn" class="btn-logout mfa-cancel-btn" type="button">Annulla accesso</button>
-        </div>
-        <div id="auth-error" class="error-msg" role="alert" aria-live="assertive"></div>
-    </div>
-
-    <main id="dashboard-container" class="is-hidden" style="margin-top: 20px;">
-        <div class="dashboard-layout" style="display: flex; gap: 20px; align-items: flex-start;">
-
-            <aside class="sidebar card" style="width: 250px; flex-shrink: 0; padding: 15px;">
-                <div class="sidebar-menu" style="display: flex; flex-direction: column; gap: 10px;">
-                    <button type="button" class="menu-btn active" data-route="inventory">📦 Inventario Asset</button>
-                    <button type="button" class="menu-btn" data-route="add-asset">➕ Nuovo Asset</button>
-                    <button type="button" class="menu-btn" data-route="supply-chain">🔗 Supply Chain</button>
-                    <hr style="width: 100%; border: 0; border-top: 1px solid var(--border-color); margin: 5px 0;">
-                    <button type="button" class="menu-btn" data-route="audit-log">📋 Audit Log</button>
-                    <button type="button" class="menu-btn" data-route="incidenti">🚨 Gestione Incidenti</button>
-                </div>
-            </aside>
-
-            <section class="content-view" style="flex-grow: 1;">
-
-                <div id="view-inventory" class="view-section card">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <dl class="project-metadata" aria-label="Informazioni sul Project Work">
                         <div>
-                            <h2 style="margin:0;">Asset Critici Aziendali</h2>
-                            <p style="margin-top: 5px; font-size: 0.9rem;">Area protetta da cifratura perimetrale e policy RLS.</p>
+                            <dt>Candidato</dt>
+                            <dd>Gianluca Lucarelli</dd>
                         </div>
-                        <div class="action-group" style="display: flex; gap: 10px;">
-                            <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
-                            <button id="btn-export-xls" class="btn-primary" type="button" style="background: #10b981; border-color: #10b981;">Esporta XLS</button>
-                            <button id="btn-trigger-import" class="btn-primary" type="button" style="background: #f59e0b; border-color: #f59e0b;">Importa XLS</button>
-                            <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" style="display: none;">
+                        <div>
+                            <dt>Corso</dt>
+                            <dd>Informatica per le aziende digitali (L-31)</dd>
                         </div>
+                        <div>
+                            <dt>Ambito</dt>
+                            <dd>Privacy e sicurezza aziendale</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <section id="auth-container" class="card auth-card" aria-labelledby="auth-title">
+                    <div id="login-view">
+                        <p class="eyebrow">ACCESSO RISERVATO</p>
+                        <h2 id="auth-title">Personale autorizzato</h2>
+                        <p class="section-intro">Accedi con le credenziali abilitate. Gli utenti operativi completano la verifica MFA.</p>
+
+                        <form id="login-form" class="auth-form">
+                            <div class="form-field">
+                                <label for="auth-email">E-mail</label>
+                                <input type="email" id="auth-email" placeholder="nome@dominio.it" autocomplete="username" required class="form-input">
+                            </div>
+                            <div class="form-field">
+                                <label for="auth-password">Password</label>
+                                <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" required class="form-input">
+                            </div>
+                            <button type="submit" id="login-submit-btn" class="btn-primary btn-block">Entra nel sistema</button>
+                        </form>
                     </div>
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
-                                    <th style="padding: 10px;">ID</th>
-                                    <th style="padding: 10px;">Asset Critico</th>
-                                    <th style="padding: 10px;">Versione SW</th>
-                                    <th style="padding: 10px;">Criticità (NIS2)</th>
-                                    <th style="padding: 10px;">Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody id="asset-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div id="view-add-asset" class="view-section card" style="display:none;">
-                    <div class="card-header" style="margin-bottom: 20px;">
-                        <h2 style="margin:0;">Inserimento Nuovo Asset</h2>
-                    </div>
-                    <form id="asset-form" style="max-width: 500px;">
-                        <input type="hidden" id="asset-id">
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px;">Nome Asset</label>
-                            <input type="text" id="asset-nome" placeholder="es. FW-BORDER-01" class="form-input" required>
+                    <div id="mfa-view" class="mfa-view is-hidden">
+                        <p class="eyebrow">VERIFICA IDENTITÀ</p>
+                        <h2 id="mfa-title">Sicurezza 2FA</h2>
+                        <p id="mfa-desc" class="section-intro"></p>
+                        <div id="mfa-setup-area" class="mfa-setup is-hidden">
+                            <p id="mfa-secret"></p>
                         </div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px;">Versione Software/Firmware</label>
-                            <input type="text" id="asset-versione" placeholder="es. 9.1(7)16" class="form-input">
+                        <div class="form-field">
+                            <label for="mfa-code">Codice monouso</label>
+                            <input type="text" id="mfa-code" placeholder="Codice OTP" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" class="form-input text-center large-input">
                         </div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px;">Livello Criticità</label>
-                            <select id="asset-criticita" class="form-input" required>
-                                <option value="Bassa">Bassa</option>
-                                <option value="Media">Media</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Critica">Critica</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; gap: 10px; margin-top: 25px;">
-                            <button type="submit" class="btn-primary" style="flex: 1;">Salva Asset</button>
-                            <button type="button" class="btn-logout" style="flex: 1;" data-route="inventory">Annulla</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div id="view-supply-chain" class="view-section card" style="display:none;">
-                    <div class="card-header">
-                        <h2>Mappatura Supply Chain & Servizi Critici</h2>
+                        <button id="mfa-verify-btn" class="btn-primary btn-block" type="button">Verifica identità</button>
+                        <button id="mfa-cancel-btn" class="btn-secondary btn-block" type="button">Annulla accesso</button>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <th style="padding: 10px; text-align: left;">Servizio</th>
-                                <th style="padding: 10px; text-align: left;">Tipo</th>
-                                <th style="padding: 10px; text-align: left;">Asset Dipendente</th>
-                                <th style="padding: 10px; text-align: left;">Fornitore</th>
-                                <th style="padding: 10px; text-align: left;">Contatto</th>
-                            </tr>
-                        </thead>
-                        <tbody id="supply-chain-table-body"></tbody>
-                    </table>
+
+                    <div id="auth-error" class="error-msg" role="alert" aria-live="assertive"></div>
+                </section>
+            </div>
+
+            <section class="public-features" aria-labelledby="features-title">
+                <div class="section-heading">
+                    <p class="eyebrow">FUNZIONALITÀ PRINCIPALI</p>
+                    <h2 id="features-title">Un unico punto di accesso ai dati operativi e di conformità</h2>
                 </div>
 
-                <div id="view-audit-log" class="view-section card" style="display:none;">
-                    <h2>Audit Log (Compliance NIS2)</h2>
-                    <p style="font-size: 0.9rem; margin-bottom: 15px;">Tracciamento storico delle modifiche asset.</p>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tbody id="audit-table-body"></tbody>
-                    </table>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <span class="feature-card__icon" aria-hidden="true">📦</span>
+                        <h3>Inventario centralizzato</h3>
+                        <p>Consultazione e gestione controllata degli asset con criticità, versioni e tracciamento delle modifiche.</p>
+                    </article>
+                    <article class="feature-card">
+                        <span class="feature-card__icon" aria-hidden="true">🔗</span>
+                        <h3>Dipendenze e Supply Chain</h3>
+                        <p>Rappresentazione delle relazioni tra servizi, asset e fornitori, predisposta per percorsi multilivello.</p>
+                    </article>
+                    <article class="feature-card">
+                        <span class="feature-card__icon" aria-hidden="true">🛡️</span>
+                        <h3>Sicurezza e tracciabilità</h3>
+                        <p>Autenticazione Supabase, MFA, policy RLS, Audit Log e wizard guidato per la classificazione degli incidenti.</p>
+                    </article>
                 </div>
-
-                <div id="view-incidenti" class="view-section" style="display:none;">
-                    <div id="wizard-container" class="card">
-                        <h2 id="step-title" style="margin-bottom: 20px;">Passo 1: Baseline Characterization</h2>
-                        <div id="step-content"></div>
-                        <div class="wizard-nav" style="display: flex; justify-content: space-between; margin-top: 30px;">
-                            <button id="btn-indietro" class="btn-action btn-logout" type="button">Indietro</button>
-                            <button id="btn-avanti" class="btn-action btn-add" type="button">Avanti</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="view-riepilogo" class="view-section card" style="display:none;">
-                    <h2 style="margin-bottom: 20px;">Riepilogo Report ACN (NIS2)</h2>
-                    <textarea id="report-output" rows="10" style="width: 100%; padding: 15px; font-family: monospace; border: 1px solid var(--border-color); border-radius: 8px; background: #f8fafc; color: #0f172a; resize: vertical;" readonly></textarea>
-                    <div style="margin-top: 20px; display: flex; gap: 15px;">
-                        <button id="btn-copia" class="btn-primary" type="button">📋 Copia negli Appunti</button>
-                        <button id="btn-restart-incident" class="btn-logout" type="button">Chiudi e nuovo incidente</button>
-                    </div>
-                </div>
-
-                <div id="view-info" class="view-section card" style="display:none; padding: 30px;">
-                    <h2>Dettagli Architetturali del Progetto</h2>
-                    <p style="margin-top: 15px;">Questo applicativo rappresenta il frontend di un sistema di tracciamento asset conforme ai requisiti della Direttiva (UE) 2022/2555 (NIS2).</p>
-                    <p>Il database di backend è strutturato in Terza Forma Normale (3NF) per eliminare le ridondanze informative e garantire la consistenza dei dati relativi all'infrastruttura di un'azienda sanitaria.</p>
-                </div>
-
             </section>
-        </div>
+        </section>
+
+        <section id="dashboard-container" class="application-area is-hidden" aria-label="Area applicativa autenticata">
+            <div class="app-shell">
+                <aside class="app-sidebar" aria-label="Navigazione applicativa">
+                    <div class="sidebar-header">
+                        <span class="sidebar-header__label">Area riservata</span>
+                        <strong>Menu applicativo</strong>
+                    </div>
+
+                    <nav class="sidebar-navigation" aria-label="Sezioni dell'applicazione">
+                        <div class="navigation-group">
+                            <p class="navigation-group__title">Inventario</p>
+                            <button type="button" class="menu-btn active" data-route="inventory">
+                                <span aria-hidden="true">📦</span>
+                                <span>Inventario Asset</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="add-asset">
+                                <span aria-hidden="true">➕</span>
+                                <span>Nuovo Asset</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
+                            <p class="navigation-group__title">Relazioni</p>
+                            <button type="button" class="menu-btn" data-route="supply-chain">
+                                <span aria-hidden="true">🔗</span>
+                                <span>Supply Chain</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
+                            <p class="navigation-group__title">Sicurezza</p>
+                            <button type="button" class="menu-btn" data-route="audit-log">
+                                <span aria-hidden="true">📋</span>
+                                <span>Audit Log</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="incidenti">
+                                <span aria-hidden="true">🚨</span>
+                                <span>Gestione Incidenti</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
+                            <p class="navigation-group__title">Supporto</p>
+                            <button type="button" class="menu-btn" data-route="info">
+                                <span aria-hidden="true">ℹ️</span>
+                                <span>Informazioni e guida</span>
+                            </button>
+                        </div>
+                    </nav>
+                </aside>
+
+                <div class="app-workspace">
+                    <header class="workspace-header">
+                        <nav class="breadcrumb" aria-label="Percorso di navigazione">
+                            <span>NIS2 Asset Manager</span>
+                            <span aria-hidden="true">/</span>
+                            <span id="breadcrumb-section">Inventario</span>
+                            <span aria-hidden="true">/</span>
+                            <span id="breadcrumb-current" aria-current="page">Inventario Asset</span>
+                        </nav>
+                        <div class="workspace-header__title">
+                            <p id="page-section-label" class="eyebrow">INVENTARIO</p>
+                            <h1 id="page-title">Inventario Asset</h1>
+                        </div>
+                    </header>
+
+                    <section class="content-view" aria-live="polite">
+                        <section id="view-inventory" class="view-section card">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Asset critici aziendali</h2>
+                                    <p class="section-intro">Dati protetti da autenticazione, policy RLS e tracciamento delle operazioni.</p>
+                                </div>
+                                <div class="action-group" aria-label="Azioni inventario">
+                                    <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
+                                    <button id="btn-export-xls" class="btn-success" type="button">Esporta XLS</button>
+                                    <button id="btn-trigger-import" class="btn-warning" type="button">Importa XLS</button>
+                                    <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" class="visually-hidden">
+                                </div>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">ID</th>
+                                            <th scope="col">Asset critico</th>
+                                            <th scope="col">Versione SW</th>
+                                            <th scope="col">Criticità NIS2</th>
+                                            <th scope="col">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="asset-table-body"></tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section id="view-add-asset" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Inserimento nuovo asset</h2>
+                                    <p class="section-intro">Compila i dati disponibili. Il modello completo sarà allineato al database definitivo nella fase dedicata agli asset.</p>
+                                </div>
+                            </div>
+
+                            <form id="asset-form" class="form-card">
+                                <input type="hidden" id="asset-id">
+                                <div class="form-field">
+                                    <label for="asset-nome">Nome Asset</label>
+                                    <input type="text" id="asset-nome" placeholder="es. FW-BORDER-01" class="form-input" required>
+                                </div>
+                                <div class="form-field">
+                                    <label for="asset-versione">Versione Software/Firmware</label>
+                                    <input type="text" id="asset-versione" placeholder="es. 9.1(7)16" class="form-input">
+                                </div>
+                                <div class="form-field">
+                                    <label for="asset-criticita">Livello di criticità</label>
+                                    <select id="asset-criticita" class="form-input" required>
+                                        <option value="Bassa">Bassa</option>
+                                        <option value="Media">Media</option>
+                                        <option value="Alta">Alta</option>
+                                        <option value="Critica">Critica</option>
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-primary">Salva Asset</button>
+                                    <button type="button" class="btn-secondary" data-route="inventory">Annulla</button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section id="view-supply-chain" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Mappatura Supply Chain e servizi critici</h2>
+                                    <p class="section-intro">Vista corrente delle dipendenze tra servizi, asset e fornitori.</p>
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Servizio</th>
+                                            <th scope="col">Tipo</th>
+                                            <th scope="col">Asset dipendente</th>
+                                            <th scope="col">Fornitore</th>
+                                            <th scope="col">Contatto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="supply-chain-table-body"></tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section id="view-audit-log" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Audit Log</h2>
+                                    <p class="section-intro">Tracciamento storico delle operazioni eseguite sui dati applicativi.</p>
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <tbody id="audit-table-body"></tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section id="view-incidenti" class="view-section is-hidden">
+                            <div id="wizard-container" class="card wizard-container">
+                                <h2 id="step-title">Gestione Incidenti</h2>
+                                <div id="step-content" class="wizard-content"></div>
+                                <div class="wizard-nav">
+                                    <button id="btn-indietro" class="btn-secondary" type="button">Indietro</button>
+                                    <button id="btn-avanti" class="btn-primary" type="button">Avanti</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="view-riepilogo" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Riepilogo Report ACN</h2>
+                                    <p class="section-intro">Sintesi narrativa generata dalle classificazioni selezionate nel wizard.</p>
+                                </div>
+                            </div>
+                            <label class="visually-hidden" for="report-output">Testo del report ACN</label>
+                            <textarea id="report-output" rows="10" class="report-output" readonly></textarea>
+                            <div class="form-actions">
+                                <button id="btn-copia" class="btn-primary" type="button">📋 Copia negli appunti</button>
+                                <button id="btn-restart-incident" class="btn-secondary" type="button">Chiudi e nuovo incidente</button>
+                            </div>
+                        </section>
+
+                        <section id="view-info" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Informazioni e guida</h2>
+                                    <p class="section-intro">Contesto, architettura e modalità di utilizzo dell'applicazione.</p>
+                                </div>
+                            </div>
+
+                            <div class="info-grid">
+                                <article class="info-panel">
+                                    <h3>Finalità</h3>
+                                    <p>L'applicazione supporta il censimento degli asset, la lettura delle dipendenze, la tracciabilità delle modifiche e la classificazione guidata degli incidenti.</p>
+                                </article>
+                                <article class="info-panel">
+                                    <h3>Architettura</h3>
+                                    <p>Frontend HTML5, CSS e JavaScript modulare pubblicato su GitHub Pages, integrato con Supabase per autenticazione, MFA, API dati e policy RLS.</p>
+                                </article>
+                                <article class="info-panel">
+                                    <h3>Sicurezza</h3>
+                                    <p>L'accesso ai dati è controllato tramite sessione autenticata, livello AAL, privilegi PostgreSQL e Row Level Security.</p>
+                                </article>
+                                <article class="info-panel">
+                                    <h3>Project Work</h3>
+                                    <p>Progetto sviluppato per il corso di Informatica per le aziende digitali (L-31), con impostazione generale e non vincolata a uno specifico settore produttivo.</p>
+                                </article>
+                            </div>
+                        </section>
+                    </section>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <footer style="margin-top: 30px; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
-        Sviluppo conforme a Direttiva NIS2 e linee guida ACN per infrastrutture sanitarie critiche.
+    <footer class="site-footer">
+        <p>NIS2 Asset Inventory Manager · Project Work universitario · Applicazione dimostrativa</p>
     </footer>
-</div>
 </body>
 </html>
