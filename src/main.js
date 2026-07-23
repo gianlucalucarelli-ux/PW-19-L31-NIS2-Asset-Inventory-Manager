@@ -13,7 +13,7 @@ import {
     setAuthBusy,
     setAuthError,
     loadAndRenderTable
-} from './ui.js';
+} from './ui.js?v=2';
 import {
     signIn,
     getCurrentSession,

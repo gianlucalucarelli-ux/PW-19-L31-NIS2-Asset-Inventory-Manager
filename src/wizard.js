@@ -10,7 +10,7 @@ import {
     updateIncidente,
     fetchReportIncidente,
     verificaAccessoIncidenti
-} from './incidentService.js';
+} from './incidentService.js?v=2';
 
 let passoCorrente = 1;
 let eventoId = null;
