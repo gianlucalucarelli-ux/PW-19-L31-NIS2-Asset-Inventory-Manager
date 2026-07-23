@@ -66,9 +66,8 @@ function setWizardBusy(isBusy) {
  * Mostra o nasconde i comandi di navigazione del wizard.
  */
 function setWizardNavigationVisible(isVisible) {
-    const display = isVisible ? '' : 'none';
-    if (btnAvanti) btnAvanti.style.display = display;
-    if (btnIndietro) btnIndietro.style.display = display;
+    if (btnAvanti) btnAvanti.classList.toggle('is-hidden', !isVisible);
+    if (btnIndietro) btnIndietro.classList.toggle('is-hidden', !isVisible);
 }
 
 /**
@@ -79,9 +78,11 @@ function renderPaginaIniziale() {
 
     title.textContent = 'Gestione Incidenti';
     container.innerHTML = `
-        <p>Avvia una nuova segnalazione guidata secondo la tassonomia ACN.</p>
-        <p>L’incidente sarà registrato nel database soltanto dopo la conferma del primo passo.</p>
-        <button id="btn-nuova-segnalazione" type="button" class="btn-primary">Nuova segnalazione</button>
+        <div class="wizard-start">
+            <p>Avvia una nuova segnalazione guidata secondo la tassonomia ACN.</p>
+            <p class="wizard-note">L’incidente sarà registrato nel database soltanto dopo la conferma del primo passo.</p>
+            <button id="btn-nuova-segnalazione" type="button" class="btn-primary">Nuova segnalazione</button>
+        </div>
     `;
 
     setWizardNavigationVisible(false);
@@ -160,7 +161,7 @@ async function renderPasso() {
     if (passoCorrente === 1) {
         title.textContent = 'Passo 1: Tipologia Soggetto';
         container.innerHTML = `
-            <p style="margin-bottom:15px;">Indica la tipologia di soggetto prevista dalla NIS2:</p>
+            <p class="wizard-instruction">Indica la tipologia di soggetto prevista dalla NIS2:</p>
             <label class="checkbox-item">
                 <input type="radio" name="tipologia" value="essenziale" checked>
                 Soggetto Essenziale

@@ -6,17 +6,50 @@
 import { fetchAssets, fetchSupplyChain, fetchAuditLogs } from './database.js';
 import { navigateTo } from './router.js?v=1';
 
+/**
+ * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
+ */
+function updateThemeControl(theme) {
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-toggle-icon');
+    const themeLabel = document.getElementById('theme-toggle-label');
+    const isLight = theme === 'light';
+    const actionLabel = isLight ? 'Passa al tema scuro' : 'Passa al tema chiaro';
+
+    if (themeToggle) {
+        themeToggle.setAttribute('aria-label', actionLabel);
+        themeToggle.setAttribute('title', actionLabel);
+        themeToggle.setAttribute('aria-pressed', String(isLight));
+    }
+
+    if (themeIcon) themeIcon.textContent = isLight ? '🌙' : '☀️';
+    if (themeLabel) themeLabel.textContent = isLight ? 'Tema scuro' : 'Tema chiaro';
+}
+
+/**
+ * Applica il tema e sincronizza il relativo controllo nell'intestazione.
+ */
+function applyTheme(theme) {
+    const normalizedTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', normalizedTheme);
+    updateThemeControl(normalizedTheme);
+}
+
 export function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    const savedTheme = localStorage.getItem('theme');
+    const systemTheme = window.matchMedia?.('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'dark';
+
+    applyTheme(savedTheme || systemTheme);
 }
 
 export function toggleTheme() {
-    const root = document.documentElement;
-    const currentTheme = root.getAttribute('data-theme');
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', newTheme);
+
     localStorage.setItem('theme', newTheme);
+    applyTheme(newTheme);
 }
 
 
@@ -304,22 +337,22 @@ async function renderAuditLog() {
     console.log("DEBUG: Inizio esecuzione renderAuditLog"); // TEST 1
     
     try {
-        container.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento log in corso...</td></tr>';
+        container.innerHTML = '<tr><td colspan="4" class="table-state">Caricamento log in corso...</td></tr>';
         const logs = await fetchAuditLogs();
         
         console.log("DEBUG: Log ricevuti dalla funzione:", logs); // TEST 2
         
         if (!logs || logs.length === 0) {
-            container.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nessun evento registrato.</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" class="table-state">Nessun evento registrato.</td></tr>';
             return;
         }
 
         container.innerHTML = logs.map(log => `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 10px; font-size: 0.85rem;">${new Date(log.data_modifica).toLocaleString()}</td>
-                <td style="padding: 10px;">${log.operazione}</td>
-                <td style="padding: 10px; font-size: 0.85rem;">${log.utente}</td>
-                <td style="padding: 10px; font-size: 0.85rem;">Asset ID: ${log.asset_id || 'N/A'}</td>
+            <tr>
+                <td class="cell-small">${new Date(log.data_modifica).toLocaleString()}</td>
+                <td class="cell-primary">${log.operazione}</td>
+                <td class="cell-small">${log.utente}</td>
+                <td class="cell-small">Asset ID: ${log.asset_id || 'N/A'}</td>
             </tr>
         `).join('');
         
@@ -340,11 +373,11 @@ export async function loadAndRenderTable() {
     if (!assetTableBody) return;
 
     try {
-        assetTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Sincronizzazione in corso...</td></tr>';
+        assetTableBody.innerHTML = '<tr><td colspan="5" class="table-state">Sincronizzazione in corso...</td></tr>';
         const data = await fetchAssets();
         
         if (!data || data.length === 0) {
-            assetTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Nessun asset censito.</td></tr>';
+            assetTableBody.innerHTML = '<tr><td colspan="5" class="table-state">Nessun asset censito.</td></tr>';
             return;
         }
 
@@ -353,16 +386,23 @@ export async function loadAndRenderTable() {
             const nome = a.nome || a.Asset_Name || 'N/D';
             const versione = a.versione || a.Software_Version || 'N/D';
             const criticita = a.criticita || a.Criticity_Level || 'Bassa';
-            const badgeClass = (criticita.toLowerCase() === 'critica' || criticita.toLowerCase() === 'alta') ? 'risk-high' : 'risk-none';
+            const normalizedRisk = criticita.toLowerCase();
+            const badgeClass = normalizedRisk === 'critica'
+                ? 'risk-critical'
+                : normalizedRisk === 'alta'
+                    ? 'risk-high'
+                    : normalizedRisk === 'media'
+                        ? 'risk-medium'
+                        : 'risk-low';
 
             return `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 10px;"><strong>${id}</strong></td>
-                <td style="padding: 10px; color: var(--text-high); font-weight: 600;">${nome}</td>
-                <td style="padding: 10px; color: var(--text-muted);">${versione}</td>
-                <td style="padding: 10px;"><span class="badge ${badgeClass}" style="padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">${criticita}</span></td>
-                <td style="padding: 10px; text-align:center;">
-                    <button class="btn-edit" data-id="${id}" style="padding: 6px 12px; font-size:0.75rem; background:transparent; border: 1px solid var(--primary); color: var(--primary); border-radius: 4px; cursor: pointer;">Modifica</button>
+            <tr>
+                <td class="cell-id">${id}</td>
+                <td class="cell-primary">${nome}</td>
+                <td class="cell-secondary">${versione}</td>
+                <td><span class="badge ${badgeClass}">${criticita}</span></td>
+                <td class="cell-actions">
+                    <button class="btn-edit" data-id="${id}" type="button">Modifica</button>
                 </td>
             </tr>
             `;
@@ -420,20 +460,20 @@ export async function loadAndRenderSupplyChain() {
     if (!container) return;
 
     try {
-        container.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-low);">Estrazione dati in corso...</td></tr>';
+        container.innerHTML = '<tr><td colspan="5" class="table-state">Estrazione dati in corso...</td></tr>';
         const data = await fetchSupplyChain();
         if (!data || data.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nessuna dipendenza registrata.</td></tr>';
+            container.innerHTML = '<tr><td colspan="5" class="table-state">Nessuna dipendenza registrata.</td></tr>';
             return;
         }
 
         container.innerHTML = data.map(item => `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 10px;">${item.Service_Name || 'N/D'}</td>
-                <td style="padding: 10px;">${item.Service_Type || 'N/D'}</td>
-                <td style="padding: 10px;"><strong>${item.Dependent_Asset || 'N/D'}</strong></td>
-                <td style="padding: 10px;">${item.Vendor_Partner || 'N/D'}</td>
-                <td style="padding: 10px; font-size: 0.8rem; color: var(--text-muted);">${item.Vendor_Contact || 'N/D'}</td>
+            <tr>
+                <td class="cell-primary">${item.Service_Name || 'N/D'}</td>
+                <td>${item.Service_Type || 'N/D'}</td>
+                <td class="cell-primary">${item.Dependent_Asset || 'N/D'}</td>
+                <td>${item.Vendor_Partner || 'N/D'}</td>
+                <td class="cell-small">${item.Vendor_Contact || 'N/D'}</td>
             </tr>
         `).join('');
     } catch (err) {
