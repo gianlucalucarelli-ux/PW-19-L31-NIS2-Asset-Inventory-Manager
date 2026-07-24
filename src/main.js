@@ -12,7 +12,7 @@ import {
     showAuthenticatedInterface,
     setAuthBusy,
     setAuthError
-} from './ui.js?v=10';
+} from './ui.js?v=11';
 import {
     initializeRouter,
     navigateTo,

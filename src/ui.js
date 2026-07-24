@@ -379,8 +379,32 @@ function formattaTimestampLocaleDatabase(valore) {
 
     if (!corrispondenza) return 'Data non disponibile';
 
+    /*
+     * audit_log.data_modifica è un timestamp senza fuso, ma i valori effettivi
+     * registrati dal trigger seguono la convenzione UTC. La conversione viene
+     * eseguita solo in visualizzazione, preservando integralmente lo storico.
+     */
     const [, anno, mese, giorno, ore, minuti, secondi] = corrispondenza;
-    return `${giorno}/${mese}/${anno}, ${ore}:${minuti}:${secondi}`;
+    const dataUtc = new Date(Date.UTC(
+        Number(anno),
+        Number(mese) - 1,
+        Number(giorno),
+        Number(ore),
+        Number(minuti),
+        Number(secondi)
+    ));
+
+    if (Number.isNaN(dataUtc.getTime())) return 'Data non disponibile';
+
+    return dataUtc.toLocaleString('it-IT', {
+        timeZone: 'Europe/Rome',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
 }
 
 /**
