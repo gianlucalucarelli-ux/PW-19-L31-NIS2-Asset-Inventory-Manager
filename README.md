@@ -15,9 +15,7 @@ NIS2 Asset Inventory Manager è un prototipo applicativo per la gestione central
 
 Il progetto è rivolto in modo generale a organizzazioni pubbliche e private e utilizza un modello relazionale PostgreSQL sviluppato su Supabase. L’obiettivo è offrire una base dati strutturata, verificabile e tracciabile, utile alle attività di censimento, analisi delle dipendenze e supporto alla compliance NIS2/ACN.
 
-Il backend è stato consolidato attraverso una pipeline SQL versionata e una serie di diagnostiche progressive. Il frontend web è sviluppato in HTML5, CSS3 e JavaScript ES6 ed è in fase di riallineamento al modello backend definitivo.
-
----
+Il backend è stato consolidato attraverso una pipeline SQL versionata composta da 26 migrazioni produttive e 19 diagnostiche. Il frontend web, sviluppato in HTML5, CSS3 e JavaScript ES6, è pubblicato su GitHub Pages e ha superato i test funzionali relativi a inventario asset, inserimento, modifica, Dashboard e Audit Log. Restano da completare le funzionalità avanzate di B1, B2, B3 e il ciclo di vita completo degli incidenti.
 
 ## 2. Obiettivi principali
 
@@ -61,7 +59,9 @@ La verifica finale `X17_CHECK_VERIFICA_FINALE_BACKEND.sql` ha restituito:
 VERIFICA_FINALE_BACKEND_SUPERATA
 ```
 
-Stato finale verificato:
+Le diagnostiche successive `X18` e `X19` hanno inoltre verificato il modello di accesso, le utenze di valutazione, la qualità dei dati e la readiness delle normalizzazioni finali.
+
+Stato consolidato:
 
 | Indicatore | Valore |
 |---|---:|
@@ -76,10 +76,12 @@ Stato finale verificato:
 | Vincoli non validati | 0 |
 | Indici non validi | 0 |
 | Duplicati nella vista di reporting dei servizi critici | 0 |
+| Migrazioni produttive versionate | 26 |
+| Diagnostiche versionate | 19 |
+| Asset attivi verificati | 13 |
+| Asset archiviati logicamente | 6 |
 
-Il backend è completo rispetto al perimetro definito per il Project Work.
-
----
+Il backend è completo rispetto al perimetro tecnico attualmente definito. Le attività residue riguardano principalmente il completamento funzionale del frontend e la documentazione conclusiva del Project Work.
 
 ## 5. Funzionalità backend consolidate
 
@@ -138,15 +140,16 @@ Le viste principali comprendono:
 Il modello di accesso separa privilegi PostgreSQL e policy RLS.
 
 - Il ruolo `anon` non dispone di privilegi sulle tabelle e sulle viste applicative.
-- La lettura è consentita alle sessioni MFA con livello `aal2` oppure all’utenza docente autorizzata.
-- `INSERT` e `UPDATE` sono disponibili soltanto sulle tabelle operative e richiedono MFA `aal2`.
+- Il modello ordinario richiede una sessione MFA con livello `aal2`.
+- L’utenza docente `docentepegaso@gmail.com` costituisce un’eccezione controllata di valutazione e può operare in `aal1` tramite `fn_accesso_operativo()`.
+- Gli script `22` e `23` estendono l’accesso operativo controllato alle tabelle applicative previste.
+- `INSERT` e `UPDATE` sono disponibili soltanto sulle tabelle operative autorizzate.
 - Non vengono concesse policy o privilegi `DELETE`.
 - Le viste principali utilizzano `security_invoker`.
 - La tabella `audit_log` è leggibile dagli utenti autorizzati, ma non è scrivibile direttamente dal frontend.
+- L’utenza obsoleta `docenteunitopegaso@gmail.com` è stata rimossa da Supabase Authentication.
 
-Le credenziali riportate nella sezione dedicata all’accesso sono pubblicate temporaneamente per consentire ai docenti la valutazione dell’applicativo. Saranno rimosse dal repository dopo il loro inserimento nella versione definitiva del documento di Project Work consegnato tramite la piattaforma Pegaso.
-
----
+Le credenziali riportate nella sezione dedicata all’accesso sono pubblicate temporaneamente per consentire ai docenti la valutazione dell’applicativo. Prima della consegna definitiva saranno trasferite nel documento di Project Work, rimosse dal repository pubblico e la password verrà ruotata in Supabase.
 
 ## 7. Struttura del repository
 
@@ -155,44 +158,55 @@ Le credenziali riportate nella sezione dedicata all’accesso sono pubblicate te
 ├── index.html
 ├── README.md
 ├── sql/
-│   ├── 01 ... 21
-│   └── X1 ... X17
+│   ├── 01 ... 26
+│   └── X1 ... X19
 ├── src/
-│   ├── css/
-│   └── js/
-└── docs/
-    ├── ACN_Tassonomia_Cyber_CLEAR.pdf
-    ├── Codice_diagramma_Core_Migration_Pipeline.puml
-    ├── Codice_diagramma_Diagnostic_Validation_Patch_Toolkit_X.puml
-    ├── Core_Migration_Pipeline.png
-    ├── Diagramma_Diagnostic_Patch_Toolkit.png
-    ├── Diagramma_ER_V5.0_30_tabelle.dbml
-    ├── Diagramma_ER_V5.0_30_tabelle.dbml.pdf
-    ├── Diagramma_ER_V5.0_30_tabelle.pdf
-    ├── Relazione_Tecnica_Backend_Database_v2.1.docx
-    └── Relazione_Tecnica_Backend_Database_v2.1.pdf
+│   ├── main.js
+│   ├── database.js
+│   ├── ui.js
+│   ├── style.css
+│   └── wizard.css
+├── docs/
+│   ├── README.md
+│   ├── ACN_Tassonomia_Cyber_CLEAR.pdf
+│   ├── Relazione_Tecnica_Backend_Database_v2.2.docx
+│   ├── Relazione_Tecnica_Backend_Database_v2.2.pdf
+│   └── diagrammi/
+│       ├── Core_Migration_Pipeline_01-26.puml
+│       ├── Core_Migration_Pipeline_01-26.png
+│       ├── Diagnostic_Validation_Patch_Toolkit_X1-X19.puml
+│       ├── Diagnostic_Validation_Patch_Toolkit_X1-X19.png
+│       ├── Diagramma_Navigazione_Frontend_v3.puml
+│       ├── Diagramma_Navigazione_Frontend_v3.png
+│       ├── Diagramma_ER_V5.1_30_tabelle.dbml
+│       └── Diagramma_ER_V5.1_30_tabelle.pdf
+└── tools/
+    ├── genera_schemi_backend.py
+    └── requirements.txt
 ```
 
 ### Cartella `sql`
 
 Contiene due insiemi distinti:
 
-- Core Migration Pipeline `01–21`: migrazioni produttive, popolamenti, hardening e correzioni;
-- Diagnostic, Validation & Patch Toolkit `X1–X17`: diagnostiche, controlli di readiness, validazioni e verifica finale.
+- Core Migration Pipeline `01–26`: migrazioni produttive, popolamenti, hardening, accessi controllati e normalizzazioni;
+- Diagnostic, Validation & Patch Toolkit `X1–X19`: diagnostiche, controlli di readiness, validazioni, accessi e qualità dei dati.
 
 ### Cartella `src`
 
-Contiene il codice JavaScript e CSS dell’applicativo web.
+Contiene il codice JavaScript e CSS dell’applicativo web, incluse integrazione Supabase, rendering dell’interfaccia, gestione degli asset, Dashboard, Audit Log e wizard incidenti.
 
 ### Cartella `docs`
 
-Contiene la relazione tecnica backend, i sorgenti e le immagini dei diagrammi PlantUML, il sorgente DBML, il diagramma ER finale e la documentazione sulla tassonomia ACN.
+Contiene le relazioni tecniche ufficiali e la sottocartella `diagrammi`, nella quale sono raccolti i sorgenti PlantUML, i PNG generati, il sorgente DBML e il diagramma ER.
 
----
+### Cartella `tools`
+
+Contiene gli strumenti di supporto usati per rigenerare i diagrammi tecnici.
 
 ## 8. Pipeline SQL
 
-La pipeline produttiva comprende 21 script sequenziali.
+La pipeline produttiva comprende 26 script sequenziali.
 
 Principali fasi:
 
@@ -202,33 +216,38 @@ Principali fasi:
 4. hardening dei domini e gerarchie di servizi e asset;
 5. gerarchia dei fornitori e relazione asset–fornitore;
 6. Supply Chain multilivello, reporting e audit generalizzato;
-7. archiviazione logica e rimozione dei vincoli `ON DELETE CASCADE`.
+7. archiviazione logica e rimozione dei vincoli `ON DELETE CASCADE`;
+8. accesso operativo controllato e abilitazione dell’utenza di valutazione;
+9. archiviazione logica dei record dimostrativi e normalizzazione dei dati applicativi.
 
-Le diagnostiche `X1–X17` accompagnano la pipeline e documentano lo stato del database prima e dopo le migrazioni.
-
----
+Le diagnostiche `X1–X19` accompagnano la pipeline e documentano struttura, sicurezza, readiness, accessi, qualità dei dati e stato finale del database.
 
 ## 9. Documentazione tecnica
 
 ### Relazione tecnica backend
 
-- [Relazione tecnica backend v2.1 — PDF](docs/Relazione_Tecnica_Backend_Database_v2.1.pdf)
-- [Relazione tecnica backend v2.1 — DOCX](docs/Relazione_Tecnica_Backend_Database_v2.1.docx)
+- [Relazione tecnica backend v2.2 — PDF](docs/Relazione_Tecnica_Backend_Database_v2.2.pdf)
+- [Relazione tecnica backend v2.2 — DOCX](docs/Relazione_Tecnica_Backend_Database_v2.2.docx)
 
 ### Core Migration Pipeline
 
-- [Sorgente PlantUML della Core Migration Pipeline](docs/Codice_diagramma_Core_Migration_Pipeline.puml)
-- [Immagine della Core Migration Pipeline](docs/Core_Migration_Pipeline.png)
+- [Sorgente PlantUML della Core Migration Pipeline 01–26](docs/diagrammi/Core_Migration_Pipeline_01-26.puml)
+- [Immagine della Core Migration Pipeline 01–26](docs/diagrammi/Core_Migration_Pipeline_01-26.png)
 
 ### Diagnostic, Validation & Patch Toolkit
 
-- [Sorgente PlantUML del Diagnostic, Validation & Patch Toolkit](docs/Codice_diagramma_Diagnostic_Validation_Patch_Toolkit_X.puml)
-- [Immagine del Diagnostic, Validation & Patch Toolkit](docs/Diagramma_Diagnostic_Patch_Toolkit.png)
+- [Sorgente PlantUML del Toolkit X1–X19](docs/diagrammi/Diagnostic_Validation_Patch_Toolkit_X1-X19.puml)
+- [Immagine del Toolkit X1–X19](docs/diagrammi/Diagnostic_Validation_Patch_Toolkit_X1-X19.png)
 
 ### Diagramma ER
 
-- [Sorgente DBML del diagramma ER V5.0](docs/Diagramma_ER_V5.0_30_tabelle.dbml)
-- [Diagramma ER finale a 30 tabelle](docs/Diagramma_ER_V5.0_30_tabelle.pdf)
+- [Sorgente DBML del diagramma ER V5.1](docs/diagrammi/Diagramma_ER_V5.1_30_tabelle.dbml)
+- [Diagramma ER V5.1 a 30 tabelle](docs/diagrammi/Diagramma_ER_V5.1_30_tabelle.pdf)
+
+### Navigazione frontend
+
+- [Sorgente PlantUML del diagramma di navigazione frontend v3](docs/diagrammi/Diagramma_Navigazione_Frontend_v3.puml)
+- [Immagine del diagramma di navigazione frontend v3](docs/diagrammi/Diagramma_Navigazione_Frontend_v3.png)
 
 ### Tassonomia ACN
 
@@ -240,9 +259,7 @@ La relazione tecnica frontend sarà aggiunta con il nome:
 docs/Relazione_Tecnica_Frontend_Applicativo.pdf
 ```
 
-dopo il consolidamento dell’applicativo web e delle SCR.
-
----
+al termine del consolidamento delle sezioni B1, B2, B3 e del ciclo di vita completo degli incidenti.
 
 ## 10. Applicativo web
 
@@ -257,56 +274,67 @@ Le seguenti credenziali consentono ai docenti di accedere all’applicativo dura
 - Utenza: `docentepegaso@gmail.com`
 - Password: `9P4UxeD2S$`
 
-L’utenza docente è configurata per l’accesso semplificato senza MFA. L’autenticazione MFA è comunque implementata e funzionante per le utenze operative abilitate.
+L’utenza docente utilizza l’eccezione controllata di valutazione in `aal1`. Le utenze operative ordinarie devono invece raggiungere `aal2` mediante MFA.
 
-Le credenziali saranno rimosse dal repository pubblico dopo il loro inserimento nella versione definitiva del documento di Project Work consegnato tramite la piattaforma Pegaso.
+Le credenziali saranno rimosse dal repository pubblico dopo il loro inserimento nella versione definitiva del documento di Project Work e la password sarà successivamente ruotata in Supabase.
 
-Stato attuale:
+Stato verificato:
 
-- backend completato e verificato;
-- frontend funzionante nelle funzioni principali;
-- SCR e interfaccia in fase di consolidamento rispetto al database definitivo;
-- relazione tecnica frontend da redigere al termine dei test applicativi.
-
----
+- inventario limitato agli asset attivi;
+- 13 asset attivi e 6 asset archiviati logicamente;
+- inserimento completo di un nuovo asset;
+- modifica completa di un asset esistente;
+- conteggi Dashboard coerenti con la criticità;
+- Audit Log con registrazione di `INSERT` e `UPDATE`;
+- visualizzazione degli orari nel fuso `Europe/Rome`;
+- accesso docente operativo;
+- Dashboard, Supply Chain e Audit Log consultabili;
+- gestione incidenti ancora parziale: il wizard di creazione è disponibile, mentre elenco, dettaglio, aggiornamento, chiusura e archiviazione logica devono ancora essere sviluppati.
 
 ## 11. Riproducibilità e versionamento
 
 Il flusso adottato per gli script SQL è:
 
 1. esecuzione e verifica su Supabase;
-2. salvataggio su `vscode.dev`;
-3. commit nel repository GitHub;
-4. copia locale di sicurezza.
+2. salvataggio nel repository tramite `vscode.dev` o interfaccia GitHub;
+3. commit nel ramo `main`;
+4. pubblicazione automatica tramite GitHub Pages;
+5. aggiornamento della copia locale mediante `Code → Download ZIP`.
 
-Questa procedura evita di versionare migrazioni non ancora verificate e mantiene allineati database cloud, repository remoto e archivio locale.
+La sorgente ufficiale del codice è il ramo `main` del repository. Supabase rappresenta lo stato operativo del database, mentre lo ZIP locale costituisce la copia di sicurezza aggiornata.
 
----
+Questa procedura evita di versionare migrazioni non ancora verificate e mantiene allineati database cloud, repository remoto, pubblicazione web e archivio locale.
 
 ## 12. Stato del Project Work
 
 ### Completato
 
 - progettazione e consolidamento del backend;
-- pipeline produttiva `01–21`;
-- toolkit diagnostico `X1–X17`;
-- modello ER finale a 30 tabelle;
-- sicurezza RLS e MFA;
+- pipeline produttiva `01–26`;
+- toolkit diagnostico `X1–X19`;
+- modello ER V5.1 a 30 tabelle;
+- sicurezza RLS, privilegi e MFA;
+- accesso controllato dell’utenza docente;
 - audit generalizzato;
 - archiviazione logica;
+- normalizzazione dei dati applicativi;
 - verifica finale del database;
-- relazione tecnica backend;
-- documentazione tecnica backend.
+- relazione tecnica backend v2.2;
+- diagrammi backend aggiornati;
+- inventario asset operativo;
+- inserimento e modifica asset verificati;
+- Dashboard e Audit Log verificati;
+- orario Audit Log corretto.
 
-### Fase successiva
+### In corso
 
-- consolidamento delle SCR;
-- riallineamento del frontend al modello definitivo;
-- test funzionali completi dell’applicativo;
-- redazione della `Relazione_Tecnica_Frontend_Applicativo.pdf`;
+- chiusura B1: collegamento degli incidenti a un elenco effettivo e verifiche finali di navigazione;
+- completamento B2: ricerca, filtri, paginazione, dettaglio, archiviazione logica dal web e collaudo completo import/export;
+- ripresa della sezione B3 secondo la scaletta originale;
+- sviluppo D2/D3: elenco, dettaglio, aggiornamento, chiusura e archiviazione logica degli incidenti;
+- relazione tecnica frontend–database;
+- aggiornamento di `docs/README.md`;
 - revisione finale del documento principale del Project Work.
-
----
 
 ## 13. Autore
 
