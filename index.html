@@ -20,7 +20,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="src/main.js?v=11"></script>
+    <script type="module" src="src/main.js?v=12"></script>
     <script type="module" src="src/wizard.js?v=5"></script>
 </head>
 <body>
@@ -408,8 +408,11 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <thead>
                                         <tr>
                                             <th scope="col">ID</th>
-                                            <th scope="col">Asset critico</th>
-                                            <th scope="col">Versione SW</th>
+                                            <th scope="col">Codice</th>
+                                            <th scope="col">Nome asset</th>
+                                            <th scope="col">Categoria</th>
+                                            <th scope="col">Organizzazione</th>
+                                            <th scope="col">Versione</th>
                                             <th scope="col">Criticità NIS2</th>
                                             <th scope="col">Azioni</th>
                                         </tr>
@@ -423,20 +426,72 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="view-header">
                                 <div>
                                     <h2>Inserimento nuovo asset</h2>
-                                    <p class="section-intro">Compila i dati disponibili. Il modello completo sarà allineato al database definitivo nella fase dedicata agli asset.</p>
+                                    <p class="section-intro">
+                                        Registra l’asset con codice univoco, classificazione, organizzazione e riferimenti
+                                        controllati caricati direttamente da Supabase.
+                                    </p>
                                 </div>
                             </div>
 
                             <form id="asset-form" class="form-card">
                                 <input type="hidden" id="asset-id">
+
                                 <div class="form-field">
-                                    <label for="asset-nome">Nome Asset</label>
-                                    <input type="text" id="asset-nome" placeholder="es. FW-BORDER-01" class="form-input" required>
+                                    <label for="asset-codice">Codice asset</label>
+                                    <input
+                                        type="text"
+                                        id="asset-codice"
+                                        placeholder="es. FW-BORDER-02"
+                                        maxlength="80"
+                                        pattern="[A-Z0-9][A-Z0-9_-]{2,79}"
+                                        autocomplete="off"
+                                        class="form-input"
+                                        required
+                                    >
+                                    <small>Da 3 a 80 caratteri: lettere maiuscole, numeri, trattino e underscore.</small>
                                 </div>
+
                                 <div class="form-field">
-                                    <label for="asset-versione">Versione Software/Firmware</label>
+                                    <label for="asset-nome">Nome asset</label>
+                                    <input type="text" id="asset-nome" placeholder="es. Firewall perimetrale secondario" class="form-input" required>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="asset-categoria">Categoria asset</label>
+                                    <select id="asset-categoria" class="form-input" required>
+                                        <option value="">Caricamento categorie…</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="asset-organizzazione">Organizzazione</label>
+                                    <select id="asset-organizzazione" class="form-input" required>
+                                        <option value="">Caricamento organizzazioni…</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="asset-responsabile">Responsabile tecnico</label>
+                                    <select id="asset-responsabile" class="form-input">
+                                        <option value="">Nessun responsabile associato</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="asset-versione">Versione software o firmware</label>
                                     <input type="text" id="asset-versione" placeholder="es. 9.1(7)16" class="form-input">
                                 </div>
+
+                                <div class="form-field">
+                                    <label for="asset-ubicazione">Ubicazione</label>
+                                    <input type="text" id="asset-ubicazione" placeholder="es. Data center primario" class="form-input">
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="asset-descrizione">Descrizione</label>
+                                    <textarea id="asset-descrizione" rows="3" placeholder="Descrizione funzionale e operativa dell’asset" class="form-input"></textarea>
+                                </div>
+
                                 <div class="form-field">
                                     <label for="asset-criticita">Livello di criticità</label>
                                     <select id="asset-criticita" class="form-input" required>
@@ -446,6 +501,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                         <option value="Critica">Critica</option>
                                     </select>
                                 </div>
+
                                 <div class="form-actions">
                                     <button type="submit" class="btn-primary">Salva Asset</button>
                                     <button type="button" class="btn-secondary" data-route="inventory">Annulla</button>
@@ -485,6 +541,15 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             </div>
                             <div class="table-wrapper">
                                 <table>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Data e ora</th>
+                                            <th scope="col">Operazione</th>
+                                            <th scope="col">Entità</th>
+                                            <th scope="col">Record</th>
+                                            <th scope="col">Utente</th>
+                                        </tr>
+                                    </thead>
                                     <tbody id="audit-table-body"></tbody>
                                 </table>
                             </div>
