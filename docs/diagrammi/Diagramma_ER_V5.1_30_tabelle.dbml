@@ -1,0 +1,450 @@
+// ==========================================================================
+// FILE: docs/Diagramma_ER_V5.1_30_tabelle.dbml
+// VERSIONE: ER V5.1
+// TARGET: 30 TABELLE
+// DESCRIZIONE:
+// - Backend PostgreSQL/Supabase consolidato e riallineato allo schema fisico 01-26
+// - 30 tabelle relazionali in 3FN
+// - Gerarchie storicizzabili di servizi, asset e fornitori
+// - Relazione esplicita asset-fornitore
+// - Audit generalizzato con compatibilita legacy e contesto applicativo
+// - Archiviazione logica con archiviato_da UUID e blocco cancellazione fisica
+// ==========================================================================
+
+
+// --------------------------------------------------------------------------
+// CORE E ANAGRAFICHE
+// --------------------------------------------------------------------------
+
+Table organizzazione {
+  id serial [pk]
+  nome varchar [not null]
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table categoria_asset {
+  id serial [pk]
+  codice_acn varchar [unique, note: 'Codice tassonomia ACN']
+  nome varchar [not null]
+  descrizione text
+}
+
+Table tipo_servizio {
+  id serial [pk]
+  nome varchar [not null, unique]
+  descrizione text
+}
+
+Table tipo_fornitore {
+  id serial [pk]
+  nome varchar [not null, unique]
+  descrizione text
+}
+
+Table ruolo_organigramma {
+  id serial [pk]
+  nome varchar [not null, unique]
+  descrizione text
+}
+
+Table responsabile {
+  id serial [pk]
+  nome varchar [not null]
+  cognome varchar [not null]
+  email varchar [not null, unique]
+  telefono varchar
+  organizzazione_id int [ref: > organizzazione.id]
+  ruolo_organigramma_id int [ref: > ruolo_organigramma.id]
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table ruolo {
+  id serial [pk]
+  nome varchar [not null, unique]
+  descrizione text
+}
+
+Table responsabile_ruolo {
+  responsabile_id int [pk, ref: > responsabile.id]
+  ruolo_id int [pk, ref: > ruolo.id]
+  is_titolare boolean [not null, default: true]
+}
+
+
+// --------------------------------------------------------------------------
+// VULNERABILITA
+// --------------------------------------------------------------------------
+
+Table vulnerabilita {
+  id serial [pk]
+  codice_bollettino varchar [not null, unique, note: 'Riferimento ACN / CSIRT / CVE']
+  descrizione_rischio text
+  livello_severita varchar [not null, note: 'Informativa, Bassa, Media, Alta, Critica']
+  data_pubblicazione date [default: `now()`]
+}
+
+Table asset {
+  id serial [pk]
+  codice_asset varchar [not null, unique, note: 'Codice stabile per GUI, API, import/export']
+  nome varchar [not null]
+  categoria_asset_id int [not null, ref: > categoria_asset.id]
+  classificazione_criticita varchar [not null, note: 'Bassa, Media, Alta, Critica']
+  descrizione text
+  ubicazione varchar
+  versione varchar
+  data_inserimento date [default: `now()`]
+  organizzazione_id int [not null, ref: > organizzazione.id]
+  responsabile_id int [ref: > responsabile.id]
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table asset_vulnerabilita {
+  asset_id int [pk, ref: > asset.id]
+  vulnerabilita_id int [pk, ref: > vulnerabilita.id]
+  data_rilevamento timestamp [default: `now()`]
+  stato_remediation varchar [not null, note: 'OPEN, PATCHED, MITIGATED']
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+
+// --------------------------------------------------------------------------
+// FORNITORI
+// --------------------------------------------------------------------------
+
+Table fornitore {
+  id serial [pk]
+  codice_fornitore varchar [not null, unique, note: 'Codice stabile del fornitore']
+  nome varchar [not null]
+  tipo_fornitore_id int [not null, ref: > tipo_fornitore.id]
+  indirizzo varchar
+  contatto_email varchar
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table tipo_relazione_fornitore {
+  id serial [pk]
+  codice varchar [not null, unique]
+  descrizione text
+}
+
+Table fornitore_relazione {
+  id bigint [pk, increment]
+
+  fornitore_padre_id int [not null, ref: > fornitore.id]
+  fornitore_figlio_id int [not null, ref: > fornitore.id]
+  tipo_relazione_fornitore_id int [ref: > tipo_relazione_fornitore.id]
+
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  valido_dal timestamptz [not null, default: `now()`]
+  valido_al timestamptz
+
+  relazione_primaria boolean [not null, default: false]
+  ordine_relazione int [not null, default: 1]
+
+  motivo_chiusura text
+  creato_il timestamptz [not null, default: `now()`]
+  aggiornato_il timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Gerarchia fornitore-subfornitore.
+  Relazione aciclica e storicizzabile.
+  Un solo padre primario attivo per ciascun figlio.
+  '''
+}
+
+
+// --------------------------------------------------------------------------
+// SERVIZI
+// --------------------------------------------------------------------------
+
+Table stato_servizio {
+  id serial [pk]
+  codice varchar [not null, unique]
+  descrizione text
+}
+
+Table servizio {
+  id serial [pk]
+  codice_servizio varchar [not null, unique, note: 'Codice stabile per GUI, API, import/export']
+  nome varchar [not null]
+  descrizione text
+  tipo_servizio_id int [ref: > tipo_servizio.id]
+  stato_servizio_id int [ref: > stato_servizio.id]
+  organizzazione_id int [not null, ref: > organizzazione.id]
+  responsabile_id int [ref: > responsabile.id]
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table tipo_dipendenza_servizio {
+  id serial [pk]
+  codice varchar [not null, unique, note: 'Ad esempio TECNICA, FORNITURA']
+  descrizione text
+}
+
+Table servizio_dipendenza_asset {
+  servizio_id int [pk, ref: > servizio.id]
+  asset_id int [pk, ref: > asset.id]
+  tipo_dipendenza_servizio_id int [ref: > tipo_dipendenza_servizio.id]
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table servizio_dipendenza_fornitore {
+  servizio_id int [pk, ref: > servizio.id]
+  fornitore_id int [pk, ref: > fornitore.id]
+  tipo_dipendenza_servizio_id int [ref: > tipo_dipendenza_servizio.id]
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+
+// --------------------------------------------------------------------------
+// GERARCHIA SERVIZI
+// --------------------------------------------------------------------------
+
+Table tipo_dipendenza {
+  id serial [pk]
+  codice varchar [not null, unique]
+  descrizione text
+}
+
+Table esito_impatto {
+  id serial [pk]
+  codice varchar [not null, unique]
+  descrizione text
+}
+
+Table servizio_componente {
+  id bigint [pk, increment]
+
+  servizio_padre_id int [not null, ref: > servizio.id]
+  servizio_figlio_id int [not null, ref: > servizio.id]
+
+  tipo_dipendenza_id int [ref: > tipo_dipendenza.id]
+  esito_impatto_id int [ref: > esito_impatto.id]
+
+  peso_percentuale int [note: 'Valore compreso tra 0 e 100']
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  valido_dal timestamptz [not null, default: `now()`]
+  valido_al timestamptz
+
+  relazione_primaria boolean [not null, default: false]
+  ordine_componente int [not null, default: 1]
+
+  motivo_chiusura text
+  creato_il timestamptz [not null, default: `now()`]
+  aggiornato_il timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Gerarchia servizio-sottoservizio aciclica e storicizzabile.
+  '''
+}
+
+
+// --------------------------------------------------------------------------
+// GERARCHIA ASSET
+// --------------------------------------------------------------------------
+
+Table tipo_relazione_asset {
+  id serial [pk]
+  codice varchar [not null, unique]
+  descrizione text
+}
+
+Table asset_componente {
+  id bigint [pk, increment]
+
+  asset_padre_id int [not null, ref: > asset.id]
+  asset_figlio_id int [not null, ref: > asset.id]
+  tipo_relazione_asset_id int [ref: > tipo_relazione_asset.id]
+
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  valido_dal timestamptz [not null, default: `now()`]
+  valido_al timestamptz
+
+  relazione_primaria boolean [not null, default: false]
+  ordine_componente int [not null, default: 1]
+
+  motivo_chiusura text
+  creato_il timestamptz [not null, default: `now()`]
+  aggiornato_il timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Gerarchia asset-sotto-asset aciclica e storicizzabile.
+  '''
+}
+
+
+// --------------------------------------------------------------------------
+// RELAZIONE ESPLICITA ASSET-FORNITORE
+// --------------------------------------------------------------------------
+
+Table tipo_relazione_asset_fornitore {
+  id serial [pk]
+  codice varchar [not null, unique]
+  descrizione text
+}
+
+Table asset_fornitore {
+  id bigint [pk, increment]
+
+  asset_id int [not null, ref: > asset.id]
+  fornitore_id int [not null, ref: > fornitore.id]
+  tipo_relazione_asset_fornitore_id int [ref: > tipo_relazione_asset_fornitore.id]
+
+  descrizione text
+
+  attiva boolean [not null, default: true]
+  valido_dal timestamptz [not null, default: `now()`]
+  valido_al timestamptz
+
+  relazione_primaria boolean [not null, default: false]
+  ordine_relazione int [not null, default: 1]
+
+  motivo_chiusura text
+  creato_il timestamptz [not null, default: `now()`]
+  aggiornato_il timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Relazione esplicita tra asset e fornitore.
+  Supporta storicizzazione e più fornitori per asset.
+  '''
+}
+
+
+// --------------------------------------------------------------------------
+// EVENTI E INCIDENTI
+// --------------------------------------------------------------------------
+
+Table evento_servizio {
+  id serial [pk]
+  servizio_id int [ref: > servizio.id]
+  stato_servizio_id int [ref: > stato_servizio.id]
+  inizio timestamp [not null, default: `now()`]
+  fine timestamp
+  causa varchar
+  severita varchar [not null, note: 'Bassa, Media, Alta, Critica']
+  segnalatore varchar
+  descrizione_dettagliata text
+  tipologia varchar
+  risoluzione text
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+Table tassonomia_incidenti_acn {
+  id serial [pk]
+  uuid uuid [unique]
+  macro_area varchar
+  sotto_categoria varchar
+  codice_acn varchar [unique]
+  nome_esteso varchar
+  descrizione text
+  colore_hex varchar
+  is_active boolean
+  created_at timestamptz
+}
+
+Table evento_tassonomia_acn {
+  evento_id int [pk, ref: > evento_servizio.id]
+  tassonomia_id int [pk, ref: > tassonomia_incidenti_acn.id]
+  passo_wizard int [note: 'Valore compreso tra 1 e 6']
+
+  attiva boolean [not null, default: true]
+  archiviato_da uuid
+  archiviato_il timestamptz
+  motivo_archiviazione text
+}
+
+
+// --------------------------------------------------------------------------
+// AUDIT LOG GENERALIZZATO
+// --------------------------------------------------------------------------
+
+Table audit_log {
+  id bigint [pk, increment]
+
+  // Campi legacy preservati per compatibilita e ricostruzione storica
+  asset_id int [note: 'Contesto asset o identificativo legacy; nessuna FK per preservare lo storico']
+  utente varchar [not null, note: 'Identita legacy o fallback del ruolo database']
+  valore_precedente text [note: 'Payload legacy serializzato']
+  valore_nuovo text [note: 'Payload legacy serializzato']
+
+  // Identificazione generalizzata dell'oggetto modificato
+  operazione varchar [not null, note: 'INSERT, UPDATE, DELETE']
+  tabella varchar [not null]
+  tipo_entita varchar
+  record_id varchar [not null]
+  codice_record varchar
+  nome_record varchar
+
+  // Contesto funzionale, intenzionalmente privo di FK
+  servizio_id int [note: 'Contesto servizio; nessuna FK per preservare lo storico']
+  fornitore_id int [note: 'Contesto fornitore; nessuna FK per preservare lo storico']
+
+  // Identita e contesto di autenticazione
+  utente_id uuid
+  utente_email varchar
+  livello_autenticazione varchar [note: 'aal1, aal2 o valore non disponibile']
+  ruolo_jwt varchar
+  ruolo_database varchar
+  origine_utente varchar [not null, note: 'JWT, DATABASE, LEGACY']
+
+  // Timestamp senza fuso: la presentazione web lo converte in Europe/Rome
+  data_modifica timestamp [not null, default: `now()`]
+
+  // Payload consolidati dell'audit generalizzato
+  payload_precedente jsonb
+  payload_nuovo jsonb
+
+  Note: '''
+  Audit generalizzato sulle quattordici tabelle operative.
+  I campi legacy vengono mantenuti per compatibilita con gli eventi storici.
+  I riferimenti contestuali non usano chiavi esterne, cosi lo storico resta
+  consultabile anche dopo archiviazioni logiche o refactoring del dominio.
+  L'archiviazione logica e registrata come UPDATE con attiva = false;
+  non esiste un'operazione SQL ARCHIVE.
+  '''
+}
