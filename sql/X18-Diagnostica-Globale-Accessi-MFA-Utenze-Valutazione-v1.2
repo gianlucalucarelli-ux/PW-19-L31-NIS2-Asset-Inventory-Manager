@@ -1,5 +1,5 @@
 -- =============================================================================
--- X18 - Diagnostica globale accessi, MFA e riferimenti utenze di valutazione v1.1
+-- X18 - Diagnostica globale accessi, MFA e riferimenti utenze di valutazione v1.2
 -- Classificazione: diagnostica da conservare nella cartella /sql
 -- Scopo:
 --   1. verificare le utenze docente attiva e obsoleta in Supabase Auth;
@@ -153,9 +153,29 @@ WHERE n.nspname IN ('public', 'auth')
   ]);
 
 -- -----------------------------------------------------------------------------
--- 5. Copertura delle policy di scrittura per il ruolo authenticated
+-- 5. Copertura delle policy di scrittura sulle 14 tabelle operative attese
+--
+-- La verifica parte dall'elenco atteso, non dai privilegi esistenti. In questo
+-- modo vengono evidenziate anche le tabelle prive di qualsiasi grant di scrittura.
 -- -----------------------------------------------------------------------------
-WITH privilegi AS (
+WITH tabelle_operative(tablename) AS (
+    VALUES
+        ('asset'),
+        ('asset_componente'),
+        ('asset_fornitore'),
+        ('asset_vulnerabilita'),
+        ('evento_servizio'),
+        ('evento_tassonomia_acn'),
+        ('fornitore'),
+        ('fornitore_relazione'),
+        ('responsabile'),
+        ('responsabile_ruolo'),
+        ('servizio'),
+        ('servizio_componente'),
+        ('servizio_dipendenza_asset'),
+        ('servizio_dipendenza_fornitore')
+),
+privilegi AS (
     SELECT
         g.table_name,
         bool_or(g.privilege_type = 'INSERT') AS privilegio_insert,
@@ -173,18 +193,48 @@ policy AS (
         count(*) FILTER (WHERE p.cmd = 'INSERT') AS policy_insert,
         count(*) FILTER (WHERE p.cmd = 'UPDATE') AS policy_update,
         count(*) FILTER (WHERE p.cmd = 'DELETE') AS policy_delete,
+
+        bool_or(
+            p.cmd = 'INSERT'
+            AND (
+                lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+                    LIKE '%fn_accesso_operativo%'
+                OR lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+                    LIKE '%docentepegaso@gmail.com%'
+            )
+        ) AS insert_docente,
+
+        bool_or(
+            p.cmd = 'UPDATE'
+            AND (
+                lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+                    LIKE '%fn_accesso_operativo%'
+                OR lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+                    LIKE '%docentepegaso@gmail.com%'
+            )
+        ) AS update_docente,
+
+        bool_or(
+            p.cmd = 'INSERT'
+            AND lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+                LIKE '%''aal2''%'
+        ) AS insert_aal2,
+
+        bool_or(
+            p.cmd = 'UPDATE'
+            AND lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+                LIKE '%''aal2''%'
+        ) AS update_aal2,
+
         bool_or(
             lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
-            LIKE '%fn_accesso_operativo%'
+                LIKE '%fn_accesso_operativo%'
         ) AS usa_fn_accesso_operativo,
+
         bool_or(
             lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
-            LIKE '%docentepegaso@gmail.com%'
-        ) AS usa_email_docente,
-        bool_or(
-            lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
-            LIKE '%''aal2''%'
-        ) AS usa_aal2
+                LIKE '%docentepegaso@gmail.com%'
+        ) AS usa_email_docente
     FROM pg_policies AS p
     WHERE p.schemaname = 'public'
     GROUP BY p.tablename
@@ -192,35 +242,46 @@ policy AS (
 INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
 SELECT
     'COPERTURA_SCRITTURA',
-    pr.table_name,
+    t.tablename,
     'INSERT_UPDATE',
     CASE
-        WHEN (
-            (pr.privilegio_insert AND COALESCE(po.policy_insert, 0) = 0)
-            OR
-            (pr.privilegio_update AND COALESCE(po.policy_update, 0) = 0)
-        ) THEN 'POLICY_MANCANTE'
-        WHEN COALESCE(po.usa_fn_accesso_operativo, false)
-          OR COALESCE(po.usa_email_docente, false)
+        WHEN NOT COALESCE(pr.privilegio_insert, false)
+          OR NOT COALESCE(pr.privilegio_update, false)
+            THEN 'PRIVILEGI_MANCANTI'
+
+        WHEN COALESCE(po.policy_insert, 0) = 0
+          OR COALESCE(po.policy_update, 0) = 0
+            THEN 'POLICY_MANCANTE'
+
+        WHEN COALESCE(po.insert_docente, false)
+         AND COALESCE(po.update_docente, false)
             THEN 'DOCENTE_PREVISTO'
-        WHEN COALESCE(po.usa_aal2, false)
+
+        WHEN COALESCE(po.insert_aal2, false)
+         AND COALESCE(po.update_aal2, false)
             THEN 'SOLO_AAL2'
-        ELSE 'DA_VERIFICARE'
+
+        ELSE 'COPERTURA_INCOMPLETA'
     END,
     jsonb_build_object(
-        'privilegio_insert', pr.privilegio_insert,
-        'privilegio_update', pr.privilegio_update,
-        'privilegio_delete', pr.privilegio_delete,
+        'privilegio_insert', COALESCE(pr.privilegio_insert, false),
+        'privilegio_update', COALESCE(pr.privilegio_update, false),
+        'privilegio_delete', COALESCE(pr.privilegio_delete, false),
         'policy_insert', COALESCE(po.policy_insert, 0),
         'policy_update', COALESCE(po.policy_update, 0),
         'policy_delete', COALESCE(po.policy_delete, 0),
+        'insert_docente', COALESCE(po.insert_docente, false),
+        'update_docente', COALESCE(po.update_docente, false),
+        'insert_aal2', COALESCE(po.insert_aal2, false),
+        'update_aal2', COALESCE(po.update_aal2, false),
         'usa_fn_accesso_operativo', COALESCE(po.usa_fn_accesso_operativo, false),
-        'usa_email_docente', COALESCE(po.usa_email_docente, false),
-        'usa_aal2', COALESCE(po.usa_aal2, false)
+        'usa_email_docente', COALESCE(po.usa_email_docente, false)
     )::text
-FROM privilegi AS pr
+FROM tabelle_operative AS t
+LEFT JOIN privilegi AS pr
+    ON pr.table_name = t.tablename
 LEFT JOIN policy AS po
-    ON po.tablename = pr.table_name;
+    ON po.tablename = t.tablename;
 
 -- -----------------------------------------------------------------------------
 -- 6. Privilegi concessi ad anon nel public
