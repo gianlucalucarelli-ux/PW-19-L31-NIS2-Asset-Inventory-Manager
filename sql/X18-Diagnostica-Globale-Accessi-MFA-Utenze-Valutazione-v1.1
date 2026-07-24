@@ -1,0 +1,400 @@
+-- =============================================================================
+-- X18 - Diagnostica globale accessi, MFA e riferimenti utenze di valutazione v1.1
+-- Classificazione: diagnostica da conservare nella cartella /sql
+-- Scopo:
+--   1. verificare le utenze docente attiva e obsoleta in Supabase Auth;
+--   2. rilevare eventuali fattori MFA associati;
+--   3. individuare riferimenti alle due e-mail in policy e funzioni;
+--   4. verificare la copertura delle policy di scrittura per authenticated;
+--   5. confermare l'assenza di privilegi anonimi e policy DELETE;
+--   6. testare fn_accesso_operativo() con diversi claim JWT simulati.
+--
+-- La transazione non modifica dati permanenti. La tabella temporanea viene
+-- eliminata automaticamente al ROLLBACK finale.
+-- =============================================================================
+
+BEGIN;
+
+CREATE TEMP TABLE x18_risultati (
+    sezione     text NOT NULL,
+    oggetto     text,
+    comando     text,
+    esito       text,
+    dettaglio   text
+) ON COMMIT DROP;
+
+-- -----------------------------------------------------------------------------
+-- 1. Utenze presenti in Supabase Auth
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'UTENZE_AUTH',
+    lower(u.email),
+    'PRESENZA',
+    CASE
+        WHEN u.deleted_at IS NULL THEN 'PRESENTE'
+        ELSE 'ELIMINATA_LOGICAMENTE'
+    END,
+    jsonb_build_object(
+        'id', u.id,
+        'email_confermata', u.email_confirmed_at IS NOT NULL,
+        'ultimo_accesso', u.last_sign_in_at,
+        'bannata_fino_a', u.banned_until,
+        'creata_il', u.created_at
+    )::text
+FROM auth.users AS u
+WHERE lower(u.email) IN (
+    'docentepegaso@gmail.com',
+    'docenteunitopegaso@gmail.com'
+);
+
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'UTENZE_AUTH',
+    e.email,
+    'PRESENZA',
+    'NON_PRESENTE',
+    'Nessuna riga trovata in auth.users'
+FROM (
+    VALUES
+        ('docentepegaso@gmail.com'),
+        ('docenteunitopegaso@gmail.com')
+) AS e(email)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM auth.users AS u
+    WHERE lower(u.email) = e.email
+);
+
+-- -----------------------------------------------------------------------------
+-- 2. Fattori MFA associati alle utenze considerate
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'FATTORI_MFA',
+    lower(u.email),
+    'MFA',
+    COALESCE(to_jsonb(f) ->> 'status', 'STATO_NON_DISPONIBILE'),
+    to_jsonb(f)::text
+FROM auth.users AS u
+JOIN auth.mfa_factors AS f
+    ON f.user_id = u.id
+WHERE lower(u.email) IN (
+    'docentepegaso@gmail.com',
+    'docenteunitopegaso@gmail.com'
+);
+
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'FATTORI_MFA',
+    lower(u.email),
+    'MFA',
+    'NESSUN_FATTORE',
+    'Nessun fattore MFA registrato'
+FROM auth.users AS u
+WHERE lower(u.email) IN (
+    'docentepegaso@gmail.com',
+    'docenteunitopegaso@gmail.com'
+)
+AND NOT EXISTS (
+    SELECT 1
+    FROM auth.mfa_factors AS f
+    WHERE f.user_id = u.id
+);
+
+-- -----------------------------------------------------------------------------
+-- 3. Riferimenti diretti alle e-mail nelle policy RLS
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'RIFERIMENTI_POLICY',
+    format('%I.%I', p.schemaname, p.tablename),
+    p.cmd,
+    p.policyname,
+    concat_ws(
+        ' | ',
+        'USING=' || COALESCE(p.qual, 'NULL'),
+        'WITH CHECK=' || COALESCE(p.with_check, 'NULL')
+    )
+FROM pg_policies AS p
+WHERE lower(
+    COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, '')
+) LIKE ANY (ARRAY[
+    '%docentepegaso@gmail.com%',
+    '%docenteunitopegaso@gmail.com%'
+]);
+
+-- -----------------------------------------------------------------------------
+-- 4. Riferimenti diretti alle e-mail nelle funzioni
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'RIFERIMENTI_FUNZIONI',
+    format('%I.%I', n.nspname, pr.proname),
+    'FUNCTION',
+    CASE
+        WHEN lower(pg_get_functiondef(pr.oid)) LIKE '%docenteunitopegaso@gmail.com%'
+            THEN 'RIFERIMENTO_OBSOLETO'
+        WHEN lower(pg_get_functiondef(pr.oid)) LIKE '%docentepegaso@gmail.com%'
+            THEN 'RIFERIMENTO_ATTIVO'
+        ELSE 'ALTRO'
+    END,
+    pg_get_function_identity_arguments(pr.oid)
+FROM pg_proc AS pr
+JOIN pg_namespace AS n
+    ON n.oid = pr.pronamespace
+WHERE n.nspname IN ('public', 'auth')
+  -- pg_proc contiene anche aggregati come array_agg. pg_get_functiondef()
+  -- accetta funzioni ordinarie, non gli aggregati.
+  AND pr.prokind = 'f'
+  AND lower(pg_get_functiondef(pr.oid)) LIKE ANY (ARRAY[
+      '%docentepegaso@gmail.com%',
+      '%docenteunitopegaso@gmail.com%'
+  ]);
+
+-- -----------------------------------------------------------------------------
+-- 5. Copertura delle policy di scrittura per il ruolo authenticated
+-- -----------------------------------------------------------------------------
+WITH privilegi AS (
+    SELECT
+        g.table_name,
+        bool_or(g.privilege_type = 'INSERT') AS privilegio_insert,
+        bool_or(g.privilege_type = 'UPDATE') AS privilegio_update,
+        bool_or(g.privilege_type = 'DELETE') AS privilegio_delete
+    FROM information_schema.role_table_grants AS g
+    WHERE g.table_schema = 'public'
+      AND g.grantee = 'authenticated'
+      AND g.privilege_type IN ('INSERT', 'UPDATE', 'DELETE')
+    GROUP BY g.table_name
+),
+policy AS (
+    SELECT
+        p.tablename,
+        count(*) FILTER (WHERE p.cmd = 'INSERT') AS policy_insert,
+        count(*) FILTER (WHERE p.cmd = 'UPDATE') AS policy_update,
+        count(*) FILTER (WHERE p.cmd = 'DELETE') AS policy_delete,
+        bool_or(
+            lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+            LIKE '%fn_accesso_operativo%'
+        ) AS usa_fn_accesso_operativo,
+        bool_or(
+            lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+            LIKE '%docentepegaso@gmail.com%'
+        ) AS usa_email_docente,
+        bool_or(
+            lower(COALESCE(p.qual, '') || ' ' || COALESCE(p.with_check, ''))
+            LIKE '%''aal2''%'
+        ) AS usa_aal2
+    FROM pg_policies AS p
+    WHERE p.schemaname = 'public'
+    GROUP BY p.tablename
+)
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'COPERTURA_SCRITTURA',
+    pr.table_name,
+    'INSERT_UPDATE',
+    CASE
+        WHEN (
+            (pr.privilegio_insert AND COALESCE(po.policy_insert, 0) = 0)
+            OR
+            (pr.privilegio_update AND COALESCE(po.policy_update, 0) = 0)
+        ) THEN 'POLICY_MANCANTE'
+        WHEN COALESCE(po.usa_fn_accesso_operativo, false)
+          OR COALESCE(po.usa_email_docente, false)
+            THEN 'DOCENTE_PREVISTO'
+        WHEN COALESCE(po.usa_aal2, false)
+            THEN 'SOLO_AAL2'
+        ELSE 'DA_VERIFICARE'
+    END,
+    jsonb_build_object(
+        'privilegio_insert', pr.privilegio_insert,
+        'privilegio_update', pr.privilegio_update,
+        'privilegio_delete', pr.privilegio_delete,
+        'policy_insert', COALESCE(po.policy_insert, 0),
+        'policy_update', COALESCE(po.policy_update, 0),
+        'policy_delete', COALESCE(po.policy_delete, 0),
+        'usa_fn_accesso_operativo', COALESCE(po.usa_fn_accesso_operativo, false),
+        'usa_email_docente', COALESCE(po.usa_email_docente, false),
+        'usa_aal2', COALESCE(po.usa_aal2, false)
+    )::text
+FROM privilegi AS pr
+LEFT JOIN policy AS po
+    ON po.tablename = pr.table_name;
+
+-- -----------------------------------------------------------------------------
+-- 6. Privilegi concessi ad anon nel public
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'PRIVILEGI_ANON',
+    format('%I.%I', g.table_schema, g.table_name),
+    g.privilege_type,
+    'PRESENTE',
+    'Privilegio da valutare'
+FROM information_schema.role_table_grants AS g
+WHERE g.table_schema = 'public'
+  AND g.grantee = 'anon';
+
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'PRIVILEGI_ANON',
+    'public',
+    'ALL',
+    'ASSENTI',
+    'Nessun privilegio di tabella per anon'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM information_schema.role_table_grants AS g
+    WHERE g.table_schema = 'public'
+      AND g.grantee = 'anon'
+);
+
+-- -----------------------------------------------------------------------------
+-- 7. Policy DELETE presenti nel public
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'POLICY_DELETE',
+    format('%I.%I', p.schemaname, p.tablename),
+    p.cmd,
+    p.policyname,
+    concat_ws(
+        ' | ',
+        'USING=' || COALESCE(p.qual, 'NULL'),
+        'WITH CHECK=' || COALESCE(p.with_check, 'NULL')
+    )
+FROM pg_policies AS p
+WHERE p.schemaname = 'public'
+  AND p.cmd = 'DELETE';
+
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'POLICY_DELETE',
+    'public',
+    'DELETE',
+    'ASSENTI',
+    'Nessuna policy DELETE presente'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM pg_policies AS p
+    WHERE p.schemaname = 'public'
+      AND p.cmd = 'DELETE'
+);
+
+-- -----------------------------------------------------------------------------
+-- 8. Verifica privilegio EXECUTE della funzione operativa
+-- -----------------------------------------------------------------------------
+INSERT INTO x18_risultati (sezione, oggetto, comando, esito, dettaglio)
+SELECT
+    'FUNZIONE_ACCESSO',
+    'public.fn_accesso_operativo()',
+    'EXECUTE',
+    CASE
+        WHEN has_function_privilege('authenticated', 'public.fn_accesso_operativo()', 'EXECUTE')
+            THEN 'CONCESSO_AUTHENTICATED'
+        ELSE 'NON_CONCESSO_AUTHENTICATED'
+    END,
+    jsonb_build_object(
+        'anon_execute',
+        has_function_privilege('anon', 'public.fn_accesso_operativo()', 'EXECUTE'),
+        'authenticated_execute',
+        has_function_privilege('authenticated', 'public.fn_accesso_operativo()', 'EXECUTE')
+    )::text;
+
+-- -----------------------------------------------------------------------------
+-- 9. Test della funzione con claim JWT simulati
+-- -----------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_esito boolean;
+BEGIN
+    PERFORM set_config(
+        'request.jwt.claims',
+        '{"role":"authenticated","email":"docentepegaso@gmail.com","aal":"aal1"}',
+        true
+    );
+    SELECT public.fn_accesso_operativo() INTO v_esito;
+    INSERT INTO x18_risultati
+    VALUES (
+        'TEST_FUNZIONE',
+        'docentepegaso@gmail.com',
+        'AAL1',
+        CASE WHEN v_esito THEN 'AUTORIZZATO' ELSE 'NEGATO' END,
+        'Utenza di valutazione attiva'
+    );
+
+    PERFORM set_config(
+        'request.jwt.claims',
+        '{"role":"authenticated","email":"docenteunitopegaso@gmail.com","aal":"aal1"}',
+        true
+    );
+    SELECT public.fn_accesso_operativo() INTO v_esito;
+    INSERT INTO x18_risultati
+    VALUES (
+        'TEST_FUNZIONE',
+        'docenteunitopegaso@gmail.com',
+        'AAL1',
+        CASE WHEN v_esito THEN 'AUTORIZZATO' ELSE 'NEGATO' END,
+        'Utenza obsoleta da rimuovere'
+    );
+
+    PERFORM set_config(
+        'request.jwt.claims',
+        '{"role":"authenticated","email":"utente.operativo@example.invalid","aal":"aal2"}',
+        true
+    );
+    SELECT public.fn_accesso_operativo() INTO v_esito;
+    INSERT INTO x18_risultati
+    VALUES (
+        'TEST_FUNZIONE',
+        'utente operativo generico',
+        'AAL2',
+        CASE WHEN v_esito THEN 'AUTORIZZATO' ELSE 'NEGATO' END,
+        'Profilo operativo ordinario con MFA'
+    );
+
+    PERFORM set_config(
+        'request.jwt.claims',
+        '{"role":"authenticated","email":"utente.aal1@example.invalid","aal":"aal1"}',
+        true
+    );
+    SELECT public.fn_accesso_operativo() INTO v_esito;
+    INSERT INTO x18_risultati
+    VALUES (
+        'TEST_FUNZIONE',
+        'utente generico',
+        'AAL1',
+        CASE WHEN v_esito THEN 'AUTORIZZATO' ELSE 'NEGATO' END,
+        'Profilo ordinario senza MFA'
+    );
+END;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- Risultato unico ordinato
+-- -----------------------------------------------------------------------------
+SELECT
+    sezione,
+    oggetto,
+    comando,
+    esito,
+    dettaglio
+FROM x18_risultati
+ORDER BY
+    CASE sezione
+        WHEN 'UTENZE_AUTH' THEN 1
+        WHEN 'FATTORI_MFA' THEN 2
+        WHEN 'RIFERIMENTI_POLICY' THEN 3
+        WHEN 'RIFERIMENTI_FUNZIONI' THEN 4
+        WHEN 'COPERTURA_SCRITTURA' THEN 5
+        WHEN 'PRIVILEGI_ANON' THEN 6
+        WHEN 'POLICY_DELETE' THEN 7
+        WHEN 'FUNZIONE_ACCESSO' THEN 8
+        WHEN 'TEST_FUNZIONE' THEN 9
+        ELSE 99
+    END,
+    oggetto,
+    comando;
+
+ROLLBACK;
