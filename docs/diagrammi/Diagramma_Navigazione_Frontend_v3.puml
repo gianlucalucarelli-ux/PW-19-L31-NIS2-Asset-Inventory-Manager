@@ -1,0 +1,114 @@
+@startuml
+' =========================================================================
+' FILE: docs/diagrammi/Diagramma_Navigazione_Frontend_v3.puml
+' DESCRIZIONE: Architettura di navigazione frontend consolidata e stato
+'              funzionale corrente del NIS2 Asset Inventory Manager
+' =========================================================================
+
+scale 1500 width
+
+title <size:22>ARCHITETTURA DI NAVIGAZIONE FRONTEND - VERSIONE CONSOLIDATA</size>\n<size:13><color:#607D8B>NIS2 Asset Inventory Manager - home pubblica, autenticazione, area applicativa e sviluppi pianificati</color></size>
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 14
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam ArrowColor #607D8B
+skinparam ArrowThickness 1.3
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+skinparam rectangle {
+  BorderColor #90A4AE
+  FontColor #263238
+}
+
+top to bottom direction
+
+' =========================
+' AREA PUBBLICA E ACCESSO
+' =========================
+rectangle "HOME PUBBLICA\n\n- Presentazione del Project Work\n- Funzionalita principali\n- Sicurezza e conformita\n- Identita visiva\n- Tema chiaro / scuro" as HOME #E3F2FD
+
+rectangle "ACCESSO RISERVATO\n\n- E-mail e password\n- Messaggi di errore\n- Stato di caricamento\n- Recupero sessione esistente" as LOGIN #E3F2FD
+
+rectangle "AUTENTICAZIONE SUPABASE\n\nVerifica credenziali, sessione\ne stato dell'utente" as AUTH #FFF8E1
+
+rectangle "VERIFICA IDENTITA E LIVELLO AAL\n\n- Utente autenticato\n- Livello AAL corrente\n- Fattori MFA disponibili\n- Tipo di accesso autorizzato" as CHECK_AAL #FFF8E1
+
+rectangle "ACCESSO VALUTAZIONE CONTROLLATO\n\nUtente docente autorizzato\n- sessione AAL1\n- nessun secondo fattore richiesto\n- accesso operativo tramite\n  fn_accesso_operativo()" as DIRECT #E8F5E9
+
+rectangle "ACCESSO OPERATIVO ORDINARIO\n\nUtente soggetto a MFA\n- challenge TOTP\n- verifica del codice\n- sessione AAL2 richiesta" as MFA #FFF3E0
+
+rectangle "ACCESSO BLOCCATO\n\n- utenza non autorizzata\n- utenza obsoleta rimossa\n- logout e ritorno alla home" as BLOCKED #FFEBEE
+
+HOME -right-> LOGIN
+LOGIN -down-> AUTH
+AUTH -down-> CHECK_AAL
+CHECK_AAL -left-> DIRECT
+CHECK_AAL -right-> MFA
+CHECK_AAL -down-> BLOCKED
+
+' =========================
+' LAYOUT E DASHBOARD
+' =========================
+rectangle "LAYOUT APPLICATIVO\n\nBarra superiore\n- nome applicazione\n- utente e stato accesso\n- tema chiaro / scuro\n- logout\n\nArea di lavoro\n- breadcrumb\n- titolo sezione\n- navigazione laterale" as LAYOUT #E8F5E9
+
+DIRECT -down-> LAYOUT
+MFA -down-> LAYOUT
+
+rectangle "DASHBOARD OPERATIVA\n\n- 6 indicatori principali\n- distribuzione criticita asset\n- copertura Supply Chain\n- incidenti classificati recenti\n- ultime attivita di audit\n- azioni rapide\n- aggiornamento manuale dati" as DASHBOARD #E8F5E9
+
+rectangle "MENU APPLICATIVO" as MENU #CFD8DC
+
+LAYOUT -down-> DASHBOARD
+DASHBOARD -down-> MENU
+
+' =========================
+' FUNZIONI IMPLEMENTATE
+' =========================
+rectangle "INVENTARIO ASSET - IMPLEMENTATO\n\n- visualizzazione soli asset attivi\n- codice, nome, categoria e organizzazione\n- inserimento completo\n- modifica completa\n- riferimenti caricati da Supabase\n- conferma reale INSERT / UPDATE\n- esportazione e importazione disponibili\n- audit automatico delle modifiche\n\nNon visibili nel web operativo:\n- 6 asset archiviati logicamente" as ASSET #E3F2FD
+
+rectangle "SUPPLY CHAIN - CONSULTAZIONE\n\n- vista tabellare dei servizi critici\n- asset collegati\n- fornitori collegati\n- riepilogo nella Dashboard\n\nLe viste multilivello sono presenti\nnel backend e saranno integrate\nprogressivamente nel frontend" as SUPPLY #F3E5F5
+
+rectangle "AUDIT LOG - IMPLEMENTATO\n\n- elenco cronologico\n- operazione, entita e record\n- utente applicativo\n- orario visualizzato in Europe/Rome\n- INSERT e UPDATE verificati" as AUDIT #FCE4EC
+
+rectangle "GESTIONE INCIDENTI - PARZIALE\n\nDisponibile:\n- nuova segnalazione\n- wizard tassonomia ACN\n- riepilogo report\n\nNon ancora disponibile:\n- elenco completo\n- dettaglio e modifica\n- chiusura\n- archiviazione logica" as INCIDENTS #FCE4EC
+
+rectangle "INFORMAZIONI E GUIDA\n\n- finalita applicazione\n- architettura sintetica\n- sicurezza\n- informazioni sul Project Work" as INFO #ECEFF1
+
+MENU -left-> ASSET
+MENU -down-> SUPPLY
+MENU -right-> AUDIT
+MENU -right-> INCIDENTS
+MENU -down-> INFO
+
+DASHBOARD -left-> ASSET : Apri inventario
+DASHBOARD -right-> SUPPLY : Apri relazioni
+DASHBOARD -right-> AUDIT : Apri Audit Log
+DASHBOARD -down-> INCIDENTS : Gestione incidenti
+
+' =========================
+' SVILUPPI PIANIFICATI
+' =========================
+rectangle "SVILUPPI PIANIFICATI\n\nB1 - chiusura Dashboard\n- collegamento a vero elenco incidenti\n- verifiche finali rotta, refresh e tema\n\nB2 - completamento Asset\n- ricerca e filtri\n- paginazione e dettaglio\n- archiviazione logica dal web\n- collaudo completo import / export\n\nB3 - ripresa della scaletta originale\n\nD2 / D3 - ciclo di vita incidenti\n- elenco, dettaglio e aggiornamento\n- chiusura e archiviazione logica\n- bonifica eventi incompleti\n- audit delle operazioni" as ROADMAP #FFF8E1
+
+INCIDENTS -down-> ROADMAP
+ASSET -down-> ROADMAP
+DASHBOARD -down-> ROADMAP
+
+legend bottom
+|= Colore |= Area |
+|<#E3F2FD>| Home pubblica e inventario asset |
+|<#FFF8E1>| Autenticazione, sessione e roadmap |
+|<#E8F5E9>| Accesso autorizzato, layout e Dashboard |
+|<#F3E5F5>| Supply Chain e relazioni |
+|<#FCE4EC>| Sicurezza, incidenti e audit |
+|<#ECEFF1>| Informazioni e supporto |
+|<#FFEBEE>| Accesso bloccato |
+endlegend
+
+footer NIS2 Asset Inventory Manager - stato frontend consolidato dopo il collaudo Asset, Dashboard e Audit Log
+
+@enduml
