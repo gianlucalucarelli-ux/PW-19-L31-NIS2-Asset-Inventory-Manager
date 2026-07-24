@@ -3,7 +3,7 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=5';
+import { fetchAssets, fetchAssetReferences, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=6';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -317,6 +317,7 @@ export async function activateApplicationRoute(route) {
         await loadAndRenderTable();
         resetAssetForm();
     } else if (route === 'add-asset') {
+        await loadAssetFormReferences();
         const assetId = document.getElementById('asset-id');
         if (!assetId?.value) {
             resetAssetForm();
@@ -356,6 +357,52 @@ function leggiCampo(record, nomi, valorePredefinito = '') {
     }
     return valorePredefinito;
 }
+
+/**
+ * Escaping minimo dei valori inseriti nelle tabelle costruite tramite template HTML.
+ */
+function escapeHtml(valore) {
+    const elemento = document.createElement('div');
+    elemento.textContent = String(valore ?? '');
+    return elemento.innerHTML;
+}
+
+/**
+ * Formatta un timestamp PostgreSQL senza fuso orario conservando l'ora locale
+ * già registrata dal database Europe/Rome.
+ */
+function formattaTimestampLocaleDatabase(valore) {
+    const testo = String(valore ?? '').trim();
+    const corrispondenza = testo.match(
+        /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/
+    );
+
+    if (!corrispondenza) return 'Data non disponibile';
+
+    const [, anno, mese, giorno, ore, minuti, secondi] = corrispondenza;
+    return `${giorno}/${mese}/${anno}, ${ore}:${minuti}:${secondi}`;
+}
+
+/**
+ * Formatta timestamp dotati di fuso o offset nel fuso operativo Europe/Rome.
+ */
+function formattaTimestampEuropeRome(valore) {
+    if (!valore) return 'Data non disponibile';
+
+    const data = new Date(valore);
+    if (Number.isNaN(data.getTime())) return 'Data non disponibile';
+
+    return data.toLocaleString('it-IT', {
+        timeZone: 'Europe/Rome',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
 
 /**
  * Normalizza una criticità per il rendering coerente di badge e distribuzioni.
@@ -500,7 +547,7 @@ function renderIncidentiRecenti(incidenti) {
         titolo.textContent = `${tipologia} #${incidente.id}`;
 
         const dettaglio = document.createElement('span');
-        const inizio = incidente.inizio ? new Date(incidente.inizio).toLocaleString('it-IT') : 'Data non disponibile';
+        const inizio = formattaTimestampEuropeRome(incidente.inizio);
         const stato = incidente.fine ? 'Chiuso' : 'Aperto';
         dettaglio.textContent = `${inizio} · ${stato}`;
 
@@ -539,7 +586,7 @@ function renderAuditRecente(logs) {
         titolo.textContent = `${log.operazione || 'OPERAZIONE'} · ${entita}`;
 
         const dettaglio = document.createElement('span');
-        const data = log.data_modifica ? new Date(log.data_modifica).toLocaleString('it-IT') : 'Data non disponibile';
+        const data = formattaTimestampLocaleDatabase(log.data_modifica);
         const utente = leggiCampo(log, ['utente_email', 'utente'], 'Sistema');
         dettaglio.textContent = `${data} · ${utente}`;
 
@@ -643,38 +690,39 @@ export async function loadAndRenderDashboard() {
 
 async function renderAuditLog() {
     const container = document.getElementById('audit-table-body');
-    if (!container) {
-        console.error("DEBUG: Elemento 'audit-table-body' non trovato nel DOM!");
-        return;
-    }
-    
-    console.log("DEBUG: Inizio esecuzione renderAuditLog"); // TEST 1
-    
+    if (!container) return;
+
     try {
-        container.innerHTML = '<tr><td colspan="4" class="table-state">Caricamento log in corso...</td></tr>';
+        container.innerHTML = '<tr><td colspan="5" class="table-state">Caricamento log in corso...</td></tr>';
         const logs = await fetchAuditLogs();
-        
-        console.log("DEBUG: Log ricevuti dalla funzione:", logs); // TEST 2
-        
-        if (!logs || logs.length === 0) {
-            container.innerHTML = '<tr><td colspan="4" class="table-state">Nessun evento registrato.</td></tr>';
+
+        if (!Array.isArray(logs) || logs.length === 0) {
+            container.innerHTML = '<tr><td colspan="5" class="table-state">Nessun evento registrato.</td></tr>';
             return;
         }
 
-        container.innerHTML = logs.map(log => `
-            <tr>
-                <td class="cell-small">${new Date(log.data_modifica).toLocaleString()}</td>
-                <td class="cell-primary">${log.operazione}</td>
-                <td class="cell-small">${log.utente}</td>
-                <td class="cell-small">Asset ID: ${log.asset_id || 'N/A'}</td>
-            </tr>
-        `).join('');
-        
-        console.log("DEBUG: Rendering completato con successo."); // TEST 3
-        
-    } catch (err) {
-        console.error("DEBUG: Errore nella funzione renderAuditLog:", err); // TEST 4
-        container.innerHTML = `<tr><td colspan="4" class="error-msg">Errore: ${err.message}</td></tr>`;
+        container.innerHTML = logs.map((log) => {
+            const entita = leggiCampo(log, ['tabella', 'tipo_entita'], 'Record applicativo');
+            const record = leggiCampo(
+                log,
+                ['nome_record', 'codice_record', 'record_id'],
+                'N/D'
+            );
+            const utente = leggiCampo(log, ['utente_email', 'utente'], 'Sistema');
+
+            return `
+                <tr>
+                    <td class="cell-small">${escapeHtml(formattaTimestampLocaleDatabase(log.data_modifica))}</td>
+                    <td class="cell-primary">${escapeHtml(log.operazione || 'OPERAZIONE')}</td>
+                    <td class="cell-small">${escapeHtml(entita)}</td>
+                    <td class="cell-primary">${escapeHtml(record)}</td>
+                    <td class="cell-small">${escapeHtml(utente)}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Errore durante il rendering dell’Audit Log:', error);
+        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
     }
 }
 
@@ -682,87 +730,174 @@ async function renderAuditLog() {
 // FUNZIONI ESISTENTI (INVENTARIO E SUPPLY CHAIN)
 // =========================================================================
 
+let assetReferencesCache = null;
+
+/**
+ * Popola una select conservando, quando possibile, il valore già selezionato.
+ */
+function popolaSelect(select, elementi, placeholder, creaEtichetta) {
+    if (!select) return;
+
+    const valoreCorrente = select.value;
+    select.replaceChildren();
+
+    const opzioneVuota = document.createElement('option');
+    opzioneVuota.value = '';
+    opzioneVuota.textContent = placeholder;
+    select.appendChild(opzioneVuota);
+
+    elementi.forEach((elemento) => {
+        const opzione = document.createElement('option');
+        opzione.value = String(elemento.id);
+        opzione.textContent = creaEtichetta(elemento);
+        select.appendChild(opzione);
+    });
+
+    if ([...select.options].some((opzione) => opzione.value === valoreCorrente)) {
+        select.value = valoreCorrente;
+    }
+}
+
+/**
+ * Carica categorie, organizzazioni e responsabili attivi direttamente da Supabase.
+ */
+async function loadAssetFormReferences(force = false) {
+    if (!assetReferencesCache || force) {
+        assetReferencesCache = await fetchAssetReferences();
+    }
+
+    popolaSelect(
+        document.getElementById('asset-categoria'),
+        assetReferencesCache.categorie,
+        'Seleziona una categoria',
+        (categoria) => categoria.codice_acn
+            ? `${categoria.nome} · ${categoria.codice_acn}`
+            : categoria.nome
+    );
+
+    popolaSelect(
+        document.getElementById('asset-organizzazione'),
+        assetReferencesCache.organizzazioni,
+        'Seleziona un’organizzazione',
+        (organizzazione) => organizzazione.nome
+    );
+
+    popolaSelect(
+        document.getElementById('asset-responsabile'),
+        assetReferencesCache.responsabili,
+        'Nessun responsabile associato',
+        (responsabile) => {
+            const nominativo = `${responsabile.nome} ${responsabile.cognome}`.trim();
+            return responsabile.email
+                ? `${nominativo} · ${responsabile.email}`
+                : nominativo;
+        }
+    );
+
+    return assetReferencesCache;
+}
+
 export async function loadAndRenderTable() {
     const assetTableBody = document.getElementById('asset-table-body');
     if (!assetTableBody) return;
 
     try {
-        assetTableBody.innerHTML = '<tr><td colspan="5" class="table-state">Sincronizzazione in corso...</td></tr>';
-        const data = await fetchAssets();
-        
-        if (!data || data.length === 0) {
-            assetTableBody.innerHTML = '<tr><td colspan="5" class="table-state">Nessun asset censito.</td></tr>';
+        assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Sincronizzazione in corso...</td></tr>';
+
+        const [data, riferimenti] = await Promise.all([
+            fetchAssets(),
+            fetchAssetReferences()
+        ]);
+        assetReferencesCache = riferimenti;
+
+        if (!Array.isArray(data) || data.length === 0) {
+            assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Nessun asset attivo censito.</td></tr>';
             return;
         }
 
-        assetTableBody.innerHTML = data.map(a => {
-            const id = a.id || a.Asset_ID;
-            const nome = a.nome || a.Asset_Name || 'N/D';
-            const versione = a.versione || a.Software_Version || 'N/D';
-            const criticita = a.criticita || a.Criticity_Level || 'Bassa';
-            const normalizedRisk = criticita.toLowerCase();
-            const badgeClass = normalizedRisk === 'critica'
-                ? 'risk-critical'
-                : normalizedRisk === 'alta'
-                    ? 'risk-high'
-                    : normalizedRisk === 'media'
-                        ? 'risk-medium'
-                        : 'risk-low';
+        const categorie = new Map(
+            riferimenti.categorie.map((categoria) => [categoria.id, categoria.nome])
+        );
+        const organizzazioni = new Map(
+            riferimenti.organizzazioni.map((organizzazione) => [organizzazione.id, organizzazione.nome])
+        );
+
+        assetTableBody.innerHTML = data.map((asset) => {
+            const criticita = normalizzaCriticita(asset.classificazione_criticita);
+            const badgeClass = classeCriticita(criticita);
 
             return `
-            <tr>
-                <td class="cell-id">${id}</td>
-                <td class="cell-primary">${nome}</td>
-                <td class="cell-secondary">${versione}</td>
-                <td><span class="badge ${badgeClass}">${criticita}</span></td>
-                <td class="cell-actions">
-                    <button class="btn-edit" data-id="${id}" type="button">Modifica</button>
-                </td>
-            </tr>
+                <tr>
+                    <td class="cell-id">${escapeHtml(asset.id)}</td>
+                    <td class="cell-primary">${escapeHtml(asset.codice_asset)}</td>
+                    <td class="cell-primary">${escapeHtml(asset.nome)}</td>
+                    <td class="cell-secondary">${escapeHtml(categorie.get(asset.categoria_asset_id) || 'N/D')}</td>
+                    <td class="cell-secondary">${escapeHtml(organizzazioni.get(asset.organizzazione_id) || 'N/D')}</td>
+                    <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
+                    <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
+                    <td class="cell-actions">
+                        <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
+                    </td>
+                </tr>
             `;
         }).join('');
 
-        document.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = e.target.getAttribute('data-id');
-                const asset = data.find(item => (item.id || item.Asset_ID) == id);
-                if (asset) caricaAssetNelForm(asset);
+        document.querySelectorAll('.btn-edit').forEach((button) => {
+            button.addEventListener('click', async (event) => {
+                const id = Number(event.currentTarget.getAttribute('data-id'));
+                const asset = data.find((item) => item.id === id);
+                if (asset) {
+                    await caricaAssetNelForm(asset);
+                }
             });
         });
-
     } catch (error) {
-        console.error("Errore nel rendering:", error.message);
-        assetTableBody.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${error.message}</td></tr>`;
+        console.error('Errore nel rendering dell’inventario:', error);
+        assetTableBody.innerHTML = `<tr><td colspan="8" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
     }
 }
 
-export function caricaAssetNelForm(asset) {
-    document.getElementById('asset-id').value = asset.id || asset.Asset_ID;
-    document.getElementById('asset-nome').value = asset.nome || asset.Asset_Name || '';
-    document.getElementById('asset-versione').value = asset.versione || asset.Software_Version || '';
-    
-    const currCrit = asset.criticita || asset.Criticity_Level || 'Bassa';
-    const selectElem = document.getElementById('asset-criticita');
-    if(selectElem) selectElem.value = currCrit.charAt(0).toUpperCase() + currCrit.slice(1).toLowerCase();
+export async function caricaAssetNelForm(asset) {
+    await loadAssetFormReferences();
+
+    document.getElementById('asset-id').value = asset.id ?? '';
+    document.getElementById('asset-codice').value = asset.codice_asset ?? '';
+    document.getElementById('asset-nome').value = asset.nome ?? '';
+    document.getElementById('asset-versione').value = asset.versione ?? '';
+    document.getElementById('asset-ubicazione').value = asset.ubicazione ?? '';
+    document.getElementById('asset-descrizione').value = asset.descrizione ?? '';
+    document.getElementById('asset-categoria').value = String(asset.categoria_asset_id ?? '');
+    document.getElementById('asset-organizzazione').value = String(asset.organizzazione_id ?? '');
+    document.getElementById('asset-responsabile').value = asset.responsabile_id
+        ? String(asset.responsabile_id)
+        : '';
+
+    const criticita = normalizzaCriticita(asset.classificazione_criticita);
+    document.getElementById('asset-criticita').value = criticita;
 
     const headerTitle = document.querySelector('#view-add-asset h2');
     const submitBtn = document.querySelector('#asset-form button[type="submit"]');
-    if (headerTitle) headerTitle.textContent = "Modifica Configurazione Asset";
-    if (submitBtn) submitBtn.textContent = "Aggiorna Dati";
+    if (headerTitle) headerTitle.textContent = 'Modifica configurazione asset';
+    if (submitBtn) submitBtn.textContent = 'Aggiorna dati';
 
-    navigateTo('add-asset', { force: true });
+    await navigateTo('add-asset', { force: true });
 }
 
 export function resetAssetForm() {
     const form = document.getElementById('asset-form');
-    if (form) {
-        form.reset();
-        document.getElementById('asset-id').value = '';
-        const headerTitle = document.querySelector('#view-add-asset h2');
-        const submitBtn = document.querySelector('#asset-form button[type="submit"]');
-        if (headerTitle) headerTitle.textContent = "Inserimento Nuovo Asset";
-        if (submitBtn) submitBtn.textContent = "Salva Asset";
-    }
+    if (!form) return;
+
+    form.reset();
+
+    const assetId = document.getElementById('asset-id');
+    const criticita = document.getElementById('asset-criticita');
+    const headerTitle = document.querySelector('#view-add-asset h2');
+    const submitBtn = document.querySelector('#asset-form button[type="submit"]');
+
+    if (assetId) assetId.value = '';
+    if (criticita) criticita.value = 'Bassa';
+    if (headerTitle) headerTitle.textContent = 'Inserimento nuovo asset';
+    if (submitBtn) submitBtn.textContent = 'Salva Asset';
 }
 
 export function mostraDashboardInterfaccia(session, accessState) {

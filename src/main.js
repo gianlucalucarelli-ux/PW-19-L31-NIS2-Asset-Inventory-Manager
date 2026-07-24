@@ -12,7 +12,7 @@ import {
     showAuthenticatedInterface,
     setAuthBusy,
     setAuthError
-} from './ui.js?v=9';
+} from './ui.js?v=10';
 import {
     initializeRouter,
     navigateTo,
@@ -26,7 +26,7 @@ import {
     observeAuthState,
     signOut
 } from './auth.js';
-import { fetchAssets, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=5';
+import { fetchAssetsForExport, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=6';
 import { exportToExcel, parseExcelFile } from './importExport.js';
 
 initTheme();
@@ -166,6 +166,36 @@ function initializeNavigationControls() {
     });
 }
 
+
+/**
+ * Traduce gli errori più comuni di PostgreSQL, PostgREST e RLS in messaggi operativi.
+ */
+function formattaErroreOperativo(error) {
+    const code = error?.code || '';
+    const message = String(error?.message || '').trim();
+
+    if (code === '23505') {
+        return 'Il codice asset è già utilizzato. Inserisci un codice univoco.';
+    }
+    if (code === '23502') {
+        return 'Uno o più campi obbligatori non sono stati valorizzati.';
+    }
+    if (code === '23503') {
+        return 'Categoria, organizzazione o responsabile non sono più disponibili.';
+    }
+    if (code === '23514') {
+        return 'Uno dei valori non rispetta i vincoli previsti dal database.';
+    }
+    if (code === '42501' || /row-level security|permission denied/i.test(message)) {
+        return 'La sessione non dispone dell’autorizzazione necessaria per completare l’operazione.';
+    }
+    if (code === 'PGRST116') {
+        return 'Il database non ha restituito la riga attesa.';
+    }
+
+    return message || 'Errore operativo non specificato.';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const loginForm = document.getElementById('login-form');
     const themeToggleBtn = document.getElementById('theme-toggle');
@@ -275,31 +305,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (formAsset) {
         formAsset.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const id = document.getElementById('asset-id').value;
-            const nome = document.getElementById('asset-nome').value.trim();
-            const versione = document.getElementById('asset-versione').value.trim();
-            const criticita = document.getElementById('asset-criticita').value;
 
-            if (!nome) {
-                alert('Attenzione: il nome dell’asset è un campo obbligatorio.');
+            const submitButton = formAsset.querySelector('button[type="submit"]');
+            const defaultLabel = submitButton?.textContent || 'Salva Asset';
+
+            const id = document.getElementById('asset-id')?.value ?? '';
+            const codiceInput = document.getElementById('asset-codice');
+            const codiceAsset = String(codiceInput?.value ?? '').trim().toUpperCase();
+            const nome = document.getElementById('asset-nome')?.value.trim() ?? '';
+            const categoriaAssetId = document.getElementById('asset-categoria')?.value ?? '';
+            const organizzazioneId = document.getElementById('asset-organizzazione')?.value ?? '';
+            const responsabileId = document.getElementById('asset-responsabile')?.value ?? '';
+            const versione = document.getElementById('asset-versione')?.value.trim() ?? '';
+            const ubicazione = document.getElementById('asset-ubicazione')?.value.trim() ?? '';
+            const descrizione = document.getElementById('asset-descrizione')?.value.trim() ?? '';
+            const criticita = document.getElementById('asset-criticita')?.value ?? '';
+
+            if (codiceInput) codiceInput.value = codiceAsset;
+
+            if (!/^[A-Z0-9][A-Z0-9_-]{2,79}$/.test(codiceAsset)) {
+                alert('Il codice asset deve contenere da 3 a 80 caratteri tra lettere maiuscole, numeri, trattino e underscore.');
+                codiceInput?.focus();
                 return;
             }
 
-            const payload = { nome, versione, criticita };
+            if (!nome) {
+                alert('Il nome dell’asset è obbligatorio.');
+                document.getElementById('asset-nome')?.focus();
+                return;
+            }
+
+            if (!categoriaAssetId || !organizzazioneId) {
+                alert('Seleziona una categoria e un’organizzazione.');
+                return;
+            }
+
+            const payload = {
+                codice_asset: codiceAsset,
+                nome,
+                categoria_asset_id: categoriaAssetId,
+                organizzazione_id: organizzazioneId,
+                responsabile_id: responsabileId || null,
+                versione,
+                ubicazione,
+                descrizione,
+                criticita
+            };
 
             try {
-                if (id) {
-                    await updateAsset(id, payload);
-                    alert('Configurazione asset aggiornata.');
-                } else {
-                    await insertAsset(payload);
-                    alert('Nuovo asset registrato.');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = id ? 'Aggiornamento…' : 'Salvataggio…';
                 }
+
+                const assetSalvato = id
+                    ? await updateAsset(id, payload)
+                    : await insertAsset(payload);
+
+                if (!assetSalvato?.id || assetSalvato.codice_asset !== codiceAsset) {
+                    throw new Error('Il database non ha confermato i dati dell’asset.');
+                }
+
+                alert(
+                    id
+                        ? `Asset ${assetSalvato.codice_asset} aggiornato correttamente.`
+                        : `Asset ${assetSalvato.codice_asset} registrato correttamente.`
+                );
 
                 await navigateTo('inventory', { force: true });
             } catch (error) {
                 console.error('Errore database:', error);
-                alert(`Errore operativo: ${error.message}`);
+                alert(`Errore operativo: ${formattaErroreOperativo(error)}`);
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = defaultLabel;
+                }
             }
         });
     }
@@ -308,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnExportXls) {
         btnExportXls.addEventListener('click', async () => {
             try {
-                const data = await fetchAssets();
+                const data = await fetchAssetsForExport();
                 exportToExcel(data);
             } catch (error) {
                 console.error('Errore durante l’esportazione:', error);
@@ -337,7 +418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } catch (error) {
                 console.error('Errore durante l’importazione:', error);
-                alert('Anomalia durante l’analisi del file.');
+                alert(`Anomalia durante l’analisi o l’importazione: ${formattaErroreOperativo(error)}`);
             } finally {
                 fileInput.value = '';
             }

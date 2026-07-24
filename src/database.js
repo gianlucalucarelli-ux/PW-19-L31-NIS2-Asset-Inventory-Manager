@@ -6,72 +6,290 @@
 import { supabase } from './supabase.js';
 
 /**
- * Estrae l'elenco degli asset sfruttando la vista di esportazione ACN.
+ * Colonne restituite dalle operazioni CRUD sugli asset.
+ */
+const ASSET_COLUMNS = [
+    'id',
+    'codice_asset',
+    'nome',
+    'categoria_asset_id',
+    'classificazione_criticita',
+    'descrizione',
+    'ubicazione',
+    'versione',
+    'organizzazione_id',
+    'responsabile_id',
+    'attiva',
+    'data_inserimento'
+].join(',');
+
+/**
+ * Estrae esclusivamente gli asset attivi dalla tabella applicativa.
+ *
+ * La vista di esportazione non espone il campo "attiva"; per evitare che
+ * record archiviati tornino nell'inventario, la vista operativa interroga
+ * direttamente la tabella protetta da RLS.
  */
 export async function fetchAssets() {
     const { data, error } = await supabase
-        .from('vista_esportazione_acn_assets')
-        .select('*');
+        .from('asset')
+        .select(ASSET_COLUMNS)
+        .eq('attiva', true)
+        .order('id', { ascending: true });
 
     if (error) throw error;
-    return data;
+    return data ?? [];
 }
 
 /**
- * Allinea il payload del frontend alla struttura attualmente usata dalla tabella asset.
- * I valori relazionali temporanei verranno sostituiti da selezioni controllate nella Fase B2.
+ * Estrae la vista ACN limitandola agli identificativi degli asset ancora attivi.
+ * Mantiene così il formato storico dell'esportazione senza reintrodurre record archiviati.
  */
-function trasformaPayload(payload) {
+export async function fetchAssetsForExport() {
+    const assetAttivi = await fetchAssets();
+    const ids = assetAttivi.map((asset) => asset.id);
+
+    if (ids.length === 0) return [];
+
+    const { data, error } = await supabase
+        .from('vista_esportazione_acn_assets')
+        .select('*')
+        .in('Asset_ID', ids)
+        .order('Asset_ID', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+}
+
+/**
+ * Carica i valori controllati usati dal form asset.
+ */
+export async function fetchAssetReferences() {
+    const [categorieResult, organizzazioniResult, responsabiliResult] = await Promise.all([
+        supabase
+            .from('categoria_asset')
+            .select('id, codice_acn, nome, descrizione')
+            .order('nome', { ascending: true }),
+        supabase
+            .from('organizzazione')
+            .select('id, nome, descrizione')
+            .eq('attiva', true)
+            .order('nome', { ascending: true }),
+        supabase
+            .from('responsabile')
+            .select('id, nome, cognome, email, organizzazione_id')
+            .eq('attiva', true)
+            .order('cognome', { ascending: true })
+            .order('nome', { ascending: true })
+    ]);
+
+    const errors = [
+        categorieResult.error,
+        organizzazioniResult.error,
+        responsabiliResult.error
+    ].filter(Boolean);
+
+    if (errors.length > 0) {
+        throw errors[0];
+    }
+
     return {
-        nome: payload.nome,
-        versione: payload.versione,
-        classificazione_criticita: payload.criticita || 'Bassa',
-        categoria_asset_id: 1,
-        organizzazione_id: 1,
-        responsabile_id: 1
+        categorie: categorieResult.data ?? [],
+        organizzazioni: organizzazioniResult.data ?? [],
+        responsabili: responsabiliResult.data ?? []
     };
 }
 
 /**
- * Esegue l'inserimento di un nuovo asset.
+ * Legge il primo valore valorizzato tra più possibili nomi di campo.
+ * È usato anche dall'importazione per mantenere compatibilità con intestazioni note.
+ */
+function leggiValorePayload(payload, chiavi) {
+    for (const chiave of chiavi) {
+        const valore = payload?.[chiave];
+        if (valore !== undefined && valore !== null && String(valore).trim() !== '') {
+            return valore;
+        }
+    }
+    return null;
+}
+
+function normalizzaTestoOpzionale(valore) {
+    const testo = String(valore ?? '').trim();
+    return testo === '' ? null : testo;
+}
+
+function normalizzaInteroObbligatorio(valore, etichetta) {
+    const numero = Number(valore);
+    if (!Number.isInteger(numero) || numero <= 0) {
+        throw new Error(`${etichetta}: seleziona un valore valido.`);
+    }
+    return numero;
+}
+
+function normalizzaInteroOpzionale(valore, etichetta) {
+    if (valore === null || valore === undefined || String(valore).trim() === '') {
+        return null;
+    }
+
+    const numero = Number(valore);
+    if (!Number.isInteger(numero) || numero <= 0) {
+        throw new Error(`${etichetta}: seleziona un valore valido.`);
+    }
+    return numero;
+}
+
+/**
+ * Allinea e valida il payload del frontend rispetto allo schema reale di public.asset.
+ */
+function trasformaPayload(payload, indice = null) {
+    const prefisso = indice === null ? '' : `Riga ${indice + 1}: `;
+
+    const codice = String(leggiValorePayload(payload, [
+        'codice_asset',
+        'codice',
+        'Asset_Code',
+        'Codice_Asset'
+    ]) ?? '').trim().toUpperCase();
+
+    const nome = String(leggiValorePayload(payload, [
+        'nome',
+        'Asset_Name',
+        'Nome_Asset'
+    ]) ?? '').trim();
+
+    const criticita = String(leggiValorePayload(payload, [
+        'criticita',
+        'classificazione_criticita',
+        'Criticity_Level'
+    ]) ?? 'Bassa').trim();
+
+    const categoriaId = leggiValorePayload(payload, [
+        'categoria_asset_id',
+        'Categoria_Asset_ID'
+    ]);
+
+    const organizzazioneId = leggiValorePayload(payload, [
+        'organizzazione_id',
+        'Organizzazione_ID'
+    ]);
+
+    const responsabileId = leggiValorePayload(payload, [
+        'responsabile_id',
+        'Responsabile_ID'
+    ]);
+
+    if (!/^[A-Z0-9][A-Z0-9_-]{2,79}$/.test(codice)) {
+        throw new Error(
+            `${prefisso}il codice asset deve contenere da 3 a 80 caratteri tra lettere maiuscole, numeri, trattino e underscore.`
+        );
+    }
+
+    if (!nome) {
+        throw new Error(`${prefisso}il nome dell'asset è obbligatorio.`);
+    }
+
+    if (!['Bassa', 'Media', 'Alta', 'Critica'].includes(criticita)) {
+        throw new Error(`${prefisso}il livello di criticità non è valido.`);
+    }
+
+    return {
+        codice_asset: codice,
+        nome,
+        categoria_asset_id: normalizzaInteroObbligatorio(
+            categoriaId,
+            `${prefisso}categoria asset`
+        ),
+        classificazione_criticita: criticita,
+        descrizione: normalizzaTestoOpzionale(
+            leggiValorePayload(payload, ['descrizione', 'Description'])
+        ),
+        ubicazione: normalizzaTestoOpzionale(
+            leggiValorePayload(payload, ['ubicazione', 'Location'])
+        ),
+        versione: normalizzaTestoOpzionale(
+            leggiValorePayload(payload, ['versione', 'Software_Version'])
+        ),
+        organizzazione_id: normalizzaInteroObbligatorio(
+            organizzazioneId,
+            `${prefisso}organizzazione`
+        ),
+        responsabile_id: normalizzaInteroOpzionale(
+            responsabileId,
+            `${prefisso}responsabile`
+        )
+    };
+}
+
+/**
+ * Esegue l'inserimento di un nuovo asset e restituisce la riga realmente creata.
  */
 export async function insertAsset(payload) {
     const dbPayload = trasformaPayload(payload);
     const { data, error } = await supabase
         .from('asset')
-        .insert([dbPayload])
-        .select();
+        .insert(dbPayload)
+        .select(ASSET_COLUMNS)
+        .single();
 
     if (error) throw error;
+    if (!data?.id) {
+        throw new Error('Inserimento non confermato dal database.');
+    }
+
     return data;
 }
 
 /**
- * Esegue l'aggiornamento di un asset esistente.
+ * Aggiorna esclusivamente un asset attivo e restituisce la riga realmente modificata.
  */
 export async function updateAsset(id, payload) {
+    const assetId = Number(id);
+    if (!Number.isInteger(assetId) || assetId <= 0) {
+        throw new Error('Identificativo asset non valido.');
+    }
+
     const dbPayload = trasformaPayload(payload);
     const { data, error } = await supabase
         .from('asset')
         .update(dbPayload)
-        .eq('id', id)
-        .select();
+        .eq('id', assetId)
+        .eq('attiva', true)
+        .select(ASSET_COLUMNS)
+        .maybeSingle();
 
     if (error) throw error;
+    if (!data?.id) {
+        throw new Error(
+            'Nessun asset attivo è stato aggiornato. Il record potrebbe essere stato archiviato o non essere più accessibile.'
+        );
+    }
+
     return data;
 }
 
 /**
- * Esegue l'inserimento massivo per il flusso di importazione Excel.
+ * Esegue l'inserimento massivo con la stessa validazione del form manuale.
  */
 export async function bulkInsertAssets(assetsArray) {
-    const dbPayloadArray = assetsArray.map((asset) => trasformaPayload(asset));
+    if (!Array.isArray(assetsArray) || assetsArray.length === 0) {
+        throw new Error('Il file non contiene asset da importare.');
+    }
+
+    const dbPayloadArray = assetsArray.map((asset, indice) => trasformaPayload(asset, indice));
     const { data, error } = await supabase
         .from('asset')
         .insert(dbPayloadArray)
-        .select();
+        .select(ASSET_COLUMNS);
 
     if (error) throw error;
+
+    if (!Array.isArray(data) || data.length !== dbPayloadArray.length) {
+        throw new Error(
+            `Importazione non confermata: create ${data?.length ?? 0} righe su ${dbPayloadArray.length}.`
+        );
+    }
+
     return data;
 }
 
