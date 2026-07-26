@@ -759,6 +759,8 @@ let inventoryAssetsCache = [];
 let inventoryCategoryMap = new Map();
 let inventoryOrganizationMap = new Map();
 let inventoryFilteredCache = [];
+let inventoryCurrentPage = 1;
+let inventoryPageSize = 5;
 
 
 /**
@@ -907,7 +909,8 @@ function impostaDisponibilitaFiltriInventario(disabilitati) {
         'asset-search',
         'asset-filter-criticita',
         'asset-filter-categoria',
-        'asset-filter-organizzazione'
+        'asset-filter-organizzazione',
+        'asset-page-size'
     ].forEach((id) => {
         const controllo = document.getElementById(id);
         if (controllo) controllo.disabled = disabilitati;
@@ -915,8 +918,12 @@ function impostaDisponibilitaFiltriInventario(disabilitati) {
 
     const clearButton = document.getElementById('asset-search-clear');
     const exportButton = document.getElementById('btn-export-filtered');
+    const previousButton = document.getElementById('asset-page-prev');
+    const nextButton = document.getElementById('asset-page-next');
     if (clearButton && disabilitati) clearButton.disabled = true;
     if (exportButton && disabilitati) exportButton.disabled = true;
+    if (previousButton && disabilitati) previousButton.disabled = true;
+    if (nextButton && disabilitati) nextButton.disabled = true;
 }
 
 /**
@@ -928,27 +935,105 @@ function inizializzaRicercaAsset() {
     const categoriaSelect = document.getElementById('asset-filter-categoria');
     const organizzazioneSelect = document.getElementById('asset-filter-organizzazione');
     const clearButton = document.getElementById('asset-search-clear');
+    const pageSizeSelect = document.getElementById('asset-page-size');
+    const previousButton = document.getElementById('asset-page-prev');
+    const nextButton = document.getElementById('asset-page-next');
 
-    if (!input || !criticitaSelect || !categoriaSelect || !organizzazioneSelect || !clearButton) return;
+    if (
+        !input
+        || !criticitaSelect
+        || !categoriaSelect
+        || !organizzazioneSelect
+        || !clearButton
+        || !pageSizeSelect
+        || !previousButton
+        || !nextButton
+    ) return;
 
-    input.oninput = renderInventarioFiltrato;
-    criticitaSelect.onchange = renderInventarioFiltrato;
-    categoriaSelect.onchange = renderInventarioFiltrato;
-    organizzazioneSelect.onchange = renderInventarioFiltrato;
+    const applicaCriteriDallaPrimaPagina = () => {
+        inventoryCurrentPage = 1;
+        renderInventarioFiltrato();
+    };
+
+    input.oninput = applicaCriteriDallaPrimaPagina;
+    criticitaSelect.onchange = applicaCriteriDallaPrimaPagina;
+    categoriaSelect.onchange = applicaCriteriDallaPrimaPagina;
+    organizzazioneSelect.onchange = applicaCriteriDallaPrimaPagina;
+
+    pageSizeSelect.onchange = () => {
+        const nuovaDimensione = Number(pageSizeSelect.value);
+        inventoryPageSize = [5, 10, 25].includes(nuovaDimensione) ? nuovaDimensione : 5;
+        inventoryCurrentPage = 1;
+        renderInventarioFiltrato();
+    };
+
+    previousButton.onclick = () => {
+        if (inventoryCurrentPage <= 1) return;
+        inventoryCurrentPage -= 1;
+        renderInventarioFiltrato();
+        document.getElementById('asset-pagination')?.scrollIntoView({ block: 'nearest' });
+    };
+
+    nextButton.onclick = () => {
+        const totalePagine = Math.max(1, Math.ceil(inventoryFilteredCache.length / inventoryPageSize));
+        if (inventoryCurrentPage >= totalePagine) return;
+        inventoryCurrentPage += 1;
+        renderInventarioFiltrato();
+        document.getElementById('asset-pagination')?.scrollIntoView({ block: 'nearest' });
+    };
 
     clearButton.onclick = () => {
         input.value = '';
         criticitaSelect.value = '';
         categoriaSelect.value = '';
         organizzazioneSelect.value = '';
+        inventoryCurrentPage = 1;
         renderInventarioFiltrato();
         input.focus();
     };
 }
 
 /**
+ * Aggiorna riepilogo e comandi della paginazione locale.
+ */
+function aggiornaPaginazioneInventario(totaleRisultati) {
+    const previousButton = document.getElementById('asset-page-prev');
+    const nextButton = document.getElementById('asset-page-next');
+    const indicator = document.getElementById('asset-page-indicator');
+    const status = document.getElementById('asset-page-status');
+    const pageSizeSelect = document.getElementById('asset-page-size');
+
+    if (!previousButton || !nextButton || !indicator || !status || !pageSizeSelect) return;
+
+    const totalePagine = totaleRisultati === 0
+        ? 0
+        : Math.ceil(totaleRisultati / inventoryPageSize);
+
+    if (totalePagine === 0) {
+        inventoryCurrentPage = 1;
+        previousButton.disabled = true;
+        nextButton.disabled = true;
+        indicator.textContent = 'Pagina 0 di 0';
+        status.textContent = 'Nessun elemento da paginare';
+        pageSizeSelect.value = String(inventoryPageSize);
+        return;
+    }
+
+    inventoryCurrentPage = Math.min(Math.max(inventoryCurrentPage, 1), totalePagine);
+
+    const primoElemento = ((inventoryCurrentPage - 1) * inventoryPageSize) + 1;
+    const ultimoElemento = Math.min(inventoryCurrentPage * inventoryPageSize, totaleRisultati);
+
+    previousButton.disabled = inventoryCurrentPage === 1;
+    nextButton.disabled = inventoryCurrentPage === totalePagine;
+    indicator.textContent = `Pagina ${inventoryCurrentPage} di ${totalePagine}`;
+    status.textContent = `Elementi ${primoElemento}–${ultimoElemento} di ${totaleRisultati}`;
+    pageSizeSelect.value = String(inventoryPageSize);
+}
+
+/**
  * Disegna le righe dell'inventario usando esclusivamente i dati già caricati.
- * Ricerca e filtri non eseguono nuove query e non modificano il database.
+ * Ricerca, filtri e paginazione non eseguono nuove query e non modificano il database.
  */
 function renderInventarioFiltrato() {
     const assetTableBody = document.getElementById('asset-table-body');
@@ -990,6 +1075,8 @@ function renderInventarioFiltrato() {
         filtri
     );
 
+    aggiornaPaginazioneInventario(inventoryFilteredCache.length);
+
     if (inventoryFilteredCache.length === 0) {
         const messaggio = filtriInventarioAttivi(filtri)
             ? 'Nessun asset soddisfa i criteri di ricerca e filtro selezionati.'
@@ -998,7 +1085,13 @@ function renderInventarioFiltrato() {
         return;
     }
 
-    assetTableBody.innerHTML = inventoryFilteredCache.map((asset) => {
+    const indiceIniziale = (inventoryCurrentPage - 1) * inventoryPageSize;
+    const assetPaginaCorrente = inventoryFilteredCache.slice(
+        indiceIniziale,
+        indiceIniziale + inventoryPageSize
+    );
+
+    assetTableBody.innerHTML = assetPaginaCorrente.map((asset) => {
         const criticita = normalizzaCriticita(asset.classificazione_criticita);
         const badgeClass = classeCriticita(criticita);
 
@@ -1074,6 +1167,8 @@ export async function loadAndRenderTable() {
         ]);
         assetReferencesCache = riferimenti;
         inventoryAssetsCache = Array.isArray(data) ? data : [];
+        inventoryCurrentPage = 1;
+        inventoryPageSize = 5;
         inventoryCategoryMap = new Map(
             riferimenti.categorie.map((categoria) => [categoria.id, categoria.nome])
         );
@@ -1090,6 +1185,9 @@ export async function loadAndRenderTable() {
         inventoryCategoryMap = new Map();
         inventoryOrganizationMap = new Map();
         inventoryFilteredCache = [];
+        inventoryCurrentPage = 1;
+        inventoryPageSize = 5;
+        aggiornaPaginazioneInventario(0);
         impostaDisponibilitaFiltriInventario(true);
         if (searchStatus) searchStatus.textContent = 'Ricerca e filtri non disponibili.';
         assetTableBody.innerHTML = `<tr><td colspan="8" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
