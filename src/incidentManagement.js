@@ -74,6 +74,10 @@ function showList() {
 }
 
 export function openNewIncidentWizard() {
+    // La rotta "Nuova segnalazione" può essere aperta direttamente dal menu,
+    // senza essere passati prima dall'elenco. Inizializza quindi anche il comando
+    // "Torna agli incidenti aperti" prima di mostrare il wizard.
+    bindEvents();
     document.getElementById('incident-list-container')?.classList.add('is-hidden');
     document.getElementById('wizard-container')?.classList.remove('is-hidden');
     document.dispatchEvent(new CustomEvent('incident:wizard:start'));

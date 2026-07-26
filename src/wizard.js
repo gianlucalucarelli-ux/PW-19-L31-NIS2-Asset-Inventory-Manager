@@ -194,9 +194,12 @@ async function renderPasso() {
             return;
         }
 
+        const selectionType = passoCorrente === 4 ? 'radio' : 'checkbox';
+        const selectionName = passoCorrente === 4 ? 'severita-incidente' : `passo-${passoCorrente}`;
+
         container.innerHTML = options.map((option) => `
             <label class="checkbox-item">
-                <input type="checkbox" value="${option.id}">
+                <input type="${selectionType}" name="${selectionName}" value="${option.id}">
                 ${option.nome_esteso}
             </label>
         `).join('');
@@ -331,15 +334,57 @@ if (btnIndietro) {
     });
 }
 
+async function copiaTestoNegliAppunti(testo) {
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(testo);
+        return;
+    }
+
+    const areaTemporanea = document.createElement('textarea');
+    areaTemporanea.value = testo;
+    areaTemporanea.setAttribute('readonly', '');
+    areaTemporanea.style.position = 'fixed';
+    areaTemporanea.style.opacity = '0';
+    document.body.appendChild(areaTemporanea);
+    areaTemporanea.select();
+    areaTemporanea.setSelectionRange(0, areaTemporanea.value.length);
+
+    const copiato = document.execCommand('copy');
+    areaTemporanea.remove();
+
+    if (!copiato) {
+        throw new Error('Il browser non ha consentito la copia automatica.');
+    }
+}
+
 const copyButton = document.getElementById('btn-copia');
 if (copyButton) {
-    copyButton.addEventListener('click', () => {
+    copyButton.addEventListener('click', async () => {
         const copyText = document.getElementById('report-output');
-        if (!copyText) return;
+        const testo = String(copyText?.value || '').trim();
 
-        copyText.select();
-        document.execCommand('copy');
-        window.alert('Testo copiato negli appunti.');
+        if (!testo) {
+            window.alert('Non è presente alcun testo da copiare.');
+            return;
+        }
+
+        const etichettaOriginale = copyButton.textContent;
+        copyButton.disabled = true;
+        copyButton.textContent = 'Copia in corso…';
+
+        try {
+            await copiaTestoNegliAppunti(testo);
+            copyButton.textContent = 'Copiato ✓';
+            window.setTimeout(() => {
+                copyButton.textContent = etichettaOriginale;
+                copyButton.disabled = false;
+            }, 1400);
+        } catch (error) {
+            console.error('Errore durante la copia del report:', error);
+            copyButton.textContent = etichettaOriginale;
+            copyButton.disabled = false;
+            window.alert('Copia non riuscita. Seleziona il testo e usa Ctrl+C.');
+        }
     });
 }
 
