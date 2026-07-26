@@ -156,8 +156,13 @@ button:disabled,
 input:disabled,
 select:disabled,
 textarea:disabled {
-    cursor: wait;
+    cursor: not-allowed;
     opacity: 0.65;
+}
+
+.is-loading,
+[aria-busy="true"] {
+    cursor: progress;
 }
 
 a {
@@ -430,6 +435,7 @@ html.app-booting .app-boot-screen {
 .btn-secondary,
 .btn-success,
 .btn-warning,
+.btn-template,
 .btn-theme,
 .btn-logout,
 .btn-edit,
@@ -449,6 +455,7 @@ html.app-booting .app-boot-screen {
 .btn-primary,
 .btn-success,
 .btn-warning,
+.btn-template,
 .btn-secondary,
 .btn-theme,
 .btn-logout,
@@ -517,10 +524,26 @@ html.app-booting .app-boot-screen {
     border-color: var(--warning-strong);
 }
 
+.btn-template {
+    color: #ffffff;
+    background: #7c3aed;
+    border-color: #8b5cf6;
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.18);
+}
+
+.btn-template:hover:not(:disabled),
+.btn-template:focus-visible:not(:disabled) {
+    color: #ffffff;
+    background: #6d28d9;
+    border-color: #6d28d9;
+    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.30);
+}
+
 .btn-primary:active:not(:disabled),
 .btn-secondary:active:not(:disabled),
 .btn-success:active:not(:disabled),
 .btn-warning:active:not(:disabled),
+.btn-template:active:not(:disabled),
 .btn-theme:active:not(:disabled),
 .btn-logout:active:not(:disabled),
 .btn-edit:active:not(:disabled),
@@ -2197,14 +2220,91 @@ tbody tr:last-child td {
 }
 
 .cell-action-group {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(86px, 1fr));
     gap: 6px;
+    width: 100%;
+}
+
+.cell-action-group .btn-detail,
+.cell-action-group .btn-edit,
+.cell-action-group .btn-archive {
+    width: 100%;
+    min-height: 40px;
+}
+
+.cell-action-group .btn-archive {
+    grid-column: 1 / -1;
 }
 
 .asset-archive-dialog .asset-detail-shell {
     width: min(620px, 100%);
+}
+
+.operation-warning {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.operation-warning strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-high);
+}
+
+.operation-warning p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+
+.operation-warning--danger {
+    border-color: var(--error);
+    background: var(--error-soft);
+}
+
+.operation-warning--danger strong {
+    color: var(--error);
+}
+
+.operation-confirmation {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    margin-top: 18px;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+    color: var(--text-high);
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.45;
+    cursor: pointer;
+}
+
+.operation-confirmation input {
+    width: 18px;
+    height: 18px;
+    margin: 2px 0 0;
+    flex: 0 0 auto;
+    accent-color: var(--primary);
+}
+
+.operation-confirmation:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.operation-confirmation--danger {
+    border-color: color-mix(in srgb, var(--error) 65%, var(--border));
+}
+
+.operation-confirmation--danger input {
+    accent-color: var(--error-strong);
 }
 
 .asset-import-dialog {
@@ -2317,4 +2417,50 @@ tbody tr:last-child td {
     .asset-import-dialog {
         width: calc(100vw - 12px);
     }
+}
+
+
+/* ===============================================================================================================
+   CHIUSURA MODULO B - CORREZIONI UI FINALI
+   - Spaziatura elenco incidenti
+   - Archiviazione asset su riga dedicata
+   =============================================================================================================== */
+#incident-list-container {
+    overflow: hidden;
+}
+
+#incident-list-container > .view-header {
+    margin: 0;
+    padding: 22px 24px 18px;
+}
+
+#incident-list-container > .inventory-search-status {
+    padding: 16px 24px 12px;
+}
+
+#incident-list-container > .table-wrapper {
+    margin: 0 24px 24px;
+}
+
+.cell-actions {
+    min-width: 230px;
+    white-space: normal;
+}
+
+.cell-action-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(86px, 1fr));
+    gap: 6px;
+    width: 100%;
+}
+
+.cell-action-group .btn-detail,
+.cell-action-group .btn-edit,
+.cell-action-group .btn-archive {
+    width: 100%;
+    min-height: 40px;
+}
+
+.cell-action-group .btn-archive {
+    grid-column: 1 / -1;
 }

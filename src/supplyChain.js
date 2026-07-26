@@ -93,14 +93,8 @@ function matchesSearch(row, query) {
     ].some((value) => normalize(value).includes(query));
 }
 
-function renderRows() {
-    const tbody = document.getElementById('supply-chain-table-body');
-    const status = document.getElementById('supply-filter-status');
-    const clear = document.getElementById('supply-filter-clear');
-    if (!tbody) return;
-
-    const filters = readFilters();
-    const filtered = supplyRows.filter((row) => {
+function getFilteredRows(filters = readFilters()) {
+    return supplyRows.filter((row) => {
         if (!matchesSearch(row, filters.query)) return false;
         if (filters.serviceId && String(row.servizioRadiceId) !== filters.serviceId) return false;
         if (filters.assetId && String(row.assetEffettivoId || '') !== filters.assetId) return false;
@@ -109,8 +103,20 @@ function renderRows() {
         if (filters.origin === 'derived' && !row.derivata) return false;
         return true;
     });
+}
+
+function renderRows() {
+    const tbody = document.getElementById('supply-chain-table-body');
+    const status = document.getElementById('supply-filter-status');
+    const clear = document.getElementById('supply-filter-clear');
+    const exportButton = document.getElementById('btn-export-supply-chain');
+    if (!tbody) return;
+
+    const filters = readFilters();
+    const filtered = getFilteredRows(filters);
 
     if (clear) clear.disabled = !activeFilters(filters);
+    if (exportButton) exportButton.disabled = filtered.length === 0;
     if (status) {
         status.textContent = activeFilters(filters)
             ? `${filtered.length} percorsi su ${supplyRows.length}`
@@ -160,6 +166,167 @@ function renderRows() {
             if (row) openSupplyDetail(row);
         });
     });
+}
+
+function supplyLabel(code, name, fallback = 'N/D') {
+    const cleanCode = String(code || '').trim();
+    const cleanName = String(name || '').trim();
+    if (cleanCode && cleanName) return `${cleanCode} · ${cleanName}`;
+    return cleanName || cleanCode || fallback;
+}
+
+function supplyRouteLabel(row) {
+    return row.origineCollegamento === 'SERVIZIO_ASSET_FORNITORE'
+        ? 'Servizio → Asset → Fornitore'
+        : 'Servizio → Fornitore';
+}
+
+function supplyInheritanceLabel(row) {
+    return [
+        row.ereditataDaSottoservizio ? 'Sottoservizio' : '',
+        row.ereditataDaSottoasset ? 'Sottoasset' : '',
+        row.ereditataDaSubfornitore ? 'Subfornitore' : ''
+    ].filter(Boolean).join(', ') || 'Nessuna';
+}
+
+function supplyExportFileName() {
+    const date = new Date();
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `supply_chain_${yyyy}-${mm}-${dd}.xlsx`;
+}
+
+async function exportSupplyChain() {
+    const exportButton = document.getElementById('btn-export-supply-chain');
+    const status = document.getElementById('supply-filter-status');
+    const filters = readFilters();
+    const rows = getFilteredRows(filters);
+
+    if (rows.length === 0) {
+        if (status) status.textContent = 'Nessun percorso disponibile per l’esportazione.';
+        return;
+    }
+    if (typeof ExcelJS === 'undefined') {
+        throw new Error('Modulo ExcelJS non disponibile. Ricaricare la pagina e riprovare.');
+    }
+
+    const defaultLabel = exportButton?.textContent || 'Esporta XLS';
+    try {
+        if (exportButton) {
+            exportButton.disabled = true;
+            exportButton.textContent = 'Esportazione…';
+        }
+        if (status) status.textContent = `Preparazione di ${rows.length} percorsi…`;
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'NIS2 Asset Inventory Manager';
+        workbook.lastModifiedBy = 'NIS2 Asset Inventory Manager';
+        workbook.created = new Date();
+
+        const sheet = workbook.addWorksheet('Supply Chain', {
+            views: [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }]
+        });
+        sheet.columns = [
+            { header: 'Servizio radice', key: 'servizioRadice', width: 34 },
+            { header: 'Servizio origine', key: 'servizioOrigine', width: 34 },
+            { header: 'Asset origine', key: 'assetOrigine', width: 32 },
+            { header: 'Asset effettivo', key: 'assetEffettivo', width: 32 },
+            { header: 'Fornitore origine', key: 'fornitoreOrigine', width: 34 },
+            { header: 'Fornitore effettivo', key: 'fornitoreEffettivo', width: 34 },
+            { header: 'Contatto fornitore', key: 'contatto', width: 34 },
+            { header: 'Relazione', key: 'relazione', width: 16 },
+            { header: 'Percorso', key: 'percorso', width: 32 },
+            { header: 'Livelli S/A/F', key: 'livelli', width: 18 },
+            { header: 'Tipo dipendenza', key: 'tipoDipendenza', width: 28 },
+            { header: 'Relazione asset-fornitore', key: 'tipoRelazione', width: 32 },
+            { header: 'Ereditarietà', key: 'ereditarieta', width: 28 },
+            { header: 'Descrizione dipendenza', key: 'descrizioneDipendenza', width: 48 },
+            { header: 'Descrizione relazione', key: 'descrizioneRelazione', width: 48 }
+        ];
+
+        rows.forEach((row) => {
+            sheet.addRow({
+                servizioRadice: supplyLabel(row.servizioRadiceCodice, row.servizioRadice),
+                servizioOrigine: supplyLabel(row.servizioOrigineCodice, row.servizioOrigine),
+                assetOrigine: row.assetOrigine
+                    ? supplyLabel(row.assetOrigineCodice, row.assetOrigine)
+                    : 'Non applicabile',
+                assetEffettivo: row.assetEffettivo
+                    ? supplyLabel(row.assetEffettivoCodice, row.assetEffettivo)
+                    : 'Collegamento diretto',
+                fornitoreOrigine: supplyLabel(row.fornitoreOrigineCodice, row.fornitoreOrigine),
+                fornitoreEffettivo: supplyLabel(row.fornitoreEffettivoCodice, row.fornitoreEffettivo),
+                contatto: row.contattoFornitore || '',
+                relazione: row.derivata ? 'Derivata' : 'Diretta',
+                percorso: supplyRouteLabel(row),
+                livelli: `S${row.profonditaServizio} · A${row.profonditaAsset} · F${row.profonditaFornitore}`,
+                tipoDipendenza: row.tipoDipendenzaServizio || 'Non specificata',
+                tipoRelazione: row.tipoRelazioneAssetFornitore || 'Non applicabile',
+                ereditarieta: supplyInheritanceLabel(row),
+                descrizioneDipendenza: row.descrizioneDipendenzaServizio || '',
+                descrizioneRelazione: row.descrizioneRelazioneAssetFornitore || ''
+            });
+        });
+
+        const header = sheet.getRow(1);
+        header.height = 28;
+        header.eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        });
+        sheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return;
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: 'top', wrapText: true };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFD8E2E5' } } };
+            });
+        });
+        sheet.autoFilter = { from: 'A1', to: `O${sheet.rowCount}` };
+
+        const criteria = workbook.addWorksheet('Criteri esportazione');
+        criteria.columns = [
+            { header: 'Criterio', key: 'criterio', width: 30 },
+            { header: 'Valore', key: 'valore', width: 60 }
+        ];
+        criteria.addRows([
+            { criterio: 'Data esportazione', valore: new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'medium' }).format(new Date()) },
+            { criterio: 'Ricerca', valore: document.getElementById('supply-search')?.value.trim() || 'Nessuna' },
+            { criterio: 'Servizio', valore: document.getElementById('supply-filter-service')?.selectedOptions?.[0]?.textContent || 'Tutti' },
+            { criterio: 'Asset', valore: document.getElementById('supply-filter-asset')?.selectedOptions?.[0]?.textContent || 'Tutti' },
+            { criterio: 'Fornitore', valore: document.getElementById('supply-filter-supplier')?.selectedOptions?.[0]?.textContent || 'Tutti' },
+            { criterio: 'Origine relazione', valore: document.getElementById('supply-filter-origin')?.selectedOptions?.[0]?.textContent || 'Dirette e derivate' },
+            { criterio: 'Percorsi esportati', valore: rows.length }
+        ]);
+        criteria.getRow(1).eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = supplyExportFileName();
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        if (status) status.textContent = `${rows.length} percorsi esportati correttamente.`;
+    } catch (error) {
+        console.error('Errore esportazione Supply Chain:', error);
+        if (status) status.textContent = `Esportazione non riuscita: ${error.message}`;
+    } finally {
+        if (exportButton) {
+            exportButton.textContent = defaultLabel;
+            exportButton.disabled = getFilteredRows().length === 0;
+        }
+    }
 }
 
 function detailField(label, value) {
@@ -252,6 +419,8 @@ function initializeControls() {
         renderRows();
         document.getElementById('supply-search')?.focus();
     });
+
+    document.getElementById('btn-export-supply-chain')?.addEventListener('click', exportSupplyChain);
 
     const dialog = document.getElementById('supply-detail-dialog');
     dialog?.addEventListener('click', (event) => {

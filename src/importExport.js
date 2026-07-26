@@ -228,6 +228,8 @@ export async function downloadAssetImportTemplate(references = {}) {
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'NIS2 Asset Inventory Manager';
+    workbook.lastModifiedBy = 'NIS2 Asset Inventory Manager';
+    workbook.created = new Date();
 
     const sheet = workbook.addWorksheet('Import asset', {
         views: [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }]
@@ -253,12 +255,67 @@ export async function downloadAssetImportTemplate(references = {}) {
     });
     sheet.autoFilter = { from: 'A1', to: 'I1' };
 
-    for (let row = 2; row <= 501; row += 1) {
+    const categorie = [...new Set((references.categorie || [])
+        .map((item) => String(item.nome || '').trim())
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'it'));
+    const organizzazioni = [...new Set((references.organizzazioni || [])
+        .map((item) => String(item.nome || '').trim())
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'it'));
+    const responsabili = [...new Set((references.responsabili || [])
+        .map((item) => String(item.email || '').trim())
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'it'));
+
+    // Liste tecniche nello stesso foglio: Excel applica in modo affidabile
+    // la convalida dati anche quando il foglio viene aperto offline.
+    sheet.getCell('K1').value = 'Categorie ammesse';
+    sheet.getCell('L1').value = 'Organizzazioni ammesse';
+    sheet.getCell('M1').value = 'Responsabili ammessi';
+    categorie.forEach((value, index) => { sheet.getCell(`K${index + 2}`).value = value; });
+    organizzazioni.forEach((value, index) => { sheet.getCell(`L${index + 2}`).value = value; });
+    responsabili.forEach((value, index) => { sheet.getCell(`M${index + 2}`).value = value; });
+    sheet.getColumn('K').hidden = true;
+    sheet.getColumn('L').hidden = true;
+    sheet.getColumn('M').hidden = true;
+
+    const validationMessage = (title, message) => ({
+        type: 'list',
+        allowBlank: false,
+        showErrorMessage: true,
+        errorStyle: 'stop',
+        errorTitle: title,
+        error: message,
+        showInputMessage: true,
+        promptTitle: title,
+        prompt: 'Seleziona un valore dall’elenco controllato.'
+    });
+
+    for (let row = 2; row <= MAX_IMPORT_ROWS + 1; row += 1) {
+        if (categorie.length > 0) {
+            sheet.getCell(`C${row}`).dataValidation = {
+                ...validationMessage('Categoria non valida', 'Usa una categoria presente nell’elenco.'),
+                formulae: [`$K$2:$K$${categorie.length + 1}`]
+            };
+        }
+        if (organizzazioni.length > 0) {
+            sheet.getCell(`D${row}`).dataValidation = {
+                ...validationMessage('Organizzazione non valida', 'Usa un’organizzazione presente nell’elenco.'),
+                formulae: [`$L$2:$L$${organizzazioni.length + 1}`]
+            };
+        }
         sheet.getCell(`E${row}`).dataValidation = {
-            type: 'list',
-            allowBlank: false,
+            ...validationMessage('Criticità non valida', 'Valori ammessi: Bassa, Media, Alta, Critica.'),
             formulae: ['"Bassa,Media,Alta,Critica"']
         };
+        if (responsabili.length > 0) {
+            sheet.getCell(`F${row}`).dataValidation = {
+                ...validationMessage('Responsabile non valido', 'Usa una e-mail presente nell’elenco oppure lascia il campo vuoto.'),
+                allowBlank: true,
+                formulae: [`$M$2:$M$${responsabili.length + 1}`]
+            };
+        }
     }
 
     const values = workbook.addWorksheet('Valori ammessi');
@@ -303,10 +360,12 @@ export async function downloadAssetImportTemplate(references = {}) {
     instructions.addRows([
         { regola: 'Campi obbligatori', descrizione: 'Codice asset, Nome asset, Categoria, Organizzazione e Criticità NIS2.' },
         { regola: 'Codice asset', descrizione: 'Da 3 a 80 caratteri: lettere, numeri, trattino e underscore. Deve essere univoco.' },
-        { regola: 'Categoria', descrizione: 'Usare il nome o il codice ACN riportato nel foglio Valori ammessi.' },
-        { regola: 'Organizzazione', descrizione: 'Usare il nome riportato nel foglio Valori ammessi.' },
-        { regola: 'Responsabile', descrizione: 'Campo facoltativo: usare preferibilmente l’e-mail riportata nel foglio Valori ammessi.' },
-        { regola: 'Anteprima', descrizione: 'L’applicazione mostra gli errori riga per riga prima di eseguire qualsiasi inserimento.' }
+        { regola: 'Categoria', descrizione: 'Selezionare il valore dal menu controllato. L’applicazione riconosce anche il codice ACN.' },
+        { regola: 'Organizzazione', descrizione: 'Selezionare il valore dal menu controllato.' },
+        { regola: 'Responsabile', descrizione: 'Campo facoltativo: selezionare preferibilmente l’e-mail dal menu controllato.' },
+        { regola: 'Limite righe', descrizione: `Massimo ${MAX_IMPORT_ROWS} righe dati per singolo file.` },
+        { regola: 'Limite file', descrizione: `Dimensione massima ${MAX_IMPORT_FILE_SIZE_MB} MB.` },
+        { regola: 'Anteprima', descrizione: 'L’applicazione normalizza e verifica tutte le righe prima di eseguire qualsiasi inserimento.' }
     ]);
     instructions.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -315,6 +374,24 @@ export async function downloadAssetImportTemplate(references = {}) {
 
     const buffer = await workbook.xlsx.writeBuffer();
     scaricaBufferExcel(buffer, `modello_import_asset_${dataLocalePerNomeFile()}.xlsx`);
+}
+
+
+const MAX_IMPORT_ROWS = 500;
+const MAX_IMPORT_FILE_SIZE_MB = 5;
+const MAX_IMPORT_FILE_SIZE_BYTES = MAX_IMPORT_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_IMPORT_EXTENSIONS = ['.xlsx', '.xls', '.csv'];
+
+function validateAssetImportFile(file) {
+    if (!file) throw new Error('Seleziona un file da importare.');
+
+    const lowerName = String(file.name || '').toLocaleLowerCase('it-IT');
+    if (!ALLOWED_IMPORT_EXTENSIONS.some((extension) => lowerName.endsWith(extension))) {
+        throw new Error('Formato non ammesso. Usa un file XLSX, XLS o CSV.');
+    }
+    if (Number(file.size || 0) > MAX_IMPORT_FILE_SIZE_BYTES) {
+        throw new Error(`Il file supera il limite massimo di ${MAX_IMPORT_FILE_SIZE_MB} MB.`);
+    }
 }
 
 function normalizeHeader(value) {
@@ -432,7 +509,11 @@ function parseWorkbook(file) {
  * Nessuna query INSERT viene eseguita in questa fase.
  */
 export async function parseAssetImportFile(file, references = {}, existingAssets = []) {
+    validateAssetImportFile(file);
     const { rows, headers, sheetName } = await parseWorkbook(file);
+    if (rows.length > MAX_IMPORT_ROWS) {
+        throw new Error(`Il file contiene ${rows.length} righe: il massimo consentito è ${MAX_IMPORT_ROWS}.`);
+    }
     const headerMap = mapHeaders(headers);
     const missingHeaders = ['codice', 'nome', 'categoria', 'organizzazione', 'criticita']
         .filter((field) => !headerMap.has(field));

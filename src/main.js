@@ -13,7 +13,7 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?v=17';
+} from './ui.js?v=18';
 import {
     initializeRouter,
     navigateTo,
@@ -28,7 +28,7 @@ import {
     signOut
 } from './auth.js';
 import { fetchAssets, fetchAssetReferences, insertAsset, updateAsset } from './database.js?v=9';
-import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?v=3';
+import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?v=4';
 
 initTheme();
 
@@ -239,6 +239,8 @@ function closeImportDialog() {
 
 function resetImportDialogState() {
     pendingImportPreview = null;
+    const acknowledge = document.getElementById('asset-import-acknowledge');
+    if (acknowledge) acknowledge.checked = false;
     if (importCompleted) {
         importCompleted = false;
         navigateTo('inventory', { force: true });
@@ -254,6 +256,8 @@ function renderImportPreview(preview) {
     const status = document.getElementById('asset-import-status');
     const confirmButton = document.getElementById('asset-import-confirm');
     const cancelButton = document.getElementById('asset-import-cancel');
+    const acknowledge = document.getElementById('asset-import-acknowledge');
+    const confirmationText = document.getElementById('asset-import-confirmation-text');
     if (!dialog || !summary || !tbody || !status || !confirmButton) return;
 
     pendingImportPreview = preview;
@@ -281,7 +285,13 @@ function renderImportPreview(preview) {
     status.textContent = preview.validRows.length > 0
         ? 'Controlla l’anteprima e conferma soltanto le righe valide.'
         : 'Il file non contiene righe importabili.';
-    confirmButton.disabled = preview.validRows.length === 0;
+    if (acknowledge) acknowledge.checked = false;
+    if (confirmationText) {
+        confirmationText.textContent = preview.validRows.length > 0
+            ? `Confermo di aver controllato l’anteprima e di voler importare ${preview.validRows.length} righe valide.`
+            : 'Non sono presenti righe valide da importare.';
+    }
+    confirmButton.disabled = true;
     confirmButton.textContent = 'Importa righe valide';
     if (cancelButton) cancelButton.textContent = 'Annulla';
     if (!dialog.open) dialog.showModal();
@@ -292,7 +302,13 @@ async function executePendingImport() {
     const cancelButton = document.getElementById('asset-import-cancel');
     const status = document.getElementById('asset-import-status');
     const report = document.getElementById('asset-import-report');
+    const acknowledge = document.getElementById('asset-import-acknowledge');
     if (!pendingImportPreview || !confirmButton || !status || !report) return;
+    if (!acknowledge?.checked) {
+        status.textContent = 'Conferma di aver verificato l’anteprima prima di avviare l’importazione.';
+        acknowledge?.focus();
+        return;
+    }
 
     const successful = [];
     const failed = [];
@@ -597,6 +613,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const importClose = document.getElementById('asset-import-close');
     const importCancel = document.getElementById('asset-import-cancel');
     const importConfirm = document.getElementById('asset-import-confirm');
+    const importAcknowledge = document.getElementById('asset-import-acknowledge');
 
     if (btnTriggerImport && fileInput) {
         btnTriggerImport.addEventListener('click', () => fileInput.click());
@@ -628,6 +645,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     importClose?.addEventListener('click', closeImportDialog);
     importCancel?.addEventListener('click', closeImportDialog);
+    importAcknowledge?.addEventListener('change', () => {
+        const validRows = pendingImportPreview?.validRows?.length || 0;
+        if (importConfirm) importConfirm.disabled = !(importAcknowledge.checked && validRows > 0);
+    });
     importConfirm?.addEventListener('click', executePendingImport);
     importDialog?.addEventListener('click', (event) => {
         if (event.target === importDialog) closeImportDialog();

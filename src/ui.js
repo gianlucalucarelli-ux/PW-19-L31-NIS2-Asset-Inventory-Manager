@@ -4,7 +4,7 @@
 // ===============================================================================================================
 
 import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchAuditLogs, fetchDashboardData, fetchIncidentList } from './database.js?v=9';
-import { loadAndRenderSupplyChain } from './supplyChain.js?v=2';
+import { loadAndRenderSupplyChain } from './supplyChain.js?v=3';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -1311,12 +1311,16 @@ function apriDialogArchiviazione(asset) {
     const dialog = document.getElementById('asset-archive-dialog');
     const subtitle = document.getElementById('asset-archive-subtitle');
     const reason = document.getElementById('asset-archive-reason');
+    const acknowledge = document.getElementById('asset-archive-acknowledge');
+    const confirm = document.getElementById('asset-archive-confirm');
     const status = document.getElementById('asset-archive-status');
     if (!dialog || !reason || !status) return;
 
     archiveAssetCandidate = asset;
     if (subtitle) subtitle.textContent = `${asset.codice_asset} · ${asset.nome}`;
     reason.value = '';
+    if (acknowledge) acknowledge.checked = false;
+    if (confirm) confirm.disabled = true;
     status.textContent = 'Nessuna cancellazione fisica verrà eseguita.';
     if (!dialog.open) dialog.showModal();
     window.setTimeout(() => reason.focus(), 0);
@@ -1329,11 +1333,20 @@ function inizializzaDialogArchiviazione() {
     const close = document.getElementById('asset-archive-close');
     const confirm = document.getElementById('asset-archive-confirm');
     const reason = document.getElementById('asset-archive-reason');
+    const acknowledge = document.getElementById('asset-archive-acknowledge');
     const status = document.getElementById('asset-archive-status');
 
     if (!dialog || !form || dialog.dataset.initialized === 'true') return;
     dialog.dataset.initialized = 'true';
 
+    const aggiornaConfermaArchiviazione = () => {
+        if (!confirm) return;
+        const motivoValido = (reason?.value.trim().length || 0) >= 5;
+        confirm.disabled = !(motivoValido && acknowledge?.checked);
+    };
+
+    reason?.addEventListener('input', aggiornaConfermaArchiviazione);
+    acknowledge?.addEventListener('change', aggiornaConfermaArchiviazione);
     cancel?.addEventListener('click', chiudiDialogArchiviazione);
     close?.addEventListener('click', chiudiDialogArchiviazione);
     dialog.addEventListener('click', (event) => {
@@ -1350,6 +1363,12 @@ function inizializzaDialogArchiviazione() {
 
         const motivo = reason?.value.trim() || '';
         const defaultLabel = confirm?.textContent || 'Archivia asset';
+        if (motivo.length < 5 || !acknowledge?.checked) {
+            if (status) status.textContent = 'Inserisci una motivazione valida e conferma consapevolmente l’operazione.';
+            (motivo.length < 5 ? reason : acknowledge)?.focus();
+            aggiornaConfermaArchiviazione();
+            return;
+        }
 
         try {
             if (confirm) {
