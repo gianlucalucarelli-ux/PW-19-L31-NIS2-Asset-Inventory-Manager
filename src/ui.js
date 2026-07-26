@@ -6,12 +6,14 @@
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260726-d2';
 import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
-import { navigateTo, getCurrentRoute } from './router.js?build=20260726-e1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260726-f1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d4';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
-import { loadOrganizationView } from './organizationManagement.js?build=20260726-e1';
-import { t } from './i18n.js?build=20260726-e1';
+import { loadOrganizationView } from './organizationManagement.js?build=20260726-f1';
+import { loadServiceView } from './serviceManagement.js?build=20260726-f1';
+import { loadSupplierView } from './supplierManagement.js?build=20260726-f1';
+import { t } from './i18n.js?build=20260726-f1';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -211,6 +213,12 @@ const ROUTE_TO_VIEW = {
     'add-organization': 'add-organization',
     'organization-people': 'organization-people',
     'archived-organizations': 'archived-organizations',
+    services: 'services',
+    'add-service': 'add-service',
+    'archived-services': 'archived-services',
+    suppliers: 'suppliers',
+    'add-supplier': 'add-supplier',
+    'archived-suppliers': 'archived-suppliers',
     inventory: 'inventory',
     'archived-assets': 'archived-assets',
     'add-asset': 'add-asset',
@@ -248,6 +256,36 @@ const ROUTE_METADATA = {
         section: 'Azienda',
         label: 'AZIENDA',
         title: 'Soggetti archiviati'
+    },
+    services: {
+        section: 'Servizi',
+        label: 'SERVIZI',
+        title: 'Elenco servizi'
+    },
+    'add-service': {
+        section: 'Servizi',
+        label: 'SERVIZI',
+        title: 'Nuovo servizio'
+    },
+    'archived-services': {
+        section: 'Servizi',
+        label: 'SERVIZI',
+        title: 'Servizi cessati'
+    },
+    suppliers: {
+        section: 'Fornitori',
+        label: 'FORNITORI',
+        title: 'Elenco fornitori'
+    },
+    'add-supplier': {
+        section: 'Fornitori',
+        label: 'FORNITORI',
+        title: 'Nuovo fornitore'
+    },
+    'archived-suppliers': {
+        section: 'Fornitori',
+        label: 'FORNITORI',
+        title: 'Fornitori cessati'
     },
     inventory: {
         section: 'Inventario',
@@ -369,6 +407,10 @@ export async function activateApplicationRoute(route) {
         await loadAndRenderDashboard();
     } else if (['organizations', 'add-organization', 'organization-people', 'archived-organizations'].includes(route)) {
         await loadOrganizationView(route);
+    } else if (['services', 'add-service', 'archived-services'].includes(route)) {
+        await loadServiceView(route);
+    } else if (['suppliers', 'add-supplier', 'archived-suppliers'].includes(route)) {
+        await loadSupplierView(route);
     } else if (route === 'inventory') {
         await loadAndRenderTable();
         resetAssetForm();

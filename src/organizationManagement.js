@@ -18,14 +18,15 @@ import {
     insertAssignment,
     closeAssignment
 } from './organizationService.js?build=20260726-e1';
-import { navigateTo } from './router.js?build=20260726-e1';
-import { t } from './i18n.js?build=20260726-e1';
+import { navigateTo } from './router.js?build=20260726-f1';
+import { t } from './i18n.js?build=20260726-f1';
 
 let initialized = false;
 let organizationsCache = [];
 let archivedOrganizationsCache = [];
 let filteredOrganizationsCache = [];
 let peopleCache = [];
+let archivedPeopleCache = [];
 let rolesCache = [];
 let assignmentsCache = [];
 let organizationCurrentPage = 1;
@@ -467,6 +468,21 @@ function renderPeopleAndAssignments() {
             }).join('');
     }
 
+    const archivedPeopleBody = document.getElementById('organization-archived-people-body');
+    if (archivedPeopleBody) {
+        archivedPeopleBody.innerHTML = archivedPeopleCache.length === 0
+            ? '<tr><td colspan="5" class="table-state">Nessuna persona disattivata.</td></tr>'
+            : archivedPeopleCache.map((person) => `
+                <tr>
+                    <td><strong>${escapeHtml(`${person.nome} ${person.cognome}`)}</strong></td>
+                    <td>${escapeHtml(person.email)}</td>
+                    <td>${escapeHtml(person.telefono || 'N/D')}</td>
+                    <td>${escapeHtml(formatDateTime(person.archiviato_il))}</td>
+                    <td>${escapeHtml(person.motivo_archiviazione || 'N/D')}</td>
+                </tr>
+            `).join('');
+    }
+
     if (assignmentsBody) {
         assignmentsBody.innerHTML = assignmentsCache.length === 0
             ? '<tr><td colspan="6" class="table-state">Nessun incarico attivo.</td></tr>'
@@ -499,13 +515,15 @@ async function loadPeopleArea() {
 
         if (!selectedOrganizationId) {
             peopleCache = [];
+            archivedPeopleCache = [];
             assignmentsCache = [];
             renderPeopleAndAssignments();
             return;
         }
 
-        [peopleCache, rolesCache, assignmentsCache] = await Promise.all([
+        [peopleCache, archivedPeopleCache, rolesCache, assignmentsCache] = await Promise.all([
             fetchPeople(selectedOrganizationId, { active: true }),
+            fetchPeople(selectedOrganizationId, { active: false }),
             fetchNis2Roles(),
             fetchAssignments(selectedOrganizationId, { active: null })
         ]);
@@ -513,6 +531,7 @@ async function loadPeopleArea() {
     } catch (error) {
         console.error('Errore caricamento persone e incarichi:', error);
         peopleCache = [];
+        archivedPeopleCache = [];
         rolesCache = [];
         assignmentsCache = [];
         renderPeopleAndAssignments();
