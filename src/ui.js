@@ -755,6 +755,10 @@ async function renderAuditLog() {
 // =========================================================================
 
 let assetReferencesCache = null;
+let inventoryAssetsCache = [];
+let inventoryCategoryMap = new Map();
+let inventoryOrganizationMap = new Map();
+
 
 /**
  * Popola una select conservando, quando possibile, il valore già selezionato.
@@ -821,62 +825,157 @@ async function loadAssetFormReferences(force = false) {
     return assetReferencesCache;
 }
 
+/**
+ * Normalizza il testo usato dalla ricerca locale, ignorando maiuscole,
+ * minuscole e segni diacritici.
+ */
+function normalizzaTestoRicerca(valore) {
+    return String(valore ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('it-IT')
+        .trim();
+}
+
+/**
+ * Aggiorna il riepilogo accessibile dei risultati della ricerca inventario.
+ */
+function aggiornaStatoRicercaAsset(totale, visualizzati, termine) {
+    const stato = document.getElementById('asset-search-status');
+    if (!stato) return;
+
+    const etichettaRisultati = visualizzati === 1 ? 'risultato' : 'risultati';
+
+    stato.textContent = termine
+        ? `${visualizzati} ${etichettaRisultati} su ${totale} asset`
+        : totale === 1
+            ? '1 asset visualizzato'
+            : `${totale} asset visualizzati`;
+}
+
+/**
+ * Collega una sola volta i controlli della ricerca locale all'inventario.
+ */
+function inizializzaRicercaAsset() {
+    const input = document.getElementById('asset-search');
+    const clearButton = document.getElementById('asset-search-clear');
+    if (!input || !clearButton) return;
+
+    const aggiornaControlli = () => {
+        clearButton.disabled = input.value.trim().length === 0;
+        renderInventarioFiltrato();
+    };
+
+    input.oninput = aggiornaControlli;
+    clearButton.onclick = () => {
+        input.value = '';
+        clearButton.disabled = true;
+        renderInventarioFiltrato();
+        input.focus();
+    };
+
+    clearButton.disabled = input.value.trim().length === 0;
+}
+
+/**
+ * Disegna le righe dell'inventario usando esclusivamente i dati già caricati.
+ * La ricerca non esegue nuove query e non modifica il database.
+ */
+function renderInventarioFiltrato() {
+    const assetTableBody = document.getElementById('asset-table-body');
+    const input = document.getElementById('asset-search');
+    if (!assetTableBody) return;
+
+    const termineOriginale = input?.value.trim() ?? '';
+    const termine = normalizzaTestoRicerca(termineOriginale);
+    const assetFiltrati = termine
+        ? inventoryAssetsCache.filter((asset) => {
+            const codice = normalizzaTestoRicerca(asset.codice_asset);
+            const nome = normalizzaTestoRicerca(asset.nome);
+            return codice.includes(termine) || nome.includes(termine);
+        })
+        : inventoryAssetsCache;
+
+    aggiornaStatoRicercaAsset(
+        inventoryAssetsCache.length,
+        assetFiltrati.length,
+        termineOriginale
+    );
+
+    if (assetFiltrati.length === 0) {
+        const messaggio = termineOriginale
+            ? `Nessun asset corrisponde alla ricerca “${termineOriginale}”.`
+            : 'Nessun asset attivo censito.';
+        assetTableBody.innerHTML = `<tr><td colspan="8" class="table-state">${escapeHtml(messaggio)}</td></tr>`;
+        return;
+    }
+
+    assetTableBody.innerHTML = assetFiltrati.map((asset) => {
+        const criticita = normalizzaCriticita(asset.classificazione_criticita);
+        const badgeClass = classeCriticita(criticita);
+
+        return `
+            <tr>
+                <td class="cell-id">${escapeHtml(asset.id)}</td>
+                <td class="cell-primary">${escapeHtml(asset.codice_asset)}</td>
+                <td class="cell-primary">${escapeHtml(asset.nome)}</td>
+                <td class="cell-secondary">${escapeHtml(inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D')}</td>
+                <td class="cell-secondary">${escapeHtml(inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D')}</td>
+                <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
+                <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
+                <td class="cell-actions">
+                    <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    assetTableBody.querySelectorAll('.btn-edit').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = inventoryAssetsCache.find((item) => item.id === id);
+            if (asset) {
+                await caricaAssetNelForm(asset);
+            }
+        });
+    });
+}
+
 export async function loadAndRenderTable() {
     const assetTableBody = document.getElementById('asset-table-body');
+    const searchInput = document.getElementById('asset-search');
+    const searchStatus = document.getElementById('asset-search-status');
     if (!assetTableBody) return;
+
+    inizializzaRicercaAsset();
 
     try {
         assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Sincronizzazione in corso...</td></tr>';
+        if (searchInput) searchInput.disabled = true;
+        if (searchStatus) searchStatus.textContent = 'Caricamento asset…';
 
         const [data, riferimenti] = await Promise.all([
             fetchAssets(),
             fetchAssetReferences()
         ]);
         assetReferencesCache = riferimenti;
-
-        if (!Array.isArray(data) || data.length === 0) {
-            assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Nessun asset attivo censito.</td></tr>';
-            return;
-        }
-
-        const categorie = new Map(
+        inventoryAssetsCache = Array.isArray(data) ? data : [];
+        inventoryCategoryMap = new Map(
             riferimenti.categorie.map((categoria) => [categoria.id, categoria.nome])
         );
-        const organizzazioni = new Map(
+        inventoryOrganizationMap = new Map(
             riferimenti.organizzazioni.map((organizzazione) => [organizzazione.id, organizzazione.nome])
         );
 
-        assetTableBody.innerHTML = data.map((asset) => {
-            const criticita = normalizzaCriticita(asset.classificazione_criticita);
-            const badgeClass = classeCriticita(criticita);
-
-            return `
-                <tr>
-                    <td class="cell-id">${escapeHtml(asset.id)}</td>
-                    <td class="cell-primary">${escapeHtml(asset.codice_asset)}</td>
-                    <td class="cell-primary">${escapeHtml(asset.nome)}</td>
-                    <td class="cell-secondary">${escapeHtml(categorie.get(asset.categoria_asset_id) || 'N/D')}</td>
-                    <td class="cell-secondary">${escapeHtml(organizzazioni.get(asset.organizzazione_id) || 'N/D')}</td>
-                    <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
-                    <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
-                    <td class="cell-actions">
-                        <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        document.querySelectorAll('.btn-edit').forEach((button) => {
-            button.addEventListener('click', async (event) => {
-                const id = Number(event.currentTarget.getAttribute('data-id'));
-                const asset = data.find((item) => item.id === id);
-                if (asset) {
-                    await caricaAssetNelForm(asset);
-                }
-            });
-        });
+        if (searchInput) searchInput.disabled = false;
+        renderInventarioFiltrato();
     } catch (error) {
         console.error('Errore nel rendering dell’inventario:', error);
+        inventoryAssetsCache = [];
+        inventoryCategoryMap = new Map();
+        inventoryOrganizationMap = new Map();
+        if (searchInput) searchInput.disabled = true;
+        if (searchStatus) searchStatus.textContent = 'Ricerca non disponibile.';
         assetTableBody.innerHTML = `<tr><td colspan="8" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
     }
 }
