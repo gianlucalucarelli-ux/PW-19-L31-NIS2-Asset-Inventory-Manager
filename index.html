@@ -15,14 +15,14 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=13">
+    <link rel="stylesheet" href="src/style.css?v=14">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?v=17"></script>
-    <script type="module" src="src/wizard.js?v=5"></script>
+    <script type="module" src="src/main.js?v=18"></script>
+    <script type="module" src="src/wizard.js?v=6"></script>
 </head>
 <body>
     <div id="app-boot-screen" class="app-boot-screen" role="status" aria-live="polite" aria-label="Verifica della sessione in corso">
@@ -399,6 +399,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <div class="action-group" aria-label="Azioni inventario">
                                     <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
                                     <button id="btn-export-xls" class="btn-success" type="button">Esporta XLS</button>
+                                    <button id="btn-download-import-template" class="btn-secondary" type="button">Modello import</button>
                                     <button id="btn-trigger-import" class="btn-warning" type="button">Importa XLS</button>
                                     <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" class="visually-hidden">
                                 </div>
@@ -546,6 +547,73 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             </div>
                         </dialog>
 
+                        <dialog id="asset-archive-dialog" class="asset-detail-dialog asset-archive-dialog" aria-labelledby="asset-archive-title">
+                            <form id="asset-archive-form" class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">ARCHIVIAZIONE LOGICA</p>
+                                        <h2 id="asset-archive-title">Archivia asset</h2>
+                                        <p id="asset-archive-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <button id="asset-archive-close" class="asset-detail-close" type="button" aria-label="Chiudi archiviazione" title="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <p class="section-intro">L’asset verrà escluso dalle viste operative senza cancellare dati o storico di audit.</p>
+                                    <div class="form-field">
+                                        <label for="asset-archive-reason">Motivo dell’archiviazione</label>
+                                        <textarea id="asset-archive-reason" class="form-input" rows="4" minlength="5" maxlength="500" required placeholder="Indicare la motivazione operativa"></textarea>
+                                    </div>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <p id="asset-archive-status" class="asset-detail-status" role="status" aria-live="polite"></p>
+                                    <div class="form-actions">
+                                        <button id="asset-archive-cancel" class="btn-secondary" type="button">Annulla</button>
+                                        <button id="asset-archive-confirm" class="btn-danger" type="submit">Archivia asset</button>
+                                    </div>
+                                </footer>
+                            </form>
+                        </dialog>
+
+                        <dialog id="asset-import-dialog" class="asset-detail-dialog asset-import-dialog" aria-labelledby="asset-import-title">
+                            <div class="asset-detail-shell asset-import-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">ANTEPRIMA IMPORTAZIONE</p>
+                                        <h2 id="asset-import-title">Verifica file Excel</h2>
+                                        <p id="asset-import-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <button id="asset-import-close" class="asset-detail-close" type="button" aria-label="Chiudi anteprima" title="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div id="asset-import-summary" class="import-summary" role="status" aria-live="polite"></div>
+                                    <div class="table-wrapper import-preview-wrapper">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Riga</th>
+                                                    <th scope="col">Codice</th>
+                                                    <th scope="col">Nome</th>
+                                                    <th scope="col">Categoria</th>
+                                                    <th scope="col">Organizzazione</th>
+                                                    <th scope="col">Criticità</th>
+                                                    <th scope="col">Esito</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="asset-import-preview-body"></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="asset-import-report" class="import-report is-hidden" aria-live="polite"></div>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <p id="asset-import-status" class="asset-detail-status" role="status" aria-live="polite"></p>
+                                    <div class="form-actions">
+                                        <button id="asset-import-cancel" class="btn-secondary" type="button">Annulla</button>
+                                        <button id="asset-import-confirm" class="btn-primary" type="button">Importa righe valide</button>
+                                    </div>
+                                </footer>
+                            </div>
+                        </dialog>
+
                         <section id="view-add-asset" class="view-section card is-hidden">
                             <div class="view-header">
                                 <div>
@@ -637,24 +705,74 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="view-header">
                                 <div>
                                     <h2>Mappatura Supply Chain e servizi critici</h2>
-                                    <p class="section-intro">Vista corrente delle dipendenze tra servizi, asset e fornitori.</p>
+                                    <p class="section-intro">Percorsi diretti e derivati tra servizi, asset e fornitori, con livelli gerarchici.</p>
                                 </div>
                             </div>
+
+                            <div class="inventory-tools" role="search" aria-label="Ricerca e filtri Supply Chain">
+                                <div class="inventory-filter-grid supply-filter-grid">
+                                    <div class="inventory-filter-field inventory-search-field">
+                                        <label for="supply-search">Ricerca</label>
+                                        <input id="supply-search" type="search" class="form-input" placeholder="Servizio, asset, fornitore o relazione" autocomplete="off" aria-controls="supply-chain-table-body">
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="supply-filter-service">Servizio</label>
+                                        <select id="supply-filter-service" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti i servizi</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="supply-filter-asset">Asset</label>
+                                        <select id="supply-filter-asset" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti gli asset</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="supply-filter-supplier">Fornitore</label>
+                                        <select id="supply-filter-supplier" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti i fornitori</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="supply-filter-origin">Origine relazione</label>
+                                        <select id="supply-filter-origin" class="form-input" aria-controls="supply-chain-table-body">
+                                            <option value="">Dirette e derivate</option>
+                                            <option value="direct">Solo dirette</option>
+                                            <option value="derived">Solo derivate</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="inventory-filter-footer">
+                                    <p id="supply-filter-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento Supply Chain…</p>
+                                    <button id="supply-filter-clear" type="button" class="btn-secondary" disabled>Azzera filtri</button>
+                                </div>
+                            </div>
+
                             <div class="table-wrapper">
                                 <table>
                                     <thead>
                                         <tr>
                                             <th scope="col">Servizio</th>
-                                            <th scope="col">Tipo</th>
-                                            <th scope="col">Asset dipendente</th>
+                                            <th scope="col">Asset</th>
                                             <th scope="col">Fornitore</th>
-                                            <th scope="col">Contatto</th>
+                                            <th scope="col">Relazione</th>
+                                            <th scope="col">Livelli</th>
+                                            <th scope="col">Azioni</th>
                                         </tr>
                                     </thead>
                                     <tbody id="supply-chain-table-body"></tbody>
                                 </table>
                             </div>
                         </section>
+
+                        <dialog id="supply-detail-dialog" class="asset-detail-dialog" aria-labelledby="supply-detail-title" aria-describedby="supply-detail-subtitle">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">CATENA DI DIPENDENZA</p>
+                                        <h2 id="supply-detail-title">Dettaglio Supply Chain</h2>
+                                        <p id="supply-detail-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <form method="dialog"><button class="asset-detail-close" type="submit" aria-label="Chiudi dettaglio Supply Chain" title="Chiudi">×</button></form>
+                                </header>
+                                <div id="supply-detail-content" class="asset-detail-body"></div>
+                                <footer class="asset-detail-footer"><span></span><form method="dialog"><button class="btn-secondary" type="submit">Chiudi</button></form></footer>
+                            </div>
+                        </dialog>
 
                         <section id="view-audit-log" class="view-section card is-hidden">
                             <div class="view-header">
@@ -680,8 +798,37 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                         </section>
 
                         <section id="view-incidenti" class="view-section is-hidden">
-                            <div id="wizard-container" class="card wizard-container">
-                                <h2 id="step-title">Gestione Incidenti</h2>
+                            <div id="incident-list-container" class="card">
+                                <div class="view-header">
+                                    <div>
+                                        <h2>Incidenti classificati</h2>
+                                        <p class="section-intro">Elenco degli eventi operativi con classificazione ACN registrata.</p>
+                                    </div>
+                                    <button id="incident-new-btn" class="btn-primary" type="button">Nuova segnalazione</button>
+                                </div>
+                                <p id="incident-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento incidenti…</p>
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">ID</th>
+                                                <th scope="col">Inizio</th>
+                                                <th scope="col">Tipologia</th>
+                                                <th scope="col">Servizio</th>
+                                                <th scope="col">Severità</th>
+                                                <th scope="col">Stato</th>
+                                                <th scope="col">Classificazioni</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="incident-list-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="wizard-container" class="card wizard-container is-hidden">
+                                <div class="view-header">
+                                    <h2 id="step-title">Gestione Incidenti</h2>
+                                    <button id="incident-list-back-btn" class="btn-secondary" type="button">Torna all’elenco</button>
+                                </div>
                                 <div id="step-content" class="wizard-content"></div>
                                 <div class="wizard-nav">
                                     <button id="btn-indietro" class="btn-secondary" type="button">Indietro</button>

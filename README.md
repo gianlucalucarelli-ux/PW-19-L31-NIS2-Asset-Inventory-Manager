@@ -15,7 +15,7 @@ NIS2 Asset Inventory Manager è un prototipo applicativo per la gestione central
 
 Il progetto è rivolto in modo generale a organizzazioni pubbliche e private e utilizza un modello relazionale PostgreSQL sviluppato su Supabase. L’obiettivo è offrire una base dati strutturata, verificabile e tracciabile, utile alle attività di censimento, analisi delle dipendenze e supporto alla compliance NIS2/ACN.
 
-Il backend è stato consolidato attraverso una pipeline SQL versionata composta da 26 migrazioni produttive e 19 diagnostiche. Il frontend web, sviluppato in HTML5, CSS3 e JavaScript ES6, è pubblicato su GitHub Pages e ha superato i test funzionali relativi a inventario asset, inserimento, modifica, Dashboard e Audit Log. Restano da completare le funzionalità avanzate di B1, B2, B3 e il ciclo di vita completo degli incidenti.
+Il backend è stato consolidato attraverso una pipeline SQL versionata composta da 26 migrazioni produttive e 19 diagnostiche. Il frontend web, sviluppato in HTML5, CSS3 e JavaScript ES6, comprende ora il modulo B consolidato: Dashboard, gestione completa dell’inventario Asset e consultazione multilivello della Supply Chain. Rimane separato il successivo sviluppo del ciclo di vita completo degli incidenti previsto dal punto D.
 
 ## 2. Obiettivi principali
 
@@ -278,18 +278,22 @@ L’utenza docente utilizza l’eccezione controllata di valutazione in `aal1`. 
 
 Le credenziali saranno rimosse dal repository pubblico dopo il loro inserimento nella versione definitiva del documento di Project Work e la password sarà successivamente ruotata in Supabase.
 
-Stato verificato:
+Stato del modulo B:
 
+- Dashboard con recupero della sessione, rotta hash e tema persistente;
+- azioni rapide collegate alle viste operative;
+- collegamento della Dashboard a un elenco reale degli incidenti classificati;
 - inventario limitato agli asset attivi;
-- 13 asset attivi e 6 asset archiviati logicamente;
-- inserimento completo di un nuovo asset;
-- modifica completa di un asset esistente;
-- conteggi Dashboard coerenti con la criticità;
-- Audit Log con registrazione di `INSERT` e `UPDATE`;
-- visualizzazione degli orari nel fuso `Europe/Rome`;
-- accesso docente operativo;
-- Dashboard, Supply Chain e Audit Log consultabili;
-- gestione incidenti ancora parziale: il wizard di creazione è disponibile, mentre elenco, dettaglio, aggiornamento, chiusura e archiviazione logica devono ancora essere sviluppati.
+- ricerca, filtri combinati, paginazione e esportazione dell’intero risultato filtrato;
+- inserimento, modifica e dettaglio completo degli asset;
+- archiviazione logica dal web con motivazione obbligatoria, senza `DELETE` fisico;
+- modello Excel ufficiale, anteprima preventiva, validazione, controllo duplicati ed esito riga per riga;
+- Supply Chain multilivello con ricerca, filtri, dettaglio dei percorsi, livelli gerarchici e distinzione tra relazioni dirette e derivate;
+- esclusione dalle viste operative dei record archiviati;
+- Audit Log con registrazione delle operazioni e orari nel fuso `Europe/Rome`;
+- accesso docente operativo.
+
+Il ripristino web degli asset archiviati e il CRUD delle relazioni di Supply Chain non sono esposti: erano attività facoltative o da definire e vengono esclusi per preservare il modello di sicurezza. Il ciclo di vita completo degli incidenti resta nel punto D.
 
 ## 11. Riproducibilità e versionamento
 
@@ -322,16 +326,18 @@ Questa procedura evita di versionare migrazioni non ancora verificate e mantiene
 - relazione tecnica backend v2.2;
 - diagrammi backend aggiornati;
 - inventario asset operativo;
-- inserimento e modifica asset verificati;
-- Dashboard e Audit Log verificati;
-- orario Audit Log corretto.
+- inserimento, modifica, dettaglio e archiviazione logica degli asset;
+- ricerca, filtri, paginazione e import/export con anteprima e validazione;
+- Dashboard con sessione, navigazione e collegamento all’elenco incidenti;
+- Supply Chain multilivello con filtri, ricerca e dettaglio gerarchico;
+- Audit Log verificato;
+- orario Audit Log corretto;
+- modulo B implementato integralmente nel perimetro obbligatorio.
 
 ### In corso
 
-- chiusura B1: collegamento degli incidenti a un elenco effettivo e verifiche finali di navigazione;
-- completamento B2: ricerca, filtri, paginazione, dettaglio, archiviazione logica dal web e collaudo completo import/export;
-- ripresa della sezione B3 secondo la scaletta originale;
-- sviluppo D2/D3: elenco, dettaglio, aggiornamento, chiusura e archiviazione logica degli incidenti;
+- collaudo di regressione sull’ambiente GitHub Pages dopo la pubblicazione del modulo B;
+- sviluppo D2/D3: elenco avanzato, dettaglio, aggiornamento, chiusura e archiviazione logica degli incidenti;
 - relazione tecnica frontend–database;
 - aggiornamento di `docs/README.md`;
 - revisione finale del documento principale del Project Work.
