@@ -6,10 +6,12 @@
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260726-d2';
 import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
-import { navigateTo } from './router.js?build=20260726-d2';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260726-e1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d4';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
+import { loadOrganizationView } from './organizationManagement.js?build=20260726-e1';
+import { t } from './i18n.js?build=20260726-e1';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -205,6 +207,10 @@ export function clearHeaderUser() {
 
 const ROUTE_TO_VIEW = {
     dashboard: 'dashboard',
+    organizations: 'organizations',
+    'add-organization': 'add-organization',
+    'organization-people': 'organization-people',
+    'archived-organizations': 'archived-organizations',
     inventory: 'inventory',
     'archived-assets': 'archived-assets',
     'add-asset': 'add-asset',
@@ -222,6 +228,26 @@ const ROUTE_METADATA = {
         section: 'Panoramica',
         label: 'DASHBOARD',
         title: 'Dashboard operativa'
+    },
+    organizations: {
+        section: 'Azienda',
+        label: 'AZIENDA',
+        title: 'Soggetti NIS2'
+    },
+    'add-organization': {
+        section: 'Azienda',
+        label: 'AZIENDA',
+        title: 'Nuovo soggetto'
+    },
+    'organization-people': {
+        section: 'Azienda',
+        label: 'AZIENDA',
+        title: 'Persone e figure NIS2'
+    },
+    'archived-organizations': {
+        section: 'Azienda',
+        label: 'AZIENDA',
+        title: 'Soggetti archiviati'
     },
     inventory: {
         section: 'Inventario',
@@ -313,8 +339,12 @@ function updateWorkspaceHeader(route) {
     if (pageSectionLabel) pageSectionLabel.textContent = metadata.label;
     if (pageTitle) pageTitle.textContent = metadata.title;
 
-    document.title = `${metadata.title} | NIS2 Asset Inventory Manager`;
+    document.title = `${t(metadata.title)} | NIS2 Asset Inventory Manager`;
 }
+
+document.addEventListener('app:language-changed', () => {
+    updateWorkspaceHeader(getCurrentRoute());
+});
 
 /**
  * Attiva una vista applicativa in base alla rotta risolta dal router centrale.
@@ -337,6 +367,8 @@ export async function activateApplicationRoute(route) {
 
     if (route === 'dashboard') {
         await loadAndRenderDashboard();
+    } else if (['organizations', 'add-organization', 'organization-people', 'archived-organizations'].includes(route)) {
+        await loadOrganizationView(route);
     } else if (route === 'inventory') {
         await loadAndRenderTable();
         resetAssetForm();

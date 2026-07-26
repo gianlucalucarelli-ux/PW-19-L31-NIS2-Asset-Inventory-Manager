@@ -2936,3 +2936,231 @@ tbody tr:last-child td {
         overflow-x: auto;
     }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   SWITCH LINGUA ITALIANO / INGLESE
+   --------------------------------------------------------------------------------------------------------------- */
+.language-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-soft);
+}
+
+.language-switch__button {
+    min-width: 38px;
+    min-height: 32px;
+    padding: 5px 9px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-low);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    transition:
+        background var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.language-switch__button:hover,
+.language-switch__button:focus-visible {
+    color: var(--text-high);
+    background: var(--bg-hover);
+}
+
+.language-switch__button.active {
+    color: var(--primary-contrast);
+    background: var(--primary);
+    box-shadow: var(--shadow-button);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   MODULO AZIENDA: SOGGETTI NIS2, PERSONE E INCARICHI
+   --------------------------------------------------------------------------------------------------------------- */
+.organization-filter-grid {
+    grid-template-columns: minmax(260px, 2fr) minmax(210px, 1fr);
+}
+
+.organization-table-wrapper td:nth-child(2) strong,
+.organization-table-wrapper td:nth-child(2) small {
+    display: block;
+}
+
+.organization-table-wrapper td:nth-child(2) small {
+    margin-top: 3px;
+    color: var(--text-muted);
+}
+
+.organization-form {
+    display: grid;
+    gap: 22px;
+}
+
+.form-section {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+    margin: 0;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.form-section legend {
+    padding: 0 8px;
+    color: var(--text-high);
+    font-weight: 700;
+}
+
+.form-grid--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-grid--three .form-field--wide {
+    grid-column: span 2;
+}
+
+.organization-selector-panel {
+    display: grid;
+    grid-template-columns: minmax(210px, 380px) minmax(210px, 1fr);
+    align-items: end;
+    gap: 10px 18px;
+    margin-bottom: 24px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.organization-selector-panel label {
+    grid-column: 1 / -1;
+    font-weight: 700;
+}
+
+.organization-selector-panel .inventory-search-status {
+    margin: 0;
+}
+
+.organization-subsection {
+    display: grid;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.section-heading-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.section-heading-inline h3 {
+    margin: 0;
+}
+
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.btn-table {
+    min-height: 34px;
+    padding: 6px 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+    color: var(--text-high);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.btn-table:hover,
+.btn-table:focus-visible {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+}
+
+.btn-table-danger {
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.btn-table-danger:hover,
+.btn-table-danger:focus-visible {
+    border-color: var(--error);
+    background: var(--error-soft);
+}
+
+.relation-chip {
+    display: inline-flex;
+    align-items: center;
+    margin: 2px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--text-high);
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.detail-note {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.detail-note h3 {
+    margin-bottom: 8px;
+}
+
+.detail-note p {
+    margin-bottom: 0;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 980px) {
+    .form-grid--three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .organization-selector-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .organization-selector-panel label {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 720px) {
+    .language-switch {
+        order: -1;
+    }
+
+    .form-grid--three,
+    .organization-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid--three .form-field--wide {
+        grid-column: auto;
+    }
+
+    .table-actions {
+        min-width: 120px;
+    }
+}

@@ -5,6 +5,10 @@
 
 const ROTTE_VALIDE = new Set([
     'dashboard',
+    'organizations',
+    'add-organization',
+    'organization-people',
+    'archived-organizations',
     'inventory',
     'archived-assets',
     'add-asset',
@@ -20,6 +24,13 @@ const ROTTE_VALIDE = new Set([
 const ALIAS_ROTTE = {
     '': 'dashboard',
     'dashboard-section': 'dashboard',
+    company: 'organizations',
+    companies: 'organizations',
+    organizations: 'organizations',
+    'new-organization': 'add-organization',
+    people: 'organization-people',
+    'nis2-roles': 'organization-people',
+    'archived-organizations': 'archived-organizations',
     assets: 'inventory',
     archive: 'archived-assets',
     archived: 'archived-assets',
