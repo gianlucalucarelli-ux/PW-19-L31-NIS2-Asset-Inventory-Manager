@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?build=20260726-f1">
+    <link rel="stylesheet" href="src/style.css?build=20260726-h1">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260726-f1"></script>
+    <script type="module" src="src/main.js?build=20260726-h1"></script>
     <script type="module" src="src/wizard.js?build=20260726-d5"></script>
 </head>
 <body>
@@ -172,117 +172,92 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                     </div>
 
                     <nav class="sidebar-navigation" aria-label="Sezioni dell'applicazione">
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Azienda</p>
-                            <button type="button" class="menu-btn" data-route="organizations">
-                                <span aria-hidden="true">🏛️</span>
-                                <span>Soggetti NIS2</span>
+                        <div class="navigation-group" data-menu-group="azienda">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-azienda">
+                                <span>Azienda</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
-                            <button type="button" class="menu-btn" data-route="add-organization">
-                                <span aria-hidden="true">➕</span>
-                                <span>Nuovo soggetto</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="organization-people">
-                                <span aria-hidden="true">👥</span>
-                                <span>Persone e figure NIS2</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="archived-organizations">
-                                <span aria-hidden="true">🗄️</span>
-                                <span>Soggetti archiviati</span>
-                            </button>
+                            <div id="menu-group-azienda" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="organizations"><span aria-hidden="true">🏛️</span><span>Soggetti NIS2</span></button>
+                                <button type="button" class="menu-btn" data-route="add-organization"><span aria-hidden="true">➕</span><span>Nuovo soggetto</span></button>
+                                <button type="button" class="menu-btn" data-route="organization-people"><span aria-hidden="true">👥</span><span>Persone e figure NIS2</span></button>
+                                <button type="button" class="menu-btn" data-route="archived-organizations"><span aria-hidden="true">🗄️</span><span>Soggetti archiviati</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Inventario</p>
-                            <button type="button" class="menu-btn active" data-route="inventory">
-                                <span aria-hidden="true">📦</span>
-                                <span>Inventario Asset</span>
+                        <div class="navigation-group" data-menu-group="inventario">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="true" aria-controls="menu-group-inventario">
+                                <span>Inventario</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
-                            <button type="button" class="menu-btn" data-route="add-asset">
-                                <span aria-hidden="true">➕</span>
-                                <span>Nuovo Asset</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="archived-assets">
-                                <span aria-hidden="true">🗄️</span>
-                                <span>Asset archiviati</span>
-                            </button>
+                            <div id="menu-group-inventario" class="navigation-group__items">
+                                <button type="button" class="menu-btn active" data-route="inventory"><span aria-hidden="true">📦</span><span>Inventario Asset</span></button>
+                                <button type="button" class="menu-btn" data-route="add-asset"><span aria-hidden="true">➕</span><span>Nuovo Asset</span></button>
+                                <button type="button" class="menu-btn" data-route="archived-assets"><span aria-hidden="true">🗄️</span><span>Asset archiviati</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Servizi</p>
-                            <button type="button" class="menu-btn" data-route="services">
-                                <span aria-hidden="true">🧩</span>
-                                <span>Elenco servizi</span>
+                        <div class="navigation-group" data-menu-group="servizi">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-servizi">
+                                <span>Servizi</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
-                            <button type="button" class="menu-btn" data-route="add-service">
-                                <span aria-hidden="true">➕</span>
-                                <span>Nuovo servizio</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="archived-services">
-                                <span aria-hidden="true">🗄️</span>
-                                <span>Servizi cessati</span>
-                            </button>
+                            <div id="menu-group-servizi" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="services"><span aria-hidden="true">🧩</span><span>Elenco servizi</span></button>
+                                <button type="button" class="menu-btn" data-route="add-service"><span aria-hidden="true">➕</span><span>Nuovo servizio</span></button>
+                                <button type="button" class="menu-btn" data-route="archived-services"><span aria-hidden="true">🗄️</span><span>Servizi cessati</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Fornitori</p>
-                            <button type="button" class="menu-btn" data-route="suppliers">
-                                <span aria-hidden="true">🏢</span>
-                                <span>Elenco fornitori</span>
+                        <div class="navigation-group" data-menu-group="fornitori">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-fornitori">
+                                <span>Fornitori</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
-                            <button type="button" class="menu-btn" data-route="add-supplier">
-                                <span aria-hidden="true">➕</span>
-                                <span>Nuovo fornitore</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="archived-suppliers">
-                                <span aria-hidden="true">🗄️</span>
-                                <span>Fornitori cessati</span>
-                            </button>
+                            <div id="menu-group-fornitori" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="suppliers"><span aria-hidden="true">🏢</span><span>Elenco fornitori</span></button>
+                                <button type="button" class="menu-btn" data-route="add-supplier"><span aria-hidden="true">➕</span><span>Nuovo fornitore</span></button>
+                                <button type="button" class="menu-btn" data-route="archived-suppliers"><span aria-hidden="true">🗄️</span><span>Fornitori cessati</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Relazioni</p>
-                            <button type="button" class="menu-btn" data-route="supply-chain">
-                                <span aria-hidden="true">🔗</span>
-                                <span>Supply Chain</span>
+                        <div class="navigation-group" data-menu-group="relazioni">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-relazioni">
+                                <span>Relazioni</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
+                            <div id="menu-group-relazioni" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="supply-chain"><span aria-hidden="true">🔗</span><span>Supply Chain</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Incidenti</p>
-                            <button type="button" class="menu-btn" data-route="incidenti-aperti">
-                                <span aria-hidden="true">🚨</span>
-                                <span>Incidenti aperti</span>
+                        <div class="navigation-group" data-menu-group="incidenti">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-incidenti">
+                                <span>Incidenti</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
-                            <button type="button" class="menu-btn" data-route="incidenti-chiusi">
-                                <span aria-hidden="true">✅</span>
-                                <span>Incidenti chiusi</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="nuova-segnalazione">
-                                <span aria-hidden="true">➕</span>
-                                <span>Nuova segnalazione</span>
-                            </button>
+                            <div id="menu-group-incidenti" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="incidenti-aperti"><span aria-hidden="true">🚨</span><span>Incidenti aperti</span></button>
+                                <button type="button" class="menu-btn" data-route="incidenti-chiusi"><span aria-hidden="true">✅</span><span>Incidenti chiusi</span></button>
+                                <button type="button" class="menu-btn" data-route="nuova-segnalazione"><span aria-hidden="true">➕</span><span>Nuova segnalazione</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Sicurezza</p>
-                            <button type="button" class="menu-btn" data-route="audit-log">
-                                <span aria-hidden="true">📋</span>
-                                <span>Audit Log</span>
+                        <div class="navigation-group" data-menu-group="sicurezza">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-sicurezza">
+                                <span>Sicurezza</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
+                            <div id="menu-group-sicurezza" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="audit-log"><span aria-hidden="true">📋</span><span>Audit Log</span></button>
+                            </div>
                         </div>
 
-                        <div class="navigation-group">
-                            <p class="navigation-group__title">Supporto</p>
-                            <button type="button" class="menu-btn" data-route="info">
-                                <span aria-hidden="true">ℹ️</span>
-                                <span>Informazioni e guida</span>
+                        <div class="navigation-group" data-menu-group="supporto">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-supporto">
+                                <span>Supporto</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
                             </button>
+                            <div id="menu-group-supporto" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="info"><span aria-hidden="true">ℹ️</span><span>Informazioni e guida</span></button>
+                            </div>
                         </div>
                     </nav>
                 </aside>
 
-                <div class="app-workspace">
+                <div id="app-workspace" class="app-workspace" tabindex="-1">
                     <header class="workspace-header">
                         <nav class="breadcrumb" aria-label="Percorso di navigazione">
                             <span>NIS2 Asset Manager</span>
@@ -874,9 +849,22 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <p id="archived-suppliers-status" class="inventory-search-status" role="status" aria-live="polite"></p>
                         </section>
 
-                        <dialog id="service-detail-dialog" class="app-dialog wide-dialog">
-                            <div class="dialog-header"><div><p class="eyebrow">DETTAGLIO SERVIZIO</p><h2>Servizio e relazioni attive</h2></div><button type="button" class="dialog-close" data-close-dialog="service-detail-dialog" aria-label="Chiudi">×</button></div>
-                            <div id="service-detail-content" class="dialog-body"></div>
+                        <dialog id="service-detail-dialog" class="asset-detail-dialog entity-detail-dialog" aria-labelledby="service-detail-title" aria-describedby="service-detail-subtitle">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">DETTAGLIO SERVIZIO</p>
+                                        <h2 id="service-detail-title">Servizio e relazioni attive</h2>
+                                        <p id="service-detail-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <button type="button" class="asset-detail-close" data-close-dialog="service-detail-dialog" aria-label="Chiudi dettaglio servizio" title="Chiudi">×</button>
+                                </header>
+                                <div id="service-detail-content" class="asset-detail-body"></div>
+                                <footer class="asset-detail-footer">
+                                    <span></span>
+                                    <button type="button" class="btn-secondary" data-close-dialog="service-detail-dialog">Chiudi</button>
+                                </footer>
+                            </div>
                         </dialog>
                         <dialog id="service-archive-dialog" class="app-dialog">
                             <form id="service-archive-form" method="dialog">
@@ -891,9 +879,22 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="dialog-actions"><button type="button" class="btn-secondary" data-close-dialog="service-import-dialog">Annulla</button><button id="service-import-confirm" type="button" class="btn-primary" disabled>Importa righe valide</button></div>
                         </dialog>
 
-                        <dialog id="supplier-detail-dialog" class="app-dialog wide-dialog">
-                            <div class="dialog-header"><div><p class="eyebrow">DETTAGLIO FORNITORE</p><h2>Fornitore e relazioni attive</h2></div><button type="button" class="dialog-close" data-close-dialog="supplier-detail-dialog" aria-label="Chiudi">×</button></div>
-                            <div id="supplier-detail-content" class="dialog-body"></div>
+                        <dialog id="supplier-detail-dialog" class="asset-detail-dialog entity-detail-dialog" aria-labelledby="supplier-detail-title" aria-describedby="supplier-detail-subtitle">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">DETTAGLIO FORNITORE</p>
+                                        <h2 id="supplier-detail-title">Fornitore e relazioni attive</h2>
+                                        <p id="supplier-detail-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <button type="button" class="asset-detail-close" data-close-dialog="supplier-detail-dialog" aria-label="Chiudi dettaglio fornitore" title="Chiudi">×</button>
+                                </header>
+                                <div id="supplier-detail-content" class="asset-detail-body"></div>
+                                <footer class="asset-detail-footer">
+                                    <span></span>
+                                    <button type="button" class="btn-secondary" data-close-dialog="supplier-detail-dialog">Chiudi</button>
+                                </footer>
+                            </div>
                         </dialog>
                         <dialog id="supplier-archive-dialog" class="app-dialog">
                             <form id="supplier-archive-form" method="dialog">
@@ -1289,6 +1290,22 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <tbody id="archived-assets-table-body"></tbody>
                                 </table>
                             </div>
+                            <nav id="archived-assets-pagination" class="inventory-pagination" aria-label="Paginazione asset archiviati">
+                                <div class="inventory-pagination-summary">
+                                    <label for="archived-assets-page-size">Righe per pagina</label>
+                                    <select id="archived-assets-page-size" class="inventory-page-size" aria-controls="archived-assets-table-body">
+                                        <option value="5">5</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                    </select>
+                                    <span id="archived-assets-page-status" class="inventory-page-status">0 risultati</span>
+                                </div>
+                                <div class="inventory-pagination-actions">
+                                    <button id="archived-assets-page-prev" class="btn-secondary" type="button" aria-controls="archived-assets-table-body" disabled>Precedente</button>
+                                    <span id="archived-assets-page-indicator" class="inventory-page-indicator">Pagina 0 di 0</span>
+                                    <button id="archived-assets-page-next" class="btn-secondary" type="button" aria-controls="archived-assets-table-body" disabled>Successiva</button>
+                                </div>
+                            </nav>
                             <p class="archived-assets-note">Vista di sola lettura: nessun ripristino e nessuna cancellazione fisica vengono eseguiti.</p>
                         </section>
 
