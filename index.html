@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=16">
+    <link rel="stylesheet" href="src/style.css?v=17">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?v=20"></script>
+    <script type="module" src="src/main.js?v=21"></script>
     <script type="module" src="src/wizard.js?v=6"></script>
 </head>
 <body>
@@ -399,6 +399,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <div class="action-group" aria-label="Azioni inventario">
                                     <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
                                     <button id="btn-export-xls" class="btn-success" type="button">Esporta XLS</button>
+                                    <button id="btn-show-archived-assets" class="btn-archived" type="button" aria-haspopup="dialog">Asset archiviati</button>
                                     <button id="btn-download-import-template" class="btn-template" type="button">Modello import</button>
                                     <button id="btn-trigger-import" class="btn-warning" type="button">Importa XLS</button>
                                     <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" class="visually-hidden">
@@ -580,6 +581,44 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     </div>
                                 </footer>
                             </form>
+                        </dialog>
+
+                        <dialog id="archived-assets-dialog" class="asset-detail-dialog archived-assets-dialog" aria-labelledby="archived-assets-title" aria-describedby="archived-assets-subtitle">
+                            <div class="asset-detail-shell archived-assets-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">ARCHIVIO LOGICO</p>
+                                        <h2 id="archived-assets-title">Asset archiviati</h2>
+                                        <p id="archived-assets-subtitle" class="asset-detail-subtitle">Consultazione in sola lettura dei record esclusi dalle viste operative.</p>
+                                    </div>
+                                    <button id="archived-assets-close" class="asset-detail-close" type="button" aria-label="Chiudi archivio asset" title="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div class="archived-assets-toolbar">
+                                        <p id="archived-assets-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento asset archiviati…</p>
+                                        <button id="btn-export-archived-assets" class="btn-success" type="button" disabled>Esporta archiviati XLS</button>
+                                    </div>
+                                    <div class="table-wrapper archived-assets-table-wrapper">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">ID</th>
+                                                    <th scope="col">Codice</th>
+                                                    <th scope="col">Nome asset</th>
+                                                    <th scope="col">Archiviato il</th>
+                                                    <th scope="col">Motivazione</th>
+                                                    <th scope="col">Azioni</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="archived-assets-table-body"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <span>Nessun ripristino o DELETE viene eseguito da questa vista.</span>
+                                    <button id="archived-assets-footer-close" class="btn-secondary" type="button">Chiudi</button>
+                                </footer>
+                            </div>
                         </dialog>
 
                         <dialog id="asset-import-dialog" class="asset-detail-dialog asset-import-dialog" aria-labelledby="asset-import-title">
