@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?build=20260726-d2">
+    <link rel="stylesheet" href="src/style.css?build=20260726-e1">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260726-d4"></script>
+    <script type="module" src="src/main.js?build=20260726-e1"></script>
     <script type="module" src="src/wizard.js?build=20260726-d5"></script>
 </head>
 <body>
@@ -56,6 +56,11 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                     <span id="user-access-level" class="user-session__status"></span>
                 </div>
                 <div class="header-command-group" aria-label="Comandi della sessione">
+                    <div class="language-switch" role="group" aria-label="Selezione lingua">
+                        <button type="button" class="language-switch__button active" data-language="it" aria-pressed="true">IT</button>
+                        <button type="button" class="language-switch__button" data-language="en" aria-pressed="false">EN</button>
+                    </div>
+                    <span class="header-command-separator" aria-hidden="true"></span>
                     <button id="theme-toggle" class="btn-theme" type="button" title="Passa al tema chiaro" aria-label="Passa al tema chiaro" aria-pressed="false">
                         <span id="theme-toggle-icon" class="btn-theme__icon" aria-hidden="true">☀️</span>
                         <span id="theme-toggle-label">Tema chiaro</span>
@@ -168,6 +173,26 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
 
                     <nav class="sidebar-navigation" aria-label="Sezioni dell'applicazione">
                         <div class="navigation-group">
+                            <p class="navigation-group__title">Azienda</p>
+                            <button type="button" class="menu-btn" data-route="organizations">
+                                <span aria-hidden="true">🏛️</span>
+                                <span>Soggetti NIS2</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="add-organization">
+                                <span aria-hidden="true">➕</span>
+                                <span>Nuovo soggetto</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="organization-people">
+                                <span aria-hidden="true">👥</span>
+                                <span>Persone e figure NIS2</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="archived-organizations">
+                                <span aria-hidden="true">🗄️</span>
+                                <span>Soggetti archiviati</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
                             <p class="navigation-group__title">Inventario</p>
                             <button type="button" class="menu-btn active" data-route="inventory">
                                 <span aria-hidden="true">📦</span>
@@ -241,6 +266,415 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                     </header>
 
                     <section class="content-view" aria-live="polite">
+                        <section id="view-organizations" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Soggetti NIS2 utilizzatori</h2>
+                                    <p class="section-intro">Anagrafica delle organizzazioni essenziali o importanti che utilizzano l’applicativo.</p>
+                                </div>
+                                <button type="button" class="btn-primary" data-route="add-organization">Registra soggetto</button>
+                            </div>
+
+                            <div class="inventory-tools" role="search" aria-label="Ricerca e filtri soggetti NIS2">
+                                <div class="inventory-filter-grid organization-filter-grid">
+                                    <div class="inventory-filter-field inventory-search-field">
+                                        <label for="organization-search">Ricerca soggetto</label>
+                                        <input id="organization-search" type="search" class="form-input" placeholder="Cerca per codice, denominazione o identificativo legale" aria-controls="organization-table-body">
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="organization-classification-filter">Classificazione NIS2</label>
+                                        <select id="organization-classification-filter" class="form-input" aria-controls="organization-table-body">
+                                            <option value="">Tutte le classificazioni</option>
+                                            <option value="DA_CLASSIFICARE">Da classificare</option>
+                                            <option value="ESSENZIALE">Essenziale</option>
+                                            <option value="IMPORTANTE">Importante</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="inventory-filter-footer">
+                                    <p id="organization-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento soggetti NIS2…</p>
+                                    <button id="organization-filter-reset" type="button" class="btn-secondary">Azzera filtri</button>
+                                </div>
+                            </div>
+
+                            <div class="table-wrapper organization-table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Codice</th>
+                                            <th scope="col">Denominazione ufficiale</th>
+                                            <th scope="col">Classificazione NIS2</th>
+                                            <th scope="col">Identificativo legale</th>
+                                            <th scope="col">Sede legale</th>
+                                            <th scope="col">Contatti</th>
+                                            <th scope="col">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="organization-table-body"></tbody>
+                                </table>
+                            </div>
+
+                            <nav class="inventory-pagination" aria-label="Paginazione soggetti NIS2">
+                                <div class="inventory-pagination-summary">
+                                    <label for="organization-page-size">Righe per pagina</label>
+                                    <select id="organization-page-size" class="form-input inventory-page-size" aria-controls="organization-table-body">
+                                        <option value="5" selected>5</option>
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                    </select>
+                                    <span id="organization-page-status" class="inventory-page-status">0 risultati</span>
+                                </div>
+                                <div class="inventory-pagination-actions">
+                                    <button id="organization-page-prev" type="button" class="btn-secondary" disabled>Precedente</button>
+                                    <span id="organization-page-indicator" class="inventory-page-indicator">Pagina 1 di 1</span>
+                                    <button id="organization-page-next" type="button" class="btn-secondary" disabled>Successiva</button>
+                                </div>
+                            </nav>
+                        </section>
+
+                        <section id="view-add-organization" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2 id="organization-form-title">Nuovo soggetto NIS2</h2>
+                                    <p class="section-intro">Compila l’anagrafica legale e i contatti principali dell’organizzazione utilizzatrice.</p>
+                                </div>
+                            </div>
+
+                            <form id="organization-form" class="asset-form organization-form">
+                                <input id="organization-id" type="hidden">
+
+                                <fieldset class="form-section">
+                                    <legend>Dati identificativi</legend>
+                                    <div class="form-grid form-grid--three">
+                                        <div class="form-field">
+                                            <label for="organization-code">Codice organizzazione</label>
+                                            <input id="organization-code" class="form-input" maxlength="30" pattern="[A-Z0-9][A-Z0-9_-]{2,29}" required>
+                                        </div>
+                                        <div class="form-field form-field--wide">
+                                            <label for="organization-name">Ragione sociale / denominazione</label>
+                                            <input id="organization-name" class="form-input" maxlength="255" required>
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-classification">Classificazione NIS2</label>
+                                            <select id="organization-classification" class="form-input" required>
+                                                <option value="DA_CLASSIFICARE">Da classificare</option>
+                                                <option value="ESSENZIALE">Essenziale</option>
+                                                <option value="IMPORTANTE">Importante</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-legal-form">Forma giuridica</label>
+                                            <input id="organization-legal-form" class="form-input" maxlength="120">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-identifier-type">Tipo identificativo</label>
+                                            <select id="organization-identifier-type" class="form-input">
+                                                <option value="">Nessuno</option>
+                                                <option value="PARTITA_IVA">Partita IVA</option>
+                                                <option value="CODICE_FISCALE">Codice fiscale</option>
+                                                <option value="ALTRO">Altro identificativo</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-identifier">Identificativo legale</label>
+                                            <input id="organization-identifier" class="form-input" maxlength="80">
+                                        </div>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="organization-description">Descrizione</label>
+                                        <textarea id="organization-description" class="form-input" rows="3" maxlength="1000"></textarea>
+                                    </div>
+                                </fieldset>
+
+                                <fieldset class="form-section">
+                                    <legend>Sede legale</legend>
+                                    <div class="form-grid form-grid--three">
+                                        <div class="form-field form-field--wide">
+                                            <label for="organization-address">Indirizzo</label>
+                                            <input id="organization-address" class="form-input" maxlength="255">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-postal-code">CAP</label>
+                                            <input id="organization-postal-code" class="form-input" maxlength="20">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-city">Comune</label>
+                                            <input id="organization-city" class="form-input" maxlength="120">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-province">Provincia</label>
+                                            <input id="organization-province" class="form-input" maxlength="120">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-country">Paese</label>
+                                            <input id="organization-country" class="form-input" maxlength="120">
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                                <fieldset class="form-section">
+                                    <legend>Contatti</legend>
+                                    <div class="form-grid form-grid--three">
+                                        <div class="form-field">
+                                            <label for="organization-email">E-mail istituzionale</label>
+                                            <input id="organization-email" type="email" class="form-input" maxlength="320">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-pec">PEC</label>
+                                            <input id="organization-pec" type="email" class="form-input" maxlength="320">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="organization-phone">Telefono</label>
+                                            <input id="organization-phone" type="tel" class="form-input" maxlength="40">
+                                        </div>
+                                        <div class="form-field form-field--wide">
+                                            <label for="organization-website">Sito web</label>
+                                            <input id="organization-website" type="url" class="form-input" maxlength="500" placeholder="https://">
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                                <p id="organization-form-status" class="inventory-search-status" role="status" aria-live="polite"></p>
+                                <div class="form-actions">
+                                    <button id="organization-form-cancel" type="button" class="btn-secondary">Annulla</button>
+                                    <button id="organization-submit" type="submit" class="btn-primary">Salva soggetto</button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section id="view-organization-people" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Persone e incarichi NIS2</h2>
+                                    <p class="section-intro">Gestisci le persone dell’azienda e gli incarichi titolare, vice o supporto.</p>
+                                </div>
+                                <div class="action-group">
+                                    <button id="person-add-btn" type="button" class="btn-primary">Nuova persona</button>
+                                    <button id="assignment-add-btn" type="button" class="btn-success">Assegna figura NIS2</button>
+                                </div>
+                            </div>
+
+                            <div class="organization-selector-panel">
+                                <label for="organization-people-selector">Seleziona il soggetto NIS2</label>
+                                <select id="organization-people-selector" class="form-input"></select>
+                                <p id="organization-people-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento…</p>
+                            </div>
+
+                            <section class="organization-subsection" aria-labelledby="people-table-title">
+                                <div class="section-heading-inline">
+                                    <h3 id="people-table-title">Persone</h3>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Persona</th>
+                                                <th scope="col">E-mail</th>
+                                                <th scope="col">Telefono</th>
+                                                <th scope="col">Ruoli attivi</th>
+                                                <th scope="col">Azioni</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="organization-people-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
+
+                            <section class="organization-subsection" aria-labelledby="assignments-table-title">
+                                <div class="section-heading-inline">
+                                    <h3 id="assignments-table-title">Incarichi NIS2/ACN</h3>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Incarico</th>
+                                                <th scope="col">Persona</th>
+                                                <th scope="col">Posizione</th>
+                                                <th scope="col">Validità</th>
+                                                <th scope="col">Stato</th>
+                                                <th scope="col">Azioni</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="organization-assignments-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </section>
+
+                        <section id="view-archived-organizations" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Soggetti NIS2 archiviati</h2>
+                                    <p class="section-intro">Consultazione in sola lettura delle organizzazioni non più operative.</p>
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Codice</th>
+                                            <th scope="col">Denominazione ufficiale</th>
+                                            <th scope="col">Classificazione NIS2</th>
+                                            <th scope="col">Archiviato il</th>
+                                            <th scope="col">Motivazione</th>
+                                            <th scope="col">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="archived-organizations-body"></tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <dialog id="organization-detail-dialog" class="asset-detail-dialog" aria-labelledby="organization-detail-title">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">DETTAGLIO SOGGETTO NIS2</p>
+                                        <h2 id="organization-detail-title">Dettaglio soggetto NIS2</h2>
+                                        <p id="organization-detail-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <form method="dialog"><button class="asset-detail-close" type="submit" aria-label="Chiudi">×</button></form>
+                                </header>
+                                <div id="organization-detail-content" class="asset-detail-body"></div>
+                                <footer class="asset-detail-footer"><span></span><form method="dialog"><button class="btn-secondary" type="submit">Chiudi</button></form></footer>
+                            </div>
+                        </dialog>
+
+                        <dialog id="organization-archive-dialog" class="asset-detail-dialog" aria-labelledby="organization-archive-title">
+                            <form id="organization-archive-form" class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">ARCHIVIAZIONE LOGICA</p>
+                                        <h2 id="organization-archive-title">Archivia soggetto</h2>
+                                        <p id="organization-archive-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <button class="asset-detail-close" type="button" data-close-dialog="organization-archive-dialog" aria-label="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div class="operation-warning operation-warning--danger">
+                                        <strong>Conferma operazione sensibile</strong>
+                                        <p>Il soggetto sarà escluso dalle viste operative. Asset, servizi, persone e storico resteranno conservati.</p>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="organization-archive-reason">Motivo dell’archiviazione</label>
+                                        <textarea id="organization-archive-reason" class="form-input" rows="4" minlength="5" required></textarea>
+                                    </div>
+                                    <label class="operation-confirmation operation-confirmation--danger" for="organization-archive-acknowledge">
+                                        <input id="organization-archive-acknowledge" type="checkbox" required>
+                                        <span>Confermo di voler archiviare il soggetto NIS2 selezionato.</span>
+                                    </label>
+                                    <p id="organization-archive-status" class="inventory-search-status" role="status"></p>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <button id="organization-archive-cancel" type="button" class="btn-secondary">Annulla</button>
+                                    <button id="organization-archive-confirm" type="submit" class="btn-danger" disabled>Archivia soggetto</button>
+                                </footer>
+                            </form>
+                        </dialog>
+
+                        <dialog id="person-dialog" class="asset-detail-dialog" aria-labelledby="person-dialog-title">
+                            <form id="person-form" class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">PERSONA AZIENDALE</p>
+                                        <h2 id="person-dialog-title">Aggiungi persona</h2>
+                                    </div>
+                                    <button class="asset-detail-close" type="button" data-close-dialog="person-dialog" aria-label="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <input id="person-id" type="hidden">
+                                    <input id="person-organization-id" type="hidden">
+                                    <div class="form-grid">
+                                        <div class="form-field">
+                                            <label for="person-first-name">Nome</label>
+                                            <input id="person-first-name" class="form-input" required maxlength="120">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="person-last-name">Cognome</label>
+                                            <input id="person-last-name" class="form-input" required maxlength="120">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="person-email">E-mail</label>
+                                            <input id="person-email" type="email" class="form-input" required maxlength="320">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="person-phone">Telefono</label>
+                                            <input id="person-phone" type="tel" class="form-input" maxlength="40">
+                                        </div>
+                                    </div>
+                                    <p id="person-form-status" class="inventory-search-status" role="status"></p>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <button class="btn-secondary" type="button" data-close-dialog="person-dialog">Annulla</button>
+                                    <button id="person-submit" type="submit" class="btn-primary">Salva persona</button>
+                                </footer>
+                            </form>
+                        </dialog>
+
+                        <dialog id="assignment-dialog" class="asset-detail-dialog" aria-labelledby="assignment-dialog-title">
+                            <form id="assignment-form" class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">FIGURA NIS2/ACN</p>
+                                        <h2 id="assignment-dialog-title">Assegna incarico</h2>
+                                    </div>
+                                    <button class="asset-detail-close" type="button" data-close-dialog="assignment-dialog" aria-label="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div class="form-field">
+                                        <label for="assignment-person">Persona</label>
+                                        <select id="assignment-person" class="form-input" required></select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="assignment-role-choice">Incarico</label>
+                                        <select id="assignment-role-choice" class="form-input" required></select>
+                                        <small>Punto di contatto NIS2, Vice Punto di contatto NIS2, Referente CSIRT e Vice Referente CSIRT sono proposti come opzioni esplicite.</small>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="assignment-valid-from">Valido dal</label>
+                                        <input id="assignment-valid-from" type="date" class="form-input" required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="assignment-note">Note</label>
+                                        <textarea id="assignment-note" class="form-input" rows="3" maxlength="1000"></textarea>
+                                    </div>
+                                    <p id="assignment-form-status" class="inventory-search-status" role="status"></p>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <button class="btn-secondary" type="button" data-close-dialog="assignment-dialog">Annulla</button>
+                                    <button id="assignment-submit" type="submit" class="btn-primary">Assegna incarico</button>
+                                </footer>
+                            </form>
+                        </dialog>
+
+                        <dialog id="assignment-close-dialog" class="asset-detail-dialog" aria-labelledby="assignment-close-title">
+                            <form id="assignment-close-form" class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">CESSAZIONE INCARICO</p>
+                                        <h2 id="assignment-close-title">Concludi incarico</h2>
+                                        <p id="assignment-close-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <button class="asset-detail-close" type="button" data-close-dialog="assignment-close-dialog" aria-label="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div class="form-field">
+                                        <label for="assignment-end-date">Data di fine</label>
+                                        <input id="assignment-end-date" type="date" class="form-input" required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="assignment-close-reason">Motivo della cessazione</label>
+                                        <textarea id="assignment-close-reason" class="form-input" rows="4" minlength="5" required></textarea>
+                                    </div>
+                                    <p id="assignment-close-status" class="inventory-search-status" role="status"></p>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <button class="btn-secondary" type="button" data-close-dialog="assignment-close-dialog">Annulla</button>
+                                    <button id="assignment-close-submit" type="submit" class="btn-danger">Conferma cessazione</button>
+                                </footer>
+                            </form>
+                        </dialog>
                         <section id="view-dashboard" class="view-section dashboard-view is-hidden" aria-labelledby="dashboard-overview-title">
                             <div class="dashboard-hero card">
                                 <div>
