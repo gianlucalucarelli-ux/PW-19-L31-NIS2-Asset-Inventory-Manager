@@ -2715,3 +2715,139 @@ tbody tr:last-child td {
     }
 }
 
+
+
+/* ==============================================================================================================
+   PATCH DI CHIUSURA ASSOLUTA MODULO B
+   - navigazione superiore colorata e coerente
+   - centratura e scorrimento del dettaglio Audit Log
+   - nessuna modifica alle regole dati o al database
+   ============================================================================================================== */
+.site-header .top-navigation .nav-link[data-nav-group="dashboard"] {
+    color: #e0f2fe;
+    background: linear-gradient(135deg, #075985, #0369a1);
+    border-color: #38bdf8;
+}
+
+.site-header .top-navigation .nav-link[data-nav-group="info"] {
+    color: #f3e8ff;
+    background: linear-gradient(135deg, #6d28d9, #7e22ce);
+    border-color: #c084fc;
+}
+
+.site-header .top-navigation .nav-link[data-nav-group="dashboard"]:hover,
+.site-header .top-navigation .nav-link[data-nav-group="dashboard"]:focus-visible,
+.site-header .top-navigation .nav-link[data-nav-group="info"]:hover,
+.site-header .top-navigation .nav-link[data-nav-group="info"]:focus-visible {
+    color: #ffffff;
+    filter: brightness(1.08);
+}
+
+.audit-detail-dialog {
+    position: fixed;
+    inset: 0;
+    width: min(1180px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    margin: auto;
+    box-sizing: border-box;
+}
+
+.audit-detail-dialog .asset-detail-shell,
+.audit-detail-dialog .asset-detail-body,
+.audit-detail-dialog .asset-detail-grid,
+.audit-detail-dialog .audit-payload-grid,
+.audit-detail-dialog .audit-payload-grid section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.audit-detail-dialog .asset-detail-body {
+    overflow: auto;
+}
+
+.audit-json-payload {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    white-space: pre;
+    box-sizing: border-box;
+}
+
+@media (max-width: 760px) {
+    .audit-detail-dialog {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+    }
+}
+
+/* ==============================================================================================================
+   FIX MIRATO POST-COLLAUDO MODULO B
+   - dettaglio Audit Log sempre centrato e contenuto nel viewport
+   - payload impilati per massima leggibilita
+   - scorrimento orizzontale e verticale sempre disponibile nei JSON
+   ============================================================================================================== */
+.audit-detail-dialog[open] {
+    position: fixed;
+    inset: 0;
+    display: block;
+    width: min(1040px, calc(100vw - 48px));
+    max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 48px);
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+}
+
+.audit-detail-dialog .asset-detail-shell {
+    width: 100%;
+    max-height: calc(100vh - 48px);
+}
+
+.audit-detail-dialog .asset-detail-body {
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.audit-detail-dialog .audit-payload-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+}
+
+.audit-detail-dialog .audit-payload-grid section {
+    width: 100%;
+    min-width: 0;
+}
+
+.audit-detail-dialog .audit-json-payload {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-height: 14rem;
+    max-height: 24rem;
+    overflow-x: scroll;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
+    box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+    .audit-detail-dialog[open] {
+        width: calc(100vw - 16px);
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+    }
+
+    .audit-detail-dialog .asset-detail-shell {
+        max-height: calc(100vh - 16px);
+    }
+}

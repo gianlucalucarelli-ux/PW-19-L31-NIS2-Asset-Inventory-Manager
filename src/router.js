@@ -6,6 +6,7 @@
 const ROTTE_VALIDE = new Set([
     'dashboard',
     'inventory',
+    'archived-assets',
     'add-asset',
     'supply-chain',
     'audit-log',
@@ -18,6 +19,9 @@ const ALIAS_ROTTE = {
     '': 'dashboard',
     'dashboard-section': 'dashboard',
     assets: 'inventory',
+    archive: 'archived-assets',
+    archived: 'archived-assets',
+    'asset-archiviati': 'archived-assets',
     'new-asset': 'add-asset',
     audit: 'audit-log',
     incidents: 'incidenti',

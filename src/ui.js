@@ -5,8 +5,8 @@
 
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData, fetchIncidentList } from './database.js?v=12';
 import { loadAndRenderSupplyChain } from './supplyChain.js?v=5';
-import { loadAndRenderAuditLog } from './auditLog.js?v=2';
-import { navigateTo } from './router.js?v=3';
+import { loadAndRenderAuditLog } from './auditLog.js?v=3';
+import { navigateTo } from './router.js?v=5';
 import { exportArchivedAssetsToExcel } from './importExport.js?v=6';
 
 /**
@@ -737,6 +737,9 @@ function mostraElencoIncidenti() {
 function mostraWizardIncidenti() {
     document.getElementById('incident-list-container')?.classList.add('is-hidden');
     document.getElementById('wizard-container')?.classList.remove('is-hidden');
+
+    // Il comando Nuova segnalazione deve aprire direttamente il primo passo.
+    // L'evento separato mantiene wizard.js indipendente da ui.js ed evita dipendenze circolari.
     document.dispatchEvent(new CustomEvent('incident:wizard:start'));
 }
 

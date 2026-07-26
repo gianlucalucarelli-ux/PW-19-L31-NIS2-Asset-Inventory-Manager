@@ -11,7 +11,7 @@ import {
     fetchReportIncidente,
     verificaAccessoIncidenti
 } from './incidentService.js?v=2';
-import { navigateTo } from './router.js?v=1';
+import { navigateTo } from './router.js?v=5';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -95,6 +95,9 @@ async function preparaNuovaSegnalazione() {
     if (operazioneInCorso) return;
 
     setWizardBusy(true);
+    if (title) title.textContent = 'Nuova segnalazione';
+    if (container) container.textContent = 'Verifica autorizzazioni e preparazione del primo passo…';
+    setWizardNavigationVisible(false);
 
     try {
         await verificaAccessoIncidenti();
@@ -348,8 +351,12 @@ if (restartButton) {
 }
 
 // Il modulo registra soltanto gli eventi. Nessuna query o INSERT viene eseguita al caricamento della pagina.
-document.addEventListener('incident:wizard:open', () => {
-    initIncidentWizard();
+document.addEventListener('incident:wizard:open', async () => {
+    await initIncidentWizard();
+});
+
+document.addEventListener('incident:wizard:start', async () => {
+    await preparaNuovaSegnalazione();
 });
 
 document.addEventListener('incident:wizard:reset', () => {
