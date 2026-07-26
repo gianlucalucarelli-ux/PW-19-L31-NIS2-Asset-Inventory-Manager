@@ -3,7 +3,7 @@
 // DESCRIZIONE: Ricerca, filtri e dettaglio dei percorsi multilivello della Supply Chain.
 // ===============================================================================================================
 
-import { fetchSupplyChain } from './database.js?v=10';
+import { fetchSupplyChain } from './database.js?v=11';
 
 let supplyRows = [];
 let supplyInitialized = false;
@@ -20,6 +20,75 @@ function normalize(value) {
         .replace(/[\u0300-\u036f]/g, '')
         .toLocaleLowerCase('it-IT')
         .trim();
+}
+
+function firstSupplyValue(row, keys, fallback = '') {
+    for (const key of keys) {
+        const value = row?.[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+    return fallback;
+}
+
+function safeSupplyDepth(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function normalizeSupplyRow(row, index) {
+    const service = String(firstSupplyValue(row, [
+        'servizioRadice', 'nome_servizio_radice', 'Service_Name', 'servizio_nome'
+    ], 'N/D'));
+    const asset = String(firstSupplyValue(row, [
+        'assetEffettivo', 'nome_asset_effettivo', 'Dependent_Asset', 'asset_dipendenti'
+    ], ''));
+    const supplier = String(firstSupplyValue(row, [
+        'fornitoreEffettivo', 'nome_fornitore_effettivo', 'Vendor_Partner', 'fornitori'
+    ], 'N/D'));
+    const serviceDepth = safeSupplyDepth(firstSupplyValue(row, ['profonditaServizio', 'profondita_servizio'], 0));
+    const assetDepth = safeSupplyDepth(firstSupplyValue(row, ['profonditaAsset', 'profondita_asset'], 0));
+    const supplierDepth = safeSupplyDepth(firstSupplyValue(row, ['profonditaFornitore', 'profondita_fornitore'], 0));
+
+    return {
+        ...row,
+        idPercorso: String(firstSupplyValue(row, ['idPercorso', 'id_percorso'], `supply-${index + 1}`)),
+        origineCollegamento: String(firstSupplyValue(row, ['origineCollegamento', 'origine_collegamento'], asset
+            ? 'SERVIZIO_ASSET_FORNITORE'
+            : 'SERVIZIO_FORNITORE')),
+        servizioRadiceId: firstSupplyValue(row, ['servizioRadiceId', 'servizio_radice_id'], null),
+        servizioRadiceCodice: String(firstSupplyValue(row, ['servizioRadiceCodice', 'codice_servizio_radice'], '')),
+        servizioRadice: service,
+        servizioOrigineId: firstSupplyValue(row, ['servizioOrigineId', 'servizio_origine_id'], null),
+        servizioOrigineCodice: String(firstSupplyValue(row, ['servizioOrigineCodice', 'codice_servizio_origine'], '')),
+        servizioOrigine: String(firstSupplyValue(row, ['servizioOrigine', 'nome_servizio_origine'], service)),
+        profonditaServizio: serviceDepth,
+        assetOrigineId: firstSupplyValue(row, ['assetOrigineId', 'asset_origine_id'], null),
+        assetOrigineCodice: String(firstSupplyValue(row, ['assetOrigineCodice', 'codice_asset_origine'], '')),
+        assetOrigine: String(firstSupplyValue(row, ['assetOrigine', 'nome_asset_origine'], asset)),
+        assetEffettivoId: firstSupplyValue(row, ['assetEffettivoId', 'asset_effettivo_id'], null),
+        assetEffettivoCodice: String(firstSupplyValue(row, ['assetEffettivoCodice', 'codice_asset_effettivo'], '')),
+        assetEffettivo: asset,
+        profonditaAsset: assetDepth,
+        fornitoreOrigineId: firstSupplyValue(row, ['fornitoreOrigineId', 'fornitore_origine_id'], null),
+        fornitoreOrigineCodice: String(firstSupplyValue(row, ['fornitoreOrigineCodice', 'codice_fornitore_origine'], '')),
+        fornitoreOrigine: String(firstSupplyValue(row, ['fornitoreOrigine', 'nome_fornitore_origine'], supplier)),
+        fornitoreEffettivoId: firstSupplyValue(row, ['fornitoreEffettivoId', 'fornitore_effettivo_id'], null),
+        fornitoreEffettivoCodice: String(firstSupplyValue(row, ['fornitoreEffettivoCodice', 'codice_fornitore_effettivo'], '')),
+        fornitoreEffettivo: supplier,
+        profonditaFornitore: supplierDepth,
+        contattoFornitore: String(firstSupplyValue(row, ['contattoFornitore', 'contatto_fornitore', 'Vendor_Contact'], '')),
+        tipoDipendenzaServizio: String(firstSupplyValue(row, ['tipoDipendenzaServizio', 'tipo_dipendenza_servizio'], 'Non specificata')),
+        tipoRelazioneAssetFornitore: String(firstSupplyValue(row, ['tipoRelazioneAssetFornitore', 'tipo_relazione_asset_fornitore'], '')),
+        descrizioneDipendenzaServizio: String(firstSupplyValue(row, ['descrizioneDipendenzaServizio', 'descrizione_dipendenza_servizio'], '')),
+        descrizioneRelazioneAssetFornitore: String(firstSupplyValue(row, ['descrizioneRelazioneAssetFornitore', 'descrizione_relazione_asset_fornitore'], '')),
+        derivata: Boolean(row?.derivata)
+            || serviceDepth > 0
+            || assetDepth > 0
+            || supplierDepth > 0
+            || Boolean(row?.ereditataDaSottoservizio ?? row?.ereditata_da_sottoservizio)
+            || Boolean(row?.ereditataDaSottoasset ?? row?.ereditata_da_sottoasset)
+            || Boolean(row?.ereditataDaSubfornitore ?? row?.ereditata_da_subfornitore)
+    };
 }
 
 function setSelectOptions(select, values, placeholder) {
@@ -134,14 +203,18 @@ function renderRows() {
             : row.servizioRadice;
         const asset = row.assetEffettivo
             ? `${row.assetEffettivoCodice ? `${row.assetEffettivoCodice} · ` : ''}${row.assetEffettivo}`
-            : 'Collegamento diretto';
+            : '—';
         const supplier = row.fornitoreEffettivoCodice
             ? `${row.fornitoreEffettivoCodice} · ${row.fornitoreEffettivo}`
             : row.fornitoreEffettivo;
         const typeLabel = row.derivata ? 'Derivata' : 'Diretta';
-        const routeLabel = row.origineCollegamento === 'SERVIZIO_ASSET_FORNITORE'
+        const hasAssetStep = row.origineCollegamento === 'SERVIZIO_ASSET_FORNITORE' && Boolean(row.assetEffettivo);
+        const routeLabel = hasAssetStep
             ? 'Servizio → Asset → Fornitore'
             : 'Servizio → Fornitore';
+        const levelsLabel = hasAssetStep
+            ? `S${row.profonditaServizio} · A${row.profonditaAsset} · F${row.profonditaFornitore}`
+            : `S${row.profonditaServizio} · A— · F${row.profonditaFornitore}`;
 
         return `
             <tr>
@@ -152,7 +225,7 @@ function renderRows() {
                     <span class="supply-origin-badge ${row.derivata ? 'supply-origin-badge--derived' : 'supply-origin-badge--direct'}">${typeLabel}</span>
                     <small class="supply-route-label">${escapeHtml(routeLabel)}</small>
                 </td>
-                <td class="cell-small">S${row.profonditaServizio} · A${row.profonditaAsset} · F${row.profonditaFornitore}</td>
+                <td class="cell-small">${escapeHtml(levelsLabel)}</td>
                 <td class="cell-actions">
                     <button type="button" class="btn-detail supply-detail-btn" data-path-id="${escapeHtml(row.idPercorso)}" aria-haspopup="dialog">Dettaglio</button>
                 </td>
@@ -254,13 +327,15 @@ async function exportSupplyChain() {
                     : 'Non applicabile',
                 assetEffettivo: row.assetEffettivo
                     ? supplyLabel(row.assetEffettivoCodice, row.assetEffettivo)
-                    : 'Collegamento diretto',
+                    : 'Non applicabile',
                 fornitoreOrigine: supplyLabel(row.fornitoreOrigineCodice, row.fornitoreOrigine),
                 fornitoreEffettivo: supplyLabel(row.fornitoreEffettivoCodice, row.fornitoreEffettivo),
                 contatto: row.contattoFornitore || '',
                 relazione: row.derivata ? 'Derivata' : 'Diretta',
                 percorso: supplyRouteLabel(row),
-                livelli: `S${row.profonditaServizio} · A${row.profonditaAsset} · F${row.profonditaFornitore}`,
+                livelli: row.assetEffettivo
+                    ? `S${safeSupplyDepth(row.profonditaServizio)} · A${safeSupplyDepth(row.profonditaAsset)} · F${safeSupplyDepth(row.profonditaFornitore)}`
+                    : `S${safeSupplyDepth(row.profonditaServizio)} · A— · F${safeSupplyDepth(row.profonditaFornitore)}`,
                 tipoDipendenza: row.tipoDipendenzaServizio || 'Non specificata',
                 tipoRelazione: row.tipoRelazioneAssetFornitore || 'Non applicabile',
                 ereditarieta: supplyInheritanceLabel(row),
@@ -438,7 +513,7 @@ export async function loadAndRenderSupplyChain() {
     if (status) status.textContent = 'Caricamento Supply Chain…';
 
     try {
-        supplyRows = await fetchSupplyChain();
+        supplyRows = (await fetchSupplyChain()).map(normalizeSupplyRow);
 
         setSelectOptions(
             document.getElementById('supply-filter-service'),

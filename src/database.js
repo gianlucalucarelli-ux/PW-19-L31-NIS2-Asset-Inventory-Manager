@@ -45,6 +45,56 @@ export async function fetchAssets() {
 }
 
 /**
+ * Estrae gli asset archiviati logicamente e arricchisce i riferimenti descrittivi.
+ * La funzione è di sola lettura e non espone operazioni di ripristino o cancellazione.
+ */
+export async function fetchArchivedAssets() {
+    const { data, error } = await supabase
+        .from('asset')
+        .select(ASSET_COLUMNS)
+        .eq('attiva', false)
+        .order('archiviato_il', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: true });
+
+    if (error) throw error;
+
+    const records = data ?? [];
+    if (records.length === 0) return [];
+
+    const categoryIds = records.map((record) => record.categoria_asset_id);
+    const organizationIds = records.map((record) => record.organizzazione_id);
+    const responsibleIds = records.map((record) => record.responsabile_id);
+
+    const [categories, organizations, responsibles] = await Promise.all([
+        fetchRowsByIds('categoria_asset', 'id, nome, codice_acn', categoryIds),
+        fetchRowsByIds('organizzazione', 'id, nome', organizationIds),
+        fetchRowsByIds('responsabile', 'id, nome, cognome, email, telefono', responsibleIds)
+    ]);
+
+    const categoryMap = new Map(categories.map((record) => [Number(record.id), record]));
+    const organizationMap = new Map(organizations.map((record) => [Number(record.id), record]));
+    const responsibleMap = new Map(responsibles.map((record) => [Number(record.id), record]));
+
+    return records.map((record) => {
+        const category = categoryMap.get(Number(record.categoria_asset_id));
+        const organization = organizationMap.get(Number(record.organizzazione_id));
+        const responsible = responsibleMap.get(Number(record.responsabile_id));
+
+        return {
+            ...record,
+            categoria_nome: category?.nome || 'N/D',
+            categoria_codice: category?.codice_acn || '',
+            organizzazione_nome: organization?.nome || 'N/D',
+            responsabile_nome: responsible
+                ? `${responsible.nome || ''} ${responsible.cognome || ''}`.trim()
+                : 'Non assegnato',
+            responsabile_email: responsible?.email || '',
+            responsabile_telefono: responsible?.telefono || ''
+        };
+    });
+}
+
+/**
  * Estrae la vista ACN limitandola agli identificativi degli asset ancora attivi.
  * Mantiene così il formato storico dell'esportazione senza reintrodurre record archiviati.
  */
@@ -496,132 +546,198 @@ async function fetchRowsByIds(tabella, colonne, ids) {
  * coinvolgono entità archiviate. Mantiene anche alias compatibili con la
  * Dashboard storica.
  */
-export async function fetchSupplyChain() {
-    const { data, error } = await supabase
-        .from('vista_supply_chain_multilivello')
-        .select('*')
-        .order('nome_servizio_radice', { ascending: true });
+function supplyFirst(record, keys, fallback = null) {
+    for (const key of keys) {
+        const value = record?.[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+    }
+    return fallback;
+}
 
-    if (error) {
-        // Fallback controllato per installazioni precedenti alla vista multilivello.
+function supplyInteger(value, fallback = null) {
+    if (value === null || value === undefined || value === '') return fallback;
+    const parsed = Number(value);
+    return Number.isInteger(parsed) ? parsed : fallback;
+}
+
+function supplyDepth(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function supplyBoolean(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    return ['true', 't', '1', 'yes', 'si', 'sì'].includes(String(value ?? '').trim().toLowerCase());
+}
+
+function normalizeSupplyChainRecord(record, index) {
+    const serviceRootId = supplyInteger(supplyFirst(record, ['servizioRadiceId', 'servizio_radice_id', 'service_root_id']));
+    const serviceOriginId = supplyInteger(supplyFirst(record, ['servizioOrigineId', 'servizio_origine_id', 'service_origin_id'], serviceRootId));
+    const assetOriginId = supplyInteger(supplyFirst(record, ['assetOrigineId', 'asset_origine_id', 'asset_origin_id']));
+    const assetEffectiveId = supplyInteger(supplyFirst(record, ['assetEffettivoId', 'asset_effettivo_id', 'asset_effective_id'], assetOriginId));
+    const supplierOriginId = supplyInteger(supplyFirst(record, ['fornitoreOrigineId', 'fornitore_origine_id', 'supplier_origin_id']));
+    const supplierEffectiveId = supplyInteger(supplyFirst(record, ['fornitoreEffettivoId', 'fornitore_effettivo_id', 'supplier_effective_id'], supplierOriginId));
+
+    const serviceRoot = String(supplyFirst(record, [
+        'servizioRadice', 'nome_servizio_radice', 'Service_Name', 'servizio_nome', 'nome_servizio'
+    ], 'N/D'));
+    const serviceOrigin = String(supplyFirst(record, [
+        'servizioOrigine', 'nome_servizio_origine', 'Service_Name', 'servizio_nome', 'nome_servizio'
+    ], serviceRoot));
+    const assetOrigin = String(supplyFirst(record, [
+        'assetOrigine', 'nome_asset_origine', 'Dependent_Asset', 'asset_dipendenti', 'asset_nome'
+    ], ''));
+    const assetEffective = String(supplyFirst(record, [
+        'assetEffettivo', 'nome_asset_effettivo', 'Dependent_Asset', 'asset_dipendenti', 'asset_nome'
+    ], assetOrigin));
+    const supplierOrigin = String(supplyFirst(record, [
+        'fornitoreOrigine', 'nome_fornitore_origine', 'Vendor_Partner', 'fornitori', 'fornitore_nome'
+    ], 'N/D'));
+    const supplierEffective = String(supplyFirst(record, [
+        'fornitoreEffettivo', 'nome_fornitore_effettivo', 'Vendor_Partner', 'fornitori', 'fornitore_nome'
+    ], supplierOrigin));
+
+    const serviceDepth = supplyDepth(supplyFirst(record, ['profonditaServizio', 'profondita_servizio']));
+    const assetDepth = supplyDepth(supplyFirst(record, ['profonditaAsset', 'profondita_asset']));
+    const supplierDepth = supplyDepth(supplyFirst(record, ['profonditaFornitore', 'profondita_fornitore']));
+    const origin = String(supplyFirst(record, ['origineCollegamento', 'origine_collegamento'], assetEffective
+        ? 'SERVIZIO_ASSET_FORNITORE'
+        : 'SERVIZIO_FORNITORE'));
+    const inheritedService = supplyBoolean(supplyFirst(record, ['ereditataDaSottoservizio', 'ereditata_da_sottoservizio']));
+    const inheritedAsset = supplyBoolean(supplyFirst(record, ['ereditataDaSottoasset', 'ereditata_da_sottoasset']));
+    const inheritedSupplier = supplyBoolean(supplyFirst(record, ['ereditataDaSubfornitore', 'ereditata_da_subfornitore']));
+    const derived = supplyBoolean(record?.derivata)
+        || serviceDepth > 0
+        || assetDepth > 0
+        || supplierDepth > 0
+        || inheritedService
+        || inheritedAsset
+        || inheritedSupplier;
+
+    return {
+        idPercorso: String(supplyFirst(record, ['idPercorso', 'id_percorso'], [
+            serviceRootId || serviceRoot,
+            serviceOriginId || serviceOrigin,
+            assetEffectiveId || assetEffective || 0,
+            supplierEffectiveId || supplierEffective,
+            origin,
+            index
+        ].join('-'))),
+        origineCollegamento: origin,
+        servizioRadiceId: serviceRootId,
+        servizioRadiceCodice: String(supplyFirst(record, ['servizioRadiceCodice', 'codice_servizio_radice', 'Service_Code'], '')),
+        servizioRadice: serviceRoot,
+        servizioOrigineId: serviceOriginId,
+        servizioOrigineCodice: String(supplyFirst(record, ['servizioOrigineCodice', 'codice_servizio_origine', 'Service_Code'], '')),
+        servizioOrigine: serviceOrigin,
+        profonditaServizio: serviceDepth,
+        assetOrigineId: assetOriginId,
+        assetOrigineCodice: String(supplyFirst(record, ['assetOrigineCodice', 'codice_asset_origine', 'Asset_Code'], '')),
+        assetOrigine: assetOrigin,
+        assetEffettivoId: assetEffectiveId,
+        assetEffettivoCodice: String(supplyFirst(record, ['assetEffettivoCodice', 'codice_asset_effettivo', 'Asset_Code'], '')),
+        assetEffettivo: assetEffective,
+        profonditaAsset: assetDepth,
+        fornitoreOrigineId: supplierOriginId,
+        fornitoreOrigineCodice: String(supplyFirst(record, ['fornitoreOrigineCodice', 'codice_fornitore_origine', 'Vendor_Code'], '')),
+        fornitoreOrigine: supplierOrigin,
+        fornitoreEffettivoId: supplierEffectiveId,
+        fornitoreEffettivoCodice: String(supplyFirst(record, ['fornitoreEffettivoCodice', 'codice_fornitore_effettivo', 'Vendor_Code'], '')),
+        fornitoreEffettivo: supplierEffective,
+        profonditaFornitore: supplierDepth,
+        contattoFornitore: String(supplyFirst(record, [
+            'contattoFornitore', 'contatto_fornitore', 'Vendor_Contact', 'fornitore_email'
+        ], '')),
+        tipoDipendenzaServizio: String(supplyFirst(record, [
+            'tipoDipendenzaServizio', 'tipo_dipendenza_servizio', 'Dependency_Type'
+        ], 'Non specificata')),
+        tipoRelazioneAssetFornitore: String(supplyFirst(record, [
+            'tipoRelazioneAssetFornitore', 'tipo_relazione_asset_fornitore', 'Relationship_Type'
+        ], '')),
+        descrizioneDipendenzaServizio: String(supplyFirst(record, [
+            'descrizioneDipendenzaServizio', 'descrizione_dipendenza_servizio'
+        ], '')),
+        descrizioneRelazioneAssetFornitore: String(supplyFirst(record, [
+            'descrizioneRelazioneAssetFornitore', 'descrizione_relazione_asset_fornitore'
+        ], '')),
+        ereditataDaSottoservizio: inheritedService,
+        ereditataDaSottoasset: inheritedAsset,
+        ereditataDaSubfornitore: inheritedSupplier,
+        derivata: derived,
+        Service_Name: serviceRoot,
+        Dependent_Asset: assetEffective || 'N/D',
+        Vendor_Partner: supplierEffective,
+        Vendor_Contact: String(supplyFirst(record, ['Vendor_Contact', 'contattoFornitore', 'contatto_fornitore'], 'N/D'))
+    };
+}
+
+/**
+ * Legge la Supply Chain multilivello, normalizza i nomi delle colonne tra le
+ * diverse versioni delle viste e scarta i percorsi che referenziano entità
+ * archiviate quando gli identificativi sono disponibili.
+ */
+export async function fetchSupplyChain() {
+    const primary = await supabase
+        .from('vista_supply_chain_multilivello')
+        .select('*');
+
+    let sourceRows;
+    if (primary.error) {
         const fallback = await supabase
             .from('vista_reporting_servizi_critici')
             .select('*');
         if (fallback.error) throw fallback.error;
-        return (fallback.data ?? []).map((record, index) => ({
-            idPercorso: `legacy-${index + 1}`,
-            origineCollegamento: 'REPORTING_LEGACY',
-            servizioRadice: record.Service_Name || record.servizio_nome || 'N/D',
-            servizioOrigine: record.Service_Name || record.servizio_nome || 'N/D',
-            tipoServizio: record.Service_Type || record.tipo_servizio || 'N/D',
-            assetOrigine: record.Dependent_Asset || record.asset_dipendenti || '',
-            assetEffettivo: record.Dependent_Asset || record.asset_dipendenti || '',
-            fornitoreOrigine: record.Vendor_Partner || record.fornitori || '',
-            fornitoreEffettivo: record.Vendor_Partner || record.fornitori || '',
-            contattoFornitore: record.Vendor_Contact || record.contatto_fornitore || '',
-            profonditaServizio: 0,
-            profonditaAsset: 0,
-            profonditaFornitore: 0,
-            derivata: false,
-            Service_Name: record.Service_Name || record.servizio_nome || 'N/D',
-            Dependent_Asset: record.Dependent_Asset || record.asset_dipendenti || 'N/D',
-            Vendor_Partner: record.Vendor_Partner || record.fornitori || 'N/D'
-        }));
+        sourceRows = fallback.data ?? [];
+    } else {
+        sourceRows = primary.data ?? [];
     }
 
-    const righe = data ?? [];
-    const servizioIds = righe.flatMap((r) => [r.servizio_radice_id, r.servizio_origine_id]);
-    const assetIds = righe.flatMap((r) => [r.asset_origine_id, r.asset_effettivo_id]);
-    const fornitoreIds = righe.flatMap((r) => [r.fornitore_origine_id, r.fornitore_effettivo_id]);
+    const normalizedRows = sourceRows.map(normalizeSupplyChainRecord);
+    if (normalizedRows.length === 0) return [];
 
-    const [servizi, asset, fornitori] = await Promise.all([
-        fetchRowsByIds('servizio', 'id, attiva, tipo_servizio_id', servizioIds),
+    const serviceIds = normalizedRows.flatMap((row) => [row.servizioRadiceId, row.servizioOrigineId]);
+    const assetIds = normalizedRows.flatMap((row) => [row.assetOrigineId, row.assetEffettivoId]);
+    const supplierIds = normalizedRows.flatMap((row) => [row.fornitoreOrigineId, row.fornitoreEffettivoId]);
+
+    const [services, assets, suppliers] = await Promise.all([
+        fetchRowsByIds('servizio', 'id, attiva', serviceIds),
         fetchRowsByIds('asset', 'id, attiva', assetIds),
-        fetchRowsByIds('fornitore', 'id, attiva, contatto_email', fornitoreIds)
+        fetchRowsByIds('fornitore', 'id, attiva, contatto_email', supplierIds)
     ]);
 
-    const servizioMap = new Map(servizi.map((r) => [Number(r.id), r]));
-    const assetMap = new Map(asset.map((r) => [Number(r.id), r]));
-    const fornitoreMap = new Map(fornitori.map((r) => [Number(r.id), r]));
+    const serviceMap = new Map(services.map((record) => [Number(record.id), record]));
+    const assetMap = new Map(assets.map((record) => [Number(record.id), record]));
+    const supplierMap = new Map(suppliers.map((record) => [Number(record.id), record]));
 
-    return righe
-        .filter((r) => {
-            const servizioRadice = servizioMap.get(Number(r.servizio_radice_id));
-            const servizioOrigine = servizioMap.get(Number(r.servizio_origine_id));
-            const assetOrigine = r.asset_origine_id ? assetMap.get(Number(r.asset_origine_id)) : null;
-            const assetEffettivo = r.asset_effettivo_id ? assetMap.get(Number(r.asset_effettivo_id)) : null;
-            const fornitoreOrigine = fornitoreMap.get(Number(r.fornitore_origine_id));
-            const fornitoreEffettivo = fornitoreMap.get(Number(r.fornitore_effettivo_id));
+    const entityIsVisible = (id, map) => {
+        if (!id) return true;
+        const record = map.get(Number(id));
+        return Boolean(record) && record.attiva !== false;
+    };
 
-            // Le policy RLS possono nascondere i record archiviati. In tal caso
-            // la riga non compare nelle mappe: richiediamo quindi la presenza di
-            // tutte le entita referenziate, oltre al marker attiva.
-            const serviziAttivi = Boolean(servizioRadice && servizioOrigine)
-                && servizioRadice.attiva !== false
-                && servizioOrigine.attiva !== false;
-            const assetAttivi = (!r.asset_origine_id || Boolean(assetOrigine))
-                && (!r.asset_effettivo_id || Boolean(assetEffettivo))
-                && (!assetOrigine || assetOrigine.attiva !== false)
-                && (!assetEffettivo || assetEffettivo.attiva !== false);
-            const fornitoriAttivi = Boolean(fornitoreOrigine && fornitoreEffettivo)
-                && fornitoreOrigine.attiva !== false
-                && fornitoreEffettivo.attiva !== false;
-
-            return serviziAttivi && assetAttivi && fornitoriAttivi;
-        })
-        .map((r, index) => {
-            const profonditaServizio = Number(r.profondita_servizio ?? 0);
-            const profonditaAsset = Number(r.profondita_asset ?? 0);
-            const profonditaFornitore = Number(r.profondita_fornitore ?? 0);
-            const tramiteAsset = r.origine_collegamento === 'SERVIZIO_ASSET_FORNITORE';
-            const derivata = tramiteAsset
-                || profonditaServizio > 0
-                || profonditaAsset > 0
-                || profonditaFornitore > 0;
-            const fornitoreEffettivo = fornitoreMap.get(Number(r.fornitore_effettivo_id));
-
+    return normalizedRows
+        .filter((row) => (
+            entityIsVisible(row.servizioRadiceId, serviceMap)
+            && entityIsVisible(row.servizioOrigineId, serviceMap)
+            && entityIsVisible(row.assetOrigineId, assetMap)
+            && entityIsVisible(row.assetEffettivoId, assetMap)
+            && entityIsVisible(row.fornitoreOrigineId, supplierMap)
+            && entityIsVisible(row.fornitoreEffettivoId, supplierMap)
+        ))
+        .map((row) => {
+            const supplier = supplierMap.get(Number(row.fornitoreEffettivoId));
             return {
-                idPercorso: [
-                    r.servizio_radice_id, r.servizio_origine_id, r.asset_effettivo_id || 0,
-                    r.fornitore_effettivo_id, r.origine_collegamento, index
-                ].join('-'),
-                origineCollegamento: r.origine_collegamento,
-                servizioRadiceId: r.servizio_radice_id,
-                servizioRadiceCodice: r.codice_servizio_radice || '',
-                servizioRadice: r.nome_servizio_radice || 'N/D',
-                servizioOrigineId: r.servizio_origine_id,
-                servizioOrigineCodice: r.codice_servizio_origine || '',
-                servizioOrigine: r.nome_servizio_origine || 'N/D',
-                profonditaServizio,
-                assetOrigineId: r.asset_origine_id,
-                assetOrigineCodice: r.codice_asset_origine || '',
-                assetOrigine: r.nome_asset_origine || '',
-                assetEffettivoId: r.asset_effettivo_id,
-                assetEffettivoCodice: r.codice_asset_effettivo || '',
-                assetEffettivo: r.nome_asset_effettivo || '',
-                profonditaAsset,
-                fornitoreOrigineId: r.fornitore_origine_id,
-                fornitoreOrigineCodice: r.codice_fornitore_origine || '',
-                fornitoreOrigine: r.nome_fornitore_origine || 'N/D',
-                fornitoreEffettivoId: r.fornitore_effettivo_id,
-                fornitoreEffettivoCodice: r.codice_fornitore_effettivo || '',
-                fornitoreEffettivo: r.nome_fornitore_effettivo || 'N/D',
-                profonditaFornitore,
-                contattoFornitore: fornitoreEffettivo?.contatto_email || '',
-                tipoDipendenzaServizio: r.tipo_dipendenza_servizio || 'Non specificata',
-                tipoRelazioneAssetFornitore: r.tipo_relazione_asset_fornitore || '',
-                descrizioneDipendenzaServizio: r.descrizione_dipendenza_servizio || '',
-                descrizioneRelazioneAssetFornitore: r.descrizione_relazione_asset_fornitore || '',
-                ereditataDaSottoservizio: Boolean(r.ereditata_da_sottoservizio),
-                ereditataDaSottoasset: Boolean(r.ereditata_da_sottoasset),
-                ereditataDaSubfornitore: Boolean(r.ereditata_da_subfornitore),
-                derivata,
-                Service_Name: r.nome_servizio_radice || 'N/D',
-                Dependent_Asset: r.nome_asset_effettivo || 'N/D',
-                Vendor_Partner: r.nome_fornitore_effettivo || 'N/D',
-                Vendor_Contact: fornitoreEffettivo?.contatto_email || 'N/D'
+                ...row,
+                contattoFornitore: row.contattoFornitore || supplier?.contatto_email || '',
+                Vendor_Contact: row.contattoFornitore || supplier?.contatto_email || 'N/D'
             };
-        });
+        })
+        .sort((left, right) => (
+            left.servizioRadice.localeCompare(right.servizioRadice, 'it')
+            || left.fornitoreEffettivo.localeCompare(right.fornitoreEffettivo, 'it')
+            || left.assetEffettivo.localeCompare(right.assetEffettivo, 'it')
+        ));
 }
 
 /**
@@ -677,7 +793,7 @@ export async function fetchIncidentList(limit = 100) {
 /**
  * Legge gli eventi di audit più recenti.
  */
-export async function fetchAuditLogs(limit = 50) {
+export async function fetchAuditLogs(limit = 500) {
     const { data, error } = await supabase
         .from('audit_log')
         .select('*')

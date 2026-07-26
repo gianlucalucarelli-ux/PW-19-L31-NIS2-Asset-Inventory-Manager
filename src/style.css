@@ -2464,3 +2464,254 @@ tbody tr:last-child td {
 .cell-action-group .btn-archive {
     grid-column: 1 / -1;
 }
+
+
+/* ==============================================================================================================
+   CHIUSURA MODULO B: ARCHIVIO ASSET, NAVIGAZIONE E TABELLE DI CONSULTAZIONE
+   ============================================================================================================== */
+
+/* I collegamenti principali dell'header mantengono sempre un aspetto da pulsante. */
+.top-navigation .nav-link {
+    background: var(--bg-card);
+    border-color: var(--border);
+    box-shadow: 0 4px 12px rgba(2, 8, 23, 0.12);
+}
+
+.top-navigation .nav-link:hover,
+.top-navigation .nav-link:focus-visible {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-button);
+}
+
+.top-navigation .nav-link.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Accesso distinto all'archivio logico, senza suggerire un'azione distruttiva. */
+.btn-archived {
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid #a78bfa;
+    border-radius: var(--radius-sm);
+    color: #ffffff;
+    background: #6d28d9;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform var(--transition-fast),
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.btn-archived:hover:not(:disabled),
+.btn-archived:focus-visible:not(:disabled) {
+    background: #5b21b6;
+    border-color: #c4b5fd;
+    box-shadow: 0 8px 22px rgba(109, 40, 217, 0.28);
+}
+
+.btn-archived:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.archived-assets-shell {
+    width: min(1180px, calc(100vw - 32px));
+}
+
+.archived-assets-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.archived-assets-toolbar .inventory-search-status {
+    margin: 0;
+}
+
+.archived-assets-table-wrapper {
+    max-height: min(58vh, 640px);
+}
+
+.archived-reason-cell {
+    min-width: 240px;
+    max-width: 420px;
+    white-space: normal;
+}
+
+@media (max-width: 760px) {
+    .archived-assets-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .archived-assets-toolbar .btn-success {
+        width: 100%;
+    }
+}
+
+
+/* ==============================================================================================================
+   CHIUSURA FINALE MODULO B: NAVIGAZIONE, ARCHIVIO ASSET E AUDIT LOG
+   ============================================================================================================== */
+
+.site-header .top-navigation .nav-link {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 16px;
+    color: var(--text-high);
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 12px rgba(2, 8, 23, 0.18);
+}
+
+.site-header .top-navigation .nav-link:hover,
+.site-header .top-navigation .nav-link:focus-visible {
+    color: var(--text-high);
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-button);
+}
+
+.site-header .top-navigation .nav-link.active {
+    color: var(--primary-contrast);
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.archived-assets-view .view-header {
+    align-items: center;
+}
+
+.archived-assets-status {
+    margin: 0;
+    padding: 16px 24px 8px;
+}
+
+.archived-assets-table-wrapper {
+    margin: 0 24px;
+}
+
+.archived-assets-note {
+    margin: 0;
+    padding: 16px 24px 22px;
+    color: var(--text-low);
+    font-size: 0.88rem;
+}
+
+.archived-reason-cell {
+    min-width: 240px;
+    white-space: normal;
+}
+
+.audit-tools {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.9rem;
+    background: var(--bg-soft);
+}
+
+.audit-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(16rem, 2fr) repeat(5, minmax(10rem, 1fr));
+    gap: 0.85rem;
+    align-items: end;
+}
+
+.audit-detail-button {
+    padding: 0.45rem 0.7rem;
+    white-space: nowrap;
+}
+
+.audit-detail-dialog .asset-detail-shell {
+    width: min(74rem, calc(100vw - 2rem));
+}
+
+.audit-payload-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.audit-payload-grid section {
+    min-width: 0;
+}
+
+.audit-payload-grid h3 {
+    margin: 0 0 0.55rem;
+}
+
+.audit-json-payload {
+    min-height: 12rem;
+    max-height: 28rem;
+    overflow: auto;
+    margin: 0;
+    padding: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    background: var(--bg-card);
+    color: var(--text-high);
+    font: 0.82rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+    .audit-filter-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .audit-filter-grid,
+    .audit-payload-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Integrazione markup del modulo B */
+.supply-filter-panel {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.9rem;
+    background: var(--bg-soft);
+}
+
+.supply-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(16rem, 2fr) repeat(4, minmax(10rem, 1fr));
+    gap: 0.85rem;
+    align-items: end;
+}
+
+.import-preview-table {
+    max-height: 25rem;
+}
+
+.wizard-top-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+    .supply-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .supply-filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

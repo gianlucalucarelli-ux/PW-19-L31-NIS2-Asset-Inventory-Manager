@@ -3,9 +3,11 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchAuditLogs, fetchDashboardData, fetchIncidentList } from './database.js?v=10';
-import { loadAndRenderSupplyChain } from './supplyChain.js?v=3';
+import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData, fetchIncidentList } from './database.js?v=12';
+import { loadAndRenderSupplyChain } from './supplyChain.js?v=5';
+import { loadAndRenderAuditLog } from './auditLog.js?v=2';
 import { navigateTo } from './router.js?v=3';
+import { exportArchivedAssetsToExcel } from './importExport.js?v=5';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -202,6 +204,7 @@ export function clearHeaderUser() {
 const ROUTE_TO_VIEW = {
     dashboard: 'dashboard',
     inventory: 'inventory',
+    'archived-assets': 'archived-assets',
     'add-asset': 'add-asset',
     'supply-chain': 'supply-chain',
     'audit-log': 'audit-log',
@@ -220,6 +223,11 @@ const ROUTE_METADATA = {
         section: 'Inventario',
         label: 'INVENTARIO',
         title: 'Inventario Asset'
+    },
+    'archived-assets': {
+        section: 'Inventario',
+        label: 'INVENTARIO',
+        title: 'Asset archiviati'
     },
     'add-asset': {
         section: 'Inventario',
@@ -318,6 +326,8 @@ export async function activateApplicationRoute(route) {
     } else if (route === 'inventory') {
         await loadAndRenderTable();
         resetAssetForm();
+    } else if (route === 'archived-assets') {
+        await loadAndRenderArchivedAssets();
     } else if (route === 'add-asset') {
         await loadAssetFormReferences();
         const assetId = document.getElementById('asset-id');
@@ -327,7 +337,7 @@ export async function activateApplicationRoute(route) {
     } else if (route === 'supply-chain') {
         await loadAndRenderSupplyChain();
     } else if (route === 'audit-log') {
-        await renderAuditLog();
+        await loadAndRenderAuditLog();
     } else if (route === 'incidenti') {
         await loadAndRenderIncidentList();
     }
@@ -715,44 +725,6 @@ export async function loadAndRenderDashboard() {
 // FUNZIONI DI SUPPORTO VISTE (AUDIT E INCIDENTI)
 // =========================================================================
 
-async function renderAuditLog() {
-    const container = document.getElementById('audit-table-body');
-    if (!container) return;
-
-    try {
-        container.innerHTML = '<tr><td colspan="5" class="table-state">Caricamento log in corso...</td></tr>';
-        const logs = await fetchAuditLogs();
-
-        if (!Array.isArray(logs) || logs.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="table-state">Nessun evento registrato.</td></tr>';
-            return;
-        }
-
-        container.innerHTML = logs.map((log) => {
-            const entita = leggiCampo(log, ['tabella', 'tipo_entita'], 'Record applicativo');
-            const record = leggiCampo(
-                log,
-                ['nome_record', 'codice_record', 'record_id'],
-                'N/D'
-            );
-            const utente = leggiCampo(log, ['utente_email', 'utente'], 'Sistema');
-
-            return `
-                <tr>
-                    <td class="cell-small">${escapeHtml(formattaTimestampLocaleDatabase(log.data_modifica))}</td>
-                    <td class="cell-primary">${escapeHtml(log.operazione || 'OPERAZIONE')}</td>
-                    <td class="cell-small">${escapeHtml(entita)}</td>
-                    <td class="cell-primary">${escapeHtml(record)}</td>
-                    <td class="cell-small">${escapeHtml(utente)}</td>
-                </tr>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Errore durante il rendering dell’Audit Log:', error);
-        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
-    }
-}
-
 // =========================================================================
 // ELENCO INCIDENTI COLLEGATO ALLA DASHBOARD
 // =========================================================================
@@ -842,6 +814,7 @@ let inventoryFilteredCache = [];
 let inventoryCurrentPage = 1;
 let inventoryPageSize = 5;
 let archiveAssetCandidate = null;
+let archivedAssetsCache = [];
 
 
 /**
@@ -1228,9 +1201,9 @@ async function apriDettaglioAsset(asset) {
         (record) => Number(record.id) === Number(asset.organizzazione_id)
     );
     const responsabile = inventoryResponsibleMap.get(Number(asset.responsabile_id));
-    const nominativoResponsabile = responsabile
+    const nominativoResponsabile = asset.responsabile_nome || (responsabile
         ? `${responsabile.nome || ''} ${responsabile.cognome || ''}`.trim()
-        : 'Non assegnato';
+        : 'Non assegnato');
 
     title.textContent = asset.nome || 'Dettaglio asset';
     subtitle.textContent = asset.codice_asset || `Asset ID ${asset.id}`;
@@ -1247,15 +1220,18 @@ async function apriDettaglioAsset(asset) {
                 ${creaCampoDettaglio('ID', asset.id)}
                 ${creaCampoDettaglio('Codice asset', asset.codice_asset)}
                 ${creaCampoDettaglio('Nome', asset.nome)}
-                ${creaCampoDettaglio('Categoria', categoria?.nome || inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D')}
-                ${creaCampoDettaglio('Organizzazione', organizzazione?.nome || inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D')}
+                ${creaCampoDettaglio('Categoria', asset.categoria_nome || categoria?.nome || inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D')}
+                ${creaCampoDettaglio('Organizzazione', asset.organizzazione_nome || organizzazione?.nome || inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D')}
                 ${creaCampoDettaglio('Responsabile', nominativoResponsabile)}
-                ${creaCampoDettaglio('E-mail responsabile', responsabile?.email || 'N/D')}
-                ${creaCampoDettaglio('Telefono responsabile', responsabile?.telefono || 'N/D')}
+                ${creaCampoDettaglio('E-mail responsabile', asset.responsabile_email || responsabile?.email || 'N/D')}
+                ${creaCampoDettaglio('Telefono responsabile', asset.responsabile_telefono || responsabile?.telefono || 'N/D')}
                 ${creaCampoDettaglio('Versione', asset.versione || 'N/D')}
                 ${creaCampoDettaglio('Ubicazione', asset.ubicazione || 'N/D')}
                 ${creaCampoDettaglio('Data inserimento', formattaDataBreve(asset.data_inserimento))}
                 ${creaCampoDettaglio('Stato', asset.attiva === false ? 'Archiviato' : 'Attivo')}
+                ${asset.attiva === false ? creaCampoDettaglio('Archiviato il', formattaTimestampEuropeRome(asset.archiviato_il)) : ''}
+                ${asset.attiva === false ? creaCampoDettaglio('Archiviato da', asset.archiviato_da || 'N/D') : ''}
+                ${asset.attiva === false ? creaCampoDettaglio('Motivo archiviazione', asset.motivo_archiviazione || 'N/D', 'asset-detail-field--wide') : ''}
                 ${creaCampoDettaglio('Descrizione', asset.descrizione || 'Nessuna descrizione disponibile', 'asset-detail-field--wide')}
             </dl>
         </section>
@@ -1300,6 +1276,101 @@ function inizializzaDialogDettaglioAsset() {
     dialog.addEventListener('close', () => {
         dialog.removeAttribute('data-asset-id');
     });
+}
+
+
+function archivedAssetExportRows() {
+    return archivedAssetsCache.map((asset) => ({
+        ...asset,
+        categoria: asset.categoria_nome || inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D',
+        organizzazione: asset.organizzazione_nome || inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D',
+        responsabile: asset.responsabile_nome || 'Non assegnato',
+        email_responsabile: asset.responsabile_email || ''
+    }));
+}
+
+function renderArchivedAssets() {
+    const tbody = document.getElementById('archived-assets-table-body');
+    const status = document.getElementById('archived-assets-status');
+    const exportButton = document.getElementById('btn-export-archived-assets');
+    if (!tbody) return;
+
+    if (exportButton) exportButton.disabled = archivedAssetsCache.length === 0;
+    if (status) status.textContent = `${archivedAssetsCache.length} asset archiviati`;
+
+    if (archivedAssetsCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-state">Nessun asset archiviato disponibile.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = archivedAssetsCache.map((asset) => `
+        <tr>
+            <td class="cell-id">${escapeHtml(asset.id)}</td>
+            <td class="cell-primary">${escapeHtml(asset.codice_asset || 'N/D')}</td>
+            <td class="cell-primary">${escapeHtml(asset.nome || 'N/D')}</td>
+            <td class="cell-small">${escapeHtml(formattaTimestampEuropeRome(asset.archiviato_il))}</td>
+            <td class="cell-secondary archived-reason-cell">${escapeHtml(asset.motivo_archiviazione || 'N/D')}</td>
+            <td class="cell-actions">
+                <button class="btn-detail archived-asset-detail-btn" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.archived-asset-detail-btn').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = archivedAssetsCache.find((record) => Number(record.id) === id);
+            if (!asset) return;
+
+            const detailDialog = document.getElementById('asset-detail-dialog');
+            if (detailDialog) detailDialog.dataset.assetId = String(asset.id);
+            await apriDettaglioAsset(asset);
+        });
+    });
+}
+
+function inizializzaVistaAssetArchiviati() {
+    const exportButton = document.getElementById('btn-export-archived-assets');
+    if (!exportButton || exportButton.dataset.bound === 'true') return;
+
+    exportButton.dataset.bound = 'true';
+    exportButton.addEventListener('click', async () => {
+        const defaultLabel = exportButton.textContent;
+        try {
+            exportButton.disabled = true;
+            exportButton.textContent = 'Esportazione…';
+            await exportArchivedAssetsToExcel(archivedAssetExportRows());
+        } catch (error) {
+            console.error('Errore esportazione asset archiviati:', error);
+            window.alert(`Esportazione non riuscita: ${error.message}`);
+        } finally {
+            exportButton.textContent = defaultLabel;
+            exportButton.disabled = archivedAssetsCache.length === 0;
+        }
+    });
+}
+
+async function loadAndRenderArchivedAssets() {
+    const tbody = document.getElementById('archived-assets-table-body');
+    const status = document.getElementById('archived-assets-status');
+    const exportButton = document.getElementById('btn-export-archived-assets');
+    if (!tbody) return;
+
+    inizializzaDialogDettaglioAsset();
+    inizializzaVistaAssetArchiviati();
+    tbody.innerHTML = '<tr><td colspan="6" class="table-state">Caricamento asset archiviati…</td></tr>';
+    if (status) status.textContent = 'Lettura archivio logico in corso…';
+    if (exportButton) exportButton.disabled = true;
+
+    try {
+        archivedAssetsCache = await fetchArchivedAssets();
+        renderArchivedAssets();
+    } catch (error) {
+        console.error('Errore caricamento asset archiviati:', error);
+        archivedAssetsCache = [];
+        tbody.innerHTML = `<tr><td colspan="6" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
+        if (status) status.textContent = 'Archivio asset non disponibile.';
+    }
 }
 
 function chiudiDialogArchiviazione() {
