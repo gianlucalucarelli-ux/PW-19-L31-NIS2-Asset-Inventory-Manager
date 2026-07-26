@@ -11,7 +11,7 @@ import {
     fetchReportIncidente,
     verificaAccessoIncidenti
 } from './incidentService.js?v=2';
-import { navigateTo } from './router.js?v=1';
+import { navigateTo } from './router.js?v=3';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -350,6 +350,10 @@ if (restartButton) {
 // Il modulo registra soltanto gli eventi. Nessuna query o INSERT viene eseguita al caricamento della pagina.
 document.addEventListener('incident:wizard:open', () => {
     initIncidentWizard();
+});
+
+document.addEventListener('incident:wizard:start', () => {
+    preparaNuovaSegnalazione();
 });
 
 document.addEventListener('incident:wizard:reset', () => {

@@ -13,7 +13,7 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?v=15';
+} from './ui.js?v=17';
 import {
     initializeRouter,
     navigateTo,
@@ -27,8 +27,8 @@ import {
     observeAuthState,
     signOut
 } from './auth.js';
-import { fetchAssetsForExport, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=7';
-import { exportToExcel, exportFilteredAssetsToExcel, parseExcelFile } from './importExport.js?v=2';
+import { fetchAssets, fetchAssetReferences, insertAsset, updateAsset } from './database.js?v=9';
+import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?v=3';
 
 initTheme();
 
@@ -37,6 +37,8 @@ let activeAccessState = null;
 let lastAuthorizedSignature = null;
 let accessSyncSequence = 0;
 let routerReady = false;
+let pendingImportPreview = null;
+let importCompleted = false;
 
 /**
  * Conclude la fase di avvio soltanto dopo che la sessione iniziale è stata verificata.
@@ -195,6 +197,139 @@ function formattaErroreOperativo(error) {
     }
 
     return message || 'Errore operativo non specificato.';
+}
+
+
+function escapeImportHtml(value) {
+    const element = document.createElement('div');
+    element.textContent = String(value ?? '');
+    return element.innerHTML;
+}
+
+function buildAssetExportRows(assets, references) {
+    const categories = new Map((references.categorie || []).map((item) => [Number(item.id), item.nome]));
+    const organizations = new Map((references.organizzazioni || []).map((item) => [Number(item.id), item.nome]));
+    const responsibles = new Map((references.responsabili || []).map((item) => [Number(item.id), item]));
+
+    return (assets || []).map((asset) => {
+        const responsible = responsibles.get(Number(asset.responsabile_id));
+        return {
+            id: asset.id,
+            codice_asset: asset.codice_asset || '',
+            nome: asset.nome || '',
+            categoria: categories.get(Number(asset.categoria_asset_id)) || 'N/D',
+            organizzazione: organizations.get(Number(asset.organizzazione_id)) || 'N/D',
+            responsabile: responsible
+                ? `${responsible.nome || ''} ${responsible.cognome || ''}`.trim()
+                : 'N/D',
+            email_responsabile: responsible?.email || '',
+            versione: asset.versione || 'N/D',
+            ubicazione: asset.ubicazione || 'N/D',
+            descrizione: asset.descrizione || '',
+            data_inserimento: asset.data_inserimento || '',
+            classificazione_criticita: asset.classificazione_criticita || 'Bassa'
+        };
+    });
+}
+
+function closeImportDialog() {
+    const dialog = document.getElementById('asset-import-dialog');
+    if (dialog?.open) dialog.close();
+}
+
+function resetImportDialogState() {
+    pendingImportPreview = null;
+    if (importCompleted) {
+        importCompleted = false;
+        navigateTo('inventory', { force: true });
+    }
+}
+
+function renderImportPreview(preview) {
+    const dialog = document.getElementById('asset-import-dialog');
+    const subtitle = document.getElementById('asset-import-subtitle');
+    const summary = document.getElementById('asset-import-summary');
+    const tbody = document.getElementById('asset-import-preview-body');
+    const report = document.getElementById('asset-import-report');
+    const status = document.getElementById('asset-import-status');
+    const confirmButton = document.getElementById('asset-import-confirm');
+    const cancelButton = document.getElementById('asset-import-cancel');
+    if (!dialog || !summary || !tbody || !status || !confirmButton) return;
+
+    pendingImportPreview = preview;
+    importCompleted = false;
+    if (subtitle) subtitle.textContent = `${preview.fileName} · foglio ${preview.sheetName}`;
+    summary.innerHTML = `
+        <strong>${preview.rows.length} righe analizzate</strong>
+        <span>${preview.validRows.length} valide</span>
+        <span>${preview.invalidRows.length} non importabili</span>
+    `;
+    tbody.innerHTML = preview.rows.map((row) => `
+        <tr class="${row.valid ? 'import-row-valid' : 'import-row-invalid'}">
+            <td class="cell-id">${row.rowNumber}</td>
+            <td class="cell-primary">${escapeImportHtml(row.display.codice)}</td>
+            <td class="cell-primary">${escapeImportHtml(row.display.nome)}</td>
+            <td>${escapeImportHtml(row.display.categoria)}</td>
+            <td>${escapeImportHtml(row.display.organizzazione)}</td>
+            <td>${escapeImportHtml(row.display.criticita)}</td>
+            <td>${row.valid ? '<span class="import-status-ok">Valida</span>' : `<span class="import-status-error">${escapeImportHtml(row.errors.join('; '))}</span>`}</td>
+        </tr>
+    `).join('');
+
+    report?.classList.add('is-hidden');
+    if (report) report.replaceChildren();
+    status.textContent = preview.validRows.length > 0
+        ? 'Controlla l’anteprima e conferma soltanto le righe valide.'
+        : 'Il file non contiene righe importabili.';
+    confirmButton.disabled = preview.validRows.length === 0;
+    confirmButton.textContent = 'Importa righe valide';
+    if (cancelButton) cancelButton.textContent = 'Annulla';
+    if (!dialog.open) dialog.showModal();
+}
+
+async function executePendingImport() {
+    const confirmButton = document.getElementById('asset-import-confirm');
+    const cancelButton = document.getElementById('asset-import-cancel');
+    const status = document.getElementById('asset-import-status');
+    const report = document.getElementById('asset-import-report');
+    if (!pendingImportPreview || !confirmButton || !status || !report) return;
+
+    const successful = [];
+    const failed = [];
+    confirmButton.disabled = true;
+    confirmButton.textContent = 'Importazione…';
+    if (cancelButton) cancelButton.disabled = true;
+
+    for (const row of pendingImportPreview.validRows) {
+        status.textContent = `Importazione riga ${row.rowNumber}…`;
+        try {
+            const inserted = await insertAsset(row.payload);
+            successful.push({ rowNumber: row.rowNumber, code: inserted.codice_asset });
+        } catch (error) {
+            failed.push({
+                rowNumber: row.rowNumber,
+                code: row.display.codice,
+                message: formattaErroreOperativo(error)
+            });
+        }
+    }
+
+    importCompleted = successful.length > 0;
+    report.classList.remove('is-hidden');
+    report.innerHTML = `
+        <h3>Esito importazione</h3>
+        <p><strong>${successful.length}</strong> righe inserite; <strong>${failed.length}</strong> righe non inserite.</p>
+        ${successful.length > 0 ? `<p class="import-status-ok">Inseriti: ${escapeImportHtml(successful.map((item) => item.code).join(', '))}</p>` : ''}
+        ${failed.length > 0 ? `<ul class="import-error-list">${failed.map((item) => `<li>Riga ${item.rowNumber} (${escapeImportHtml(item.code)}): ${escapeImportHtml(item.message)}</li>`).join('')}</ul>` : ''}
+    `;
+    status.textContent = failed.length > 0
+        ? 'Importazione conclusa con alcune righe non inserite.'
+        : 'Importazione completata correttamente.';
+    confirmButton.textContent = 'Importazione conclusa';
+    if (cancelButton) {
+        cancelButton.disabled = false;
+        cancelButton.textContent = importCompleted ? 'Chiudi e aggiorna' : 'Chiudi';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -389,12 +524,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnExportXls = document.getElementById('btn-export-xls');
     if (btnExportXls) {
         btnExportXls.addEventListener('click', async () => {
+            const defaultLabel = btnExportXls.textContent;
             try {
-                const data = await fetchAssetsForExport();
-                exportToExcel(data);
+                btnExportXls.disabled = true;
+                btnExportXls.textContent = 'Esportazione…';
+                const [assets, references] = await Promise.all([
+                    fetchAssets(),
+                    fetchAssetReferences()
+                ]);
+                const rows = buildAssetExportRows(assets, references);
+                await exportFilteredAssetsToExcel(rows, {
+                    testoRicerca: 'Nessuno',
+                    criticita: 'Tutte',
+                    categoria: 'Tutte',
+                    organizzazione: 'Tutte',
+                    numeroRisultati: rows.length
+                });
             } catch (error) {
                 console.error('Errore durante l’esportazione:', error);
-                alert('Errore durante l’esportazione dei dati.');
+                alert(`Errore durante l’esportazione: ${formattaErroreOperativo(error)}`);
+            } finally {
+                btnExportXls.disabled = false;
+                btnExportXls.textContent = defaultLabel;
             }
         });
     }
@@ -421,8 +572,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    const templateButton = document.getElementById('btn-download-import-template');
+    if (templateButton) {
+        templateButton.addEventListener('click', async () => {
+            const defaultLabel = templateButton.textContent;
+            try {
+                templateButton.disabled = true;
+                templateButton.textContent = 'Preparazione…';
+                const references = await fetchAssetReferences();
+                await downloadAssetImportTemplate(references);
+            } catch (error) {
+                console.error('Errore generazione modello import:', error);
+                alert(`Impossibile generare il modello: ${formattaErroreOperativo(error)}`);
+            } finally {
+                templateButton.disabled = false;
+                templateButton.textContent = defaultLabel;
+            }
+        });
+    }
+
     const btnTriggerImport = document.getElementById('btn-trigger-import');
     const fileInput = document.getElementById('import-xls-input');
+    const importDialog = document.getElementById('asset-import-dialog');
+    const importClose = document.getElementById('asset-import-close');
+    const importCancel = document.getElementById('asset-import-cancel');
+    const importConfirm = document.getElementById('asset-import-confirm');
 
     if (btnTriggerImport && fileInput) {
         btnTriggerImport.addEventListener('click', () => fileInput.click());
@@ -431,20 +605,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             const file = event.target.files[0];
             if (!file) return;
 
+            const defaultLabel = btnTriggerImport.textContent;
             try {
-                const parsedData = await parseExcelFile(file);
-                const confirmed = confirm(`Procedere con l’importazione di ${parsedData.length} asset?`);
-
-                if (confirmed) {
-                    await bulkInsertAssets(parsedData);
-                    await navigateTo('inventory', { force: true });
-                }
+                btnTriggerImport.disabled = true;
+                btnTriggerImport.textContent = 'Analisi file…';
+                const [references, existingAssets] = await Promise.all([
+                    fetchAssetReferences(),
+                    fetchAssets()
+                ]);
+                const preview = await parseAssetImportFile(file, references, existingAssets);
+                renderImportPreview(preview);
             } catch (error) {
-                console.error('Errore durante l’importazione:', error);
-                alert(`Anomalia durante l’analisi o l’importazione: ${formattaErroreOperativo(error)}`);
+                console.error('Errore durante l’analisi del file:', error);
+                alert(`File non importabile: ${formattaErroreOperativo(error)}`);
             } finally {
                 fileInput.value = '';
+                btnTriggerImport.disabled = false;
+                btnTriggerImport.textContent = defaultLabel;
             }
         });
     }
+
+    importClose?.addEventListener('click', closeImportDialog);
+    importCancel?.addEventListener('click', closeImportDialog);
+    importConfirm?.addEventListener('click', executePendingImport);
+    importDialog?.addEventListener('click', (event) => {
+        if (event.target === importDialog) closeImportDialog();
+    });
+    importDialog?.addEventListener('close', resetImportDialogState);
 });

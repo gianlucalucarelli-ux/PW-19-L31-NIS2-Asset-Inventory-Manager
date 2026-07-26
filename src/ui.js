@@ -3,7 +3,8 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=7';
+import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchAuditLogs, fetchDashboardData, fetchIncidentList } from './database.js?v=9';
+import { loadAndRenderSupplyChain } from './supplyChain.js?v=2';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -298,8 +299,7 @@ function updateWorkspaceHeader(route) {
  */
 export async function activateApplicationRoute(route) {
     const viewId = ROUTE_TO_VIEW[route] || 'inventory';
-    const detailDialog = document.getElementById('asset-detail-dialog');
-    if (detailDialog?.open) detailDialog.close();
+    document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close());
 
     document.querySelectorAll('.view-section').forEach((section) => {
         section.classList.add('is-hidden');
@@ -329,8 +329,7 @@ export async function activateApplicationRoute(route) {
     } else if (route === 'audit-log') {
         await renderAuditLog();
     } else if (route === 'incidenti') {
-        // Il wizard viene inizializzato solo all'apertura esplicita della vista.
-        document.dispatchEvent(new CustomEvent('incident:wizard:open'));
+        await loadAndRenderIncidentList();
     }
 }
 
@@ -519,33 +518,35 @@ function renderDistribuzioneCriticita(asset) {
  */
 function renderRiepilogoSupplyChain(righe) {
     const dati = Array.isArray(righe) ? righe : [];
-    const nomiServizi = new Set();
-    let conAsset = 0;
-    let conFornitori = 0;
+    const servizi = new Set();
+    const asset = new Set();
+    const fornitori = new Set();
+    let percorsiDerivati = 0;
 
     dati.forEach((record) => {
-        const servizio = leggiCampo(record, ['Service_Name', 'servizio_nome', 'nome_servizio']);
-        const asset = leggiCampo(record, ['Dependent_Asset', 'asset_dipendenti', 'asset']);
-        const fornitore = leggiCampo(record, ['Vendor_Partner', 'fornitori', 'fornitore']);
+        const servizio = leggiCampo(record, ['servizioRadiceId', 'Service_Name', 'servizio_nome', 'nome_servizio']);
+        const assetCollegato = leggiCampo(record, ['assetEffettivoId', 'Dependent_Asset', 'asset_dipendenti', 'asset']);
+        const fornitore = leggiCampo(record, ['fornitoreEffettivoId', 'Vendor_Partner', 'fornitori', 'fornitore']);
 
-        if (servizio) nomiServizi.add(String(servizio));
-        if (asset && String(asset).toUpperCase() !== 'N/D') conAsset += 1;
-        if (fornitore && String(fornitore).toUpperCase() !== 'N/D') conFornitori += 1;
+        if (servizio) servizi.add(String(servizio));
+        if (assetCollegato && String(assetCollegato).toUpperCase() !== 'N/D') asset.add(String(assetCollegato));
+        if (fornitore && String(fornitore).toUpperCase() !== 'N/D') fornitori.add(String(fornitore));
+        if (record.derivata) percorsiDerivati += 1;
     });
 
-    impostaTesto('supply-services-count', nomiServizi.size || dati.length);
-    impostaTesto('supply-assets-count', conAsset);
-    impostaTesto('supply-suppliers-count', conFornitori);
+    impostaTesto('supply-services-count', servizi.size || dati.length);
+    impostaTesto('supply-assets-count', asset.size);
+    impostaTesto('supply-suppliers-count', fornitori.size);
 
     const nota = document.getElementById('supply-summary-note');
     if (!nota) return;
 
     if (dati.length === 0) {
-        nota.textContent = 'Nessuna dipendenza disponibile nella vista di reporting.';
+        nota.textContent = 'Nessuna dipendenza attiva disponibile.';
         return;
     }
 
-    nota.textContent = `${dati.length} record di reporting analizzati. Le viste multilivello saranno integrate nella fase dedicata alle relazioni.`;
+    nota.textContent = `${dati.length} percorsi attivi, di cui ${percorsiDerivati} derivati o gerarchici.`;
 }
 
 /**
@@ -753,6 +754,82 @@ async function renderAuditLog() {
 }
 
 // =========================================================================
+// ELENCO INCIDENTI COLLEGATO ALLA DASHBOARD
+// =========================================================================
+
+function mostraElencoIncidenti() {
+    document.getElementById('incident-list-container')?.classList.remove('is-hidden');
+    document.getElementById('wizard-container')?.classList.add('is-hidden');
+}
+
+function mostraWizardIncidenti() {
+    document.getElementById('incident-list-container')?.classList.add('is-hidden');
+    document.getElementById('wizard-container')?.classList.remove('is-hidden');
+    document.dispatchEvent(new CustomEvent('incident:wizard:start'));
+}
+
+function inizializzaGestioneIncidenti() {
+    const newButton = document.getElementById('incident-new-btn');
+    const backButton = document.getElementById('incident-list-back-btn');
+
+    if (newButton && !newButton.dataset.bound) {
+        newButton.dataset.bound = 'true';
+        newButton.addEventListener('click', mostraWizardIncidenti);
+    }
+    if (backButton && !backButton.dataset.bound) {
+        backButton.dataset.bound = 'true';
+        backButton.addEventListener('click', mostraElencoIncidenti);
+    }
+}
+
+async function loadAndRenderIncidentList() {
+    const tbody = document.getElementById('incident-list-body');
+    const status = document.getElementById('incident-list-status');
+    if (!tbody) return;
+
+    inizializzaGestioneIncidenti();
+    mostraElencoIncidenti();
+    tbody.innerHTML = '<tr><td colspan="7" class="table-state">Caricamento incidenti classificati…</td></tr>';
+    if (status) status.textContent = 'Caricamento incidenti…';
+
+    try {
+        const incidents = await fetchIncidentList();
+        if (status) {
+            status.textContent = incidents.length === 1
+                ? '1 incidente classificato'
+                : `${incidents.length} incidenti classificati`;
+        }
+
+        if (incidents.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="table-state">Nessun incidente operativo classificato.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = incidents.map((incident) => {
+            const severity = normalizzaCriticita(incident.severita);
+            const service = incident.servizioCodice
+                ? `${incident.servizioCodice} · ${incident.servizioNome}`
+                : incident.servizioNome;
+            return `
+                <tr>
+                    <td class="cell-id">${escapeHtml(incident.id)}</td>
+                    <td class="cell-small">${escapeHtml(formattaTimestampEuropeRome(incident.inizio))}</td>
+                    <td class="cell-primary">${escapeHtml(incident.tipologia || 'N/D')}</td>
+                    <td class="cell-primary">${escapeHtml(service)}</td>
+                    <td><span class="badge ${classeCriticita(severity)}">${escapeHtml(severity)}</span></td>
+                    <td>${escapeHtml(incident.stato)}</td>
+                    <td class="cell-small">${escapeHtml(incident.classificazioni)}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Errore caricamento elenco incidenti:', error);
+        tbody.innerHTML = `<tr><td colspan="7" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
+        if (status) status.textContent = 'Elenco incidenti non disponibile.';
+    }
+}
+
+// =========================================================================
 // FUNZIONI ESISTENTI (INVENTARIO E SUPPLY CHAIN)
 // =========================================================================
 
@@ -764,6 +841,7 @@ let inventoryResponsibleMap = new Map();
 let inventoryFilteredCache = [];
 let inventoryCurrentPage = 1;
 let inventoryPageSize = 5;
+let archiveAssetCandidate = null;
 
 
 /**
@@ -1224,6 +1302,78 @@ function inizializzaDialogDettaglioAsset() {
     });
 }
 
+function chiudiDialogArchiviazione() {
+    const dialog = document.getElementById('asset-archive-dialog');
+    if (dialog?.open) dialog.close();
+}
+
+function apriDialogArchiviazione(asset) {
+    const dialog = document.getElementById('asset-archive-dialog');
+    const subtitle = document.getElementById('asset-archive-subtitle');
+    const reason = document.getElementById('asset-archive-reason');
+    const status = document.getElementById('asset-archive-status');
+    if (!dialog || !reason || !status) return;
+
+    archiveAssetCandidate = asset;
+    if (subtitle) subtitle.textContent = `${asset.codice_asset} · ${asset.nome}`;
+    reason.value = '';
+    status.textContent = 'Nessuna cancellazione fisica verrà eseguita.';
+    if (!dialog.open) dialog.showModal();
+    window.setTimeout(() => reason.focus(), 0);
+}
+
+function inizializzaDialogArchiviazione() {
+    const dialog = document.getElementById('asset-archive-dialog');
+    const form = document.getElementById('asset-archive-form');
+    const cancel = document.getElementById('asset-archive-cancel');
+    const close = document.getElementById('asset-archive-close');
+    const confirm = document.getElementById('asset-archive-confirm');
+    const reason = document.getElementById('asset-archive-reason');
+    const status = document.getElementById('asset-archive-status');
+
+    if (!dialog || !form || dialog.dataset.initialized === 'true') return;
+    dialog.dataset.initialized = 'true';
+
+    cancel?.addEventListener('click', chiudiDialogArchiviazione);
+    close?.addEventListener('click', chiudiDialogArchiviazione);
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) chiudiDialogArchiviazione();
+    });
+    dialog.addEventListener('close', () => {
+        archiveAssetCandidate = null;
+        form.reset();
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!archiveAssetCandidate) return;
+
+        const motivo = reason?.value.trim() || '';
+        const defaultLabel = confirm?.textContent || 'Archivia asset';
+
+        try {
+            if (confirm) {
+                confirm.disabled = true;
+                confirm.textContent = 'Archiviazione…';
+            }
+            if (status) status.textContent = 'Aggiornamento controllato in corso…';
+
+            const archived = await archiveAsset(archiveAssetCandidate.id, motivo);
+            chiudiDialogArchiviazione();
+            await loadAndRenderTable();
+            window.alert(`Asset ${archived.codice_asset} archiviato logicamente.`);
+        } catch (error) {
+            console.error('Errore archiviazione asset:', error);
+            if (status) status.textContent = error.message || 'Archiviazione non riuscita.';
+        } finally {
+            if (confirm) {
+                confirm.disabled = false;
+                confirm.textContent = defaultLabel;
+            }
+        }
+    });
+}
+
 /**
  * Disegna le righe dell'inventario usando esclusivamente i dati già caricati.
  * Ricerca, filtri e paginazione non eseguono nuove query e non modificano il database.
@@ -1298,8 +1448,11 @@ function renderInventarioFiltrato() {
                 <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
                 <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
                 <td class="cell-actions">
-                    <button class="btn-detail" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>
-                    <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
+                    <div class="cell-action-group">
+                        <button class="btn-detail" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>
+                        <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
+                        <button class="btn-archive" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Archivia</button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1326,6 +1479,14 @@ function renderInventarioFiltrato() {
             }
         });
     });
+
+    assetTableBody.querySelectorAll('.btn-archive').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = inventoryAssetsCache.find((item) => item.id === id);
+            if (asset) apriDialogArchiviazione(asset);
+        });
+    });
 }
 
 /**
@@ -1336,15 +1497,25 @@ export function getFilteredInventoryExportSnapshot() {
     const filtri = leggiFiltriInventario();
 
     return {
-        assets: inventoryFilteredCache.map((asset) => ({
-            id: asset.id,
-            codice_asset: asset.codice_asset || '',
-            nome: asset.nome || '',
-            categoria: inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D',
-            organizzazione: inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D',
-            versione: asset.versione || 'N/D',
-            classificazione_criticita: normalizzaCriticita(asset.classificazione_criticita)
-        })),
+        assets: inventoryFilteredCache.map((asset) => {
+            const responsible = inventoryResponsibleMap.get(Number(asset.responsabile_id));
+            return {
+                id: asset.id,
+                codice_asset: asset.codice_asset || '',
+                nome: asset.nome || '',
+                categoria: inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D',
+                organizzazione: inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D',
+                responsabile: responsible
+                    ? `${responsible.nome || ''} ${responsible.cognome || ''}`.trim()
+                    : 'N/D',
+                email_responsabile: responsible?.email || '',
+                versione: asset.versione || 'N/D',
+                ubicazione: asset.ubicazione || 'N/D',
+                descrizione: asset.descrizione || '',
+                data_inserimento: asset.data_inserimento || '',
+                classificazione_criticita: normalizzaCriticita(asset.classificazione_criticita)
+            };
+        }),
         criteria: {
             testoRicerca: filtri.testoOriginale || 'Nessuno',
             criticita: filtri.criticita || 'Tutte',
@@ -1362,6 +1533,7 @@ export async function loadAndRenderTable() {
 
     inizializzaRicercaAsset();
     inizializzaDialogDettaglioAsset();
+    inizializzaDialogArchiviazione();
 
     try {
         assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Sincronizzazione in corso...</td></tr>';
@@ -1452,29 +1624,4 @@ export function mostraDashboardInterfaccia(session, accessState) {
     showAuthenticatedInterface(session, accessState);
 }
 
-export async function loadAndRenderSupplyChain() {
-    const container = document.getElementById('supply-chain-table-body');
-    if (!container) return;
 
-    try {
-        container.innerHTML = '<tr><td colspan="5" class="table-state">Estrazione dati in corso...</td></tr>';
-        const data = await fetchSupplyChain();
-        if (!data || data.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="table-state">Nessuna dipendenza registrata.</td></tr>';
-            return;
-        }
-
-        container.innerHTML = data.map(item => `
-            <tr>
-                <td class="cell-primary">${item.Service_Name || 'N/D'}</td>
-                <td>${item.Service_Type || 'N/D'}</td>
-                <td class="cell-primary">${item.Dependent_Asset || 'N/D'}</td>
-                <td>${item.Vendor_Partner || 'N/D'}</td>
-                <td class="cell-small">${item.Vendor_Contact || 'N/D'}</td>
-            </tr>
-        `).join('');
-    } catch (err) {
-        console.error("Errore rendering Supply Chain:", err);
-        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${err.message}</td></tr>`;
-    }
-}
