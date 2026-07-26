@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=14">
+    <link rel="stylesheet" href="src/style.css?v=16">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?v=18"></script>
+    <script type="module" src="src/main.js?v=19"></script>
     <script type="module" src="src/wizard.js?v=6"></script>
 </head>
 <body>
@@ -399,7 +399,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <div class="action-group" aria-label="Azioni inventario">
                                     <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
                                     <button id="btn-export-xls" class="btn-success" type="button">Esporta XLS</button>
-                                    <button id="btn-download-import-template" class="btn-secondary" type="button">Modello import</button>
+                                    <button id="btn-download-import-template" class="btn-template" type="button">Modello import</button>
                                     <button id="btn-trigger-import" class="btn-warning" type="button">Importa XLS</button>
                                     <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" class="visually-hidden">
                                 </div>
@@ -558,11 +558,19 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <button id="asset-archive-close" class="asset-detail-close" type="button" aria-label="Chiudi archiviazione" title="Chiudi">×</button>
                                 </header>
                                 <div class="asset-detail-body">
-                                    <p class="section-intro">L’asset verrà escluso dalle viste operative senza cancellare dati o storico di audit.</p>
+                                    <div class="operation-warning operation-warning--danger" role="note">
+                                        <strong>Conferma operazione sensibile</strong>
+                                        <p>L’asset verrà escluso da inventario, Dashboard e viste operative. Nessun dato verrà cancellato: relazioni e storico di audit resteranno conservati.</p>
+                                    </div>
                                     <div class="form-field">
                                         <label for="asset-archive-reason">Motivo dell’archiviazione</label>
                                         <textarea id="asset-archive-reason" class="form-input" rows="4" minlength="5" maxlength="500" required placeholder="Indicare la motivazione operativa"></textarea>
+                                        <small>Minimo 5 caratteri. La motivazione sarà registrata insieme all’operazione.</small>
                                     </div>
+                                    <label class="operation-confirmation operation-confirmation--danger" for="asset-archive-acknowledge">
+                                        <input id="asset-archive-acknowledge" type="checkbox" required>
+                                        <span>Confermo di voler archiviare questo asset e di aver verificato codice e nome visualizzati in alto.</span>
+                                    </label>
                                 </div>
                                 <footer class="asset-detail-footer">
                                     <p id="asset-archive-status" class="asset-detail-status" role="status" aria-live="polite"></p>
@@ -603,6 +611,10 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                         </table>
                                     </div>
                                     <div id="asset-import-report" class="import-report is-hidden" aria-live="polite"></div>
+                                    <label class="operation-confirmation" for="asset-import-acknowledge">
+                                        <input id="asset-import-acknowledge" type="checkbox">
+                                        <span id="asset-import-confirmation-text">Confermo di aver controllato l’anteprima e di voler importare esclusivamente le righe valide.</span>
+                                    </label>
                                 </div>
                                 <footer class="asset-detail-footer">
                                     <p id="asset-import-status" class="asset-detail-status" role="status" aria-live="polite"></p>
@@ -706,6 +718,9 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <div>
                                     <h2>Mappatura Supply Chain e servizi critici</h2>
                                     <p class="section-intro">Percorsi diretti e derivati tra servizi, asset e fornitori, con livelli gerarchici.</p>
+                                </div>
+                                <div class="action-group" aria-label="Azioni Supply Chain">
+                                    <button id="btn-export-supply-chain" class="btn-success" type="button" disabled>Esporta XLS</button>
                                 </div>
                             </div>
 
