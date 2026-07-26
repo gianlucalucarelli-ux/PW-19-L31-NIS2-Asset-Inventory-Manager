@@ -930,22 +930,27 @@ textarea:focus-visible {
 }
 
 .inventory-tools {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 18px;
+    display: grid;
+    gap: 14px;
     margin-bottom: 18px;
-    padding: 14px;
+    padding: 16px;
     background: var(--bg-soft);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
 }
 
-.inventory-search-field {
-    flex: 1 1 520px;
-    max-width: 680px;
+.inventory-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.35fr) repeat(3, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
 }
 
+.inventory-filter-field {
+    min-width: 0;
+}
+
+.inventory-filter-field label,
 .inventory-search-field label {
     display: block;
     margin-bottom: 7px;
@@ -954,27 +959,37 @@ textarea:focus-visible {
     font-weight: 650;
 }
 
-.inventory-search-controls {
+.inventory-search-input,
+.inventory-filter-field select {
+    width: 100%;
+    min-width: 0;
+}
+
+.inventory-filter-footer {
     display: flex;
-    align-items: stretch;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.inventory-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 9px;
 }
 
-.inventory-search-input {
-    min-width: 220px;
-}
-
-.inventory-search-clear {
-    flex: 0 0 auto;
+.inventory-search-clear,
+.inventory-export-filtered {
     min-height: 44px;
 }
 
 .inventory-search-status {
-    flex: 0 0 auto;
-    margin: 0 0 11px;
+    margin: 0;
     color: var(--text-low);
     font-size: 0.84rem;
-    white-space: nowrap;
 }
 
 .table-wrapper {
@@ -1658,18 +1673,17 @@ tbody tr:last-child td {
         justify-content: flex-start;
     }
 
-    .inventory-tools {
+    .inventory-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .inventory-filter-footer {
         align-items: stretch;
         flex-direction: column;
     }
 
-    .inventory-search-field {
-        max-width: none;
-    }
-
-    .inventory-search-status {
-        margin: 0;
-        white-space: normal;
+    .inventory-filter-actions {
+        justify-content: flex-start;
     }
 
     .info-grid {
@@ -1725,18 +1739,18 @@ tbody tr:last-child td {
 
     .form-actions,
     .action-group,
-    .inventory-search-controls {
+    .inventory-filter-actions {
         flex-direction: column;
     }
 
     .form-actions > button,
     .action-group > button,
-    .inventory-search-controls > button {
+    .inventory-filter-actions > button {
         width: 100%;
     }
 
-    .inventory-search-input {
-        min-width: 0;
+    .inventory-filter-grid {
+        grid-template-columns: 1fr;
     }
 }
 

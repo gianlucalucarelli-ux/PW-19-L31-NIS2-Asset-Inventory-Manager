@@ -11,8 +11,9 @@ import {
     showMfaInterface,
     showAuthenticatedInterface,
     setAuthBusy,
-    setAuthError
-} from './ui.js?v=12';
+    setAuthError,
+    getFilteredInventoryExportSnapshot
+} from './ui.js?v=13';
 import {
     initializeRouter,
     navigateTo,
@@ -27,7 +28,7 @@ import {
     signOut
 } from './auth.js';
 import { fetchAssetsForExport, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=6';
-import { exportToExcel, parseExcelFile } from './importExport.js';
+import { exportToExcel, exportFilteredAssetsToExcel, parseExcelFile } from './importExport.js?v=2';
 
 initTheme();
 
@@ -394,6 +395,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (error) {
                 console.error('Errore durante l’esportazione:', error);
                 alert('Errore durante l’esportazione dei dati.');
+            }
+        });
+    }
+
+    const btnExportFiltered = document.getElementById('btn-export-filtered');
+    if (btnExportFiltered) {
+        btnExportFiltered.addEventListener('click', async () => {
+            const defaultLabel = btnExportFiltered.textContent;
+
+            try {
+                btnExportFiltered.disabled = true;
+                btnExportFiltered.textContent = 'Esportazione…';
+
+                const snapshot = getFilteredInventoryExportSnapshot();
+                await exportFilteredAssetsToExcel(snapshot.assets, snapshot.criteria);
+            } catch (error) {
+                console.error('Errore durante l’esportazione filtrata:', error);
+                alert(`Errore durante l’esportazione filtrata: ${formattaErroreOperativo(error)}`);
+            } finally {
+                btnExportFiltered.textContent = defaultLabel;
+                const snapshot = getFilteredInventoryExportSnapshot();
+                btnExportFiltered.disabled = snapshot.assets.length === 0;
             }
         });
     }

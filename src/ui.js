@@ -758,6 +758,7 @@ let assetReferencesCache = null;
 let inventoryAssetsCache = [];
 let inventoryCategoryMap = new Map();
 let inventoryOrganizationMap = new Map();
+let inventoryFilteredCache = [];
 
 
 /**
@@ -838,15 +839,44 @@ function normalizzaTestoRicerca(valore) {
 }
 
 /**
- * Aggiorna il riepilogo accessibile dei risultati della ricerca inventario.
+ * Legge i criteri correnti della ricerca e dei filtri inventario.
  */
-function aggiornaStatoRicercaAsset(totale, visualizzati, termine) {
+function leggiFiltriInventario() {
+    const searchInput = document.getElementById('asset-search');
+    const criticitaSelect = document.getElementById('asset-filter-criticita');
+    const categoriaSelect = document.getElementById('asset-filter-categoria');
+    const organizzazioneSelect = document.getElementById('asset-filter-organizzazione');
+
+    return {
+        testoOriginale: searchInput?.value.trim() ?? '',
+        testoNormalizzato: normalizzaTestoRicerca(searchInput?.value ?? ''),
+        criticita: criticitaSelect?.value ?? '',
+        categoriaId: categoriaSelect?.value ?? '',
+        organizzazioneId: organizzazioneSelect?.value ?? '',
+        categoriaEtichetta: categoriaSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Tutte le categorie',
+        organizzazioneEtichetta: organizzazioneSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Tutte le organizzazioni'
+    };
+}
+
+function filtriInventarioAttivi(filtri) {
+    return Boolean(
+        filtri.testoOriginale
+        || filtri.criticita
+        || filtri.categoriaId
+        || filtri.organizzazioneId
+    );
+}
+
+/**
+ * Aggiorna il riepilogo accessibile dei risultati della ricerca e dei filtri.
+ */
+function aggiornaStatoRicercaAsset(totale, visualizzati, filtri) {
     const stato = document.getElementById('asset-search-status');
     if (!stato) return;
 
     const etichettaRisultati = visualizzati === 1 ? 'risultato' : 'risultati';
 
-    stato.textContent = termine
+    stato.textContent = filtriInventarioAttivi(filtri)
         ? `${visualizzati} ${etichettaRisultati} su ${totale} asset`
         : totale === 1
             ? '1 asset visualizzato'
@@ -854,63 +884,121 @@ function aggiornaStatoRicercaAsset(totale, visualizzati, termine) {
 }
 
 /**
- * Collega una sola volta i controlli della ricerca locale all'inventario.
+ * Popola i filtri dinamici con le categorie e le organizzazioni lette da Supabase.
+ */
+function popolaFiltriInventario(riferimenti) {
+    popolaSelect(
+        document.getElementById('asset-filter-categoria'),
+        riferimenti.categorie,
+        'Tutte le categorie',
+        (categoria) => categoria.nome
+    );
+
+    popolaSelect(
+        document.getElementById('asset-filter-organizzazione'),
+        riferimenti.organizzazioni,
+        'Tutte le organizzazioni',
+        (organizzazione) => organizzazione.nome
+    );
+}
+
+function impostaDisponibilitaFiltriInventario(disabilitati) {
+    [
+        'asset-search',
+        'asset-filter-criticita',
+        'asset-filter-categoria',
+        'asset-filter-organizzazione'
+    ].forEach((id) => {
+        const controllo = document.getElementById(id);
+        if (controllo) controllo.disabled = disabilitati;
+    });
+
+    const clearButton = document.getElementById('asset-search-clear');
+    const exportButton = document.getElementById('btn-export-filtered');
+    if (clearButton && disabilitati) clearButton.disabled = true;
+    if (exportButton && disabilitati) exportButton.disabled = true;
+}
+
+/**
+ * Collega una sola volta i controlli di ricerca e filtro all'inventario.
  */
 function inizializzaRicercaAsset() {
     const input = document.getElementById('asset-search');
+    const criticitaSelect = document.getElementById('asset-filter-criticita');
+    const categoriaSelect = document.getElementById('asset-filter-categoria');
+    const organizzazioneSelect = document.getElementById('asset-filter-organizzazione');
     const clearButton = document.getElementById('asset-search-clear');
-    if (!input || !clearButton) return;
 
-    const aggiornaControlli = () => {
-        clearButton.disabled = input.value.trim().length === 0;
-        renderInventarioFiltrato();
-    };
+    if (!input || !criticitaSelect || !categoriaSelect || !organizzazioneSelect || !clearButton) return;
 
-    input.oninput = aggiornaControlli;
+    input.oninput = renderInventarioFiltrato;
+    criticitaSelect.onchange = renderInventarioFiltrato;
+    categoriaSelect.onchange = renderInventarioFiltrato;
+    organizzazioneSelect.onchange = renderInventarioFiltrato;
+
     clearButton.onclick = () => {
         input.value = '';
-        clearButton.disabled = true;
+        criticitaSelect.value = '';
+        categoriaSelect.value = '';
+        organizzazioneSelect.value = '';
         renderInventarioFiltrato();
         input.focus();
     };
-
-    clearButton.disabled = input.value.trim().length === 0;
 }
 
 /**
  * Disegna le righe dell'inventario usando esclusivamente i dati già caricati.
- * La ricerca non esegue nuove query e non modifica il database.
+ * Ricerca e filtri non eseguono nuove query e non modificano il database.
  */
 function renderInventarioFiltrato() {
     const assetTableBody = document.getElementById('asset-table-body');
-    const input = document.getElementById('asset-search');
+    const clearButton = document.getElementById('asset-search-clear');
+    const exportButton = document.getElementById('btn-export-filtered');
     if (!assetTableBody) return;
 
-    const termineOriginale = input?.value.trim() ?? '';
-    const termine = normalizzaTestoRicerca(termineOriginale);
-    const assetFiltrati = termine
-        ? inventoryAssetsCache.filter((asset) => {
+    const filtri = leggiFiltriInventario();
+    inventoryFilteredCache = inventoryAssetsCache.filter((asset) => {
+        if (filtri.testoNormalizzato) {
             const codice = normalizzaTestoRicerca(asset.codice_asset);
             const nome = normalizzaTestoRicerca(asset.nome);
-            return codice.includes(termine) || nome.includes(termine);
-        })
-        : inventoryAssetsCache;
+            if (!codice.includes(filtri.testoNormalizzato) && !nome.includes(filtri.testoNormalizzato)) {
+                return false;
+            }
+        }
+
+        if (filtri.criticita && normalizzaCriticita(asset.classificazione_criticita) !== filtri.criticita) {
+            return false;
+        }
+
+        if (filtri.categoriaId && String(asset.categoria_asset_id ?? '') !== filtri.categoriaId) {
+            return false;
+        }
+
+        if (filtri.organizzazioneId && String(asset.organizzazione_id ?? '') !== filtri.organizzazioneId) {
+            return false;
+        }
+
+        return true;
+    });
+
+    if (clearButton) clearButton.disabled = !filtriInventarioAttivi(filtri);
+    if (exportButton) exportButton.disabled = inventoryFilteredCache.length === 0;
 
     aggiornaStatoRicercaAsset(
         inventoryAssetsCache.length,
-        assetFiltrati.length,
-        termineOriginale
+        inventoryFilteredCache.length,
+        filtri
     );
 
-    if (assetFiltrati.length === 0) {
-        const messaggio = termineOriginale
-            ? `Nessun asset corrisponde alla ricerca “${termineOriginale}”.`
+    if (inventoryFilteredCache.length === 0) {
+        const messaggio = filtriInventarioAttivi(filtri)
+            ? 'Nessun asset soddisfa i criteri di ricerca e filtro selezionati.'
             : 'Nessun asset attivo censito.';
         assetTableBody.innerHTML = `<tr><td colspan="8" class="table-state">${escapeHtml(messaggio)}</td></tr>`;
         return;
     }
 
-    assetTableBody.innerHTML = assetFiltrati.map((asset) => {
+    assetTableBody.innerHTML = inventoryFilteredCache.map((asset) => {
         const criticita = normalizzaCriticita(asset.classificazione_criticita);
         const badgeClass = classeCriticita(criticita);
 
@@ -941,9 +1029,35 @@ function renderInventarioFiltrato() {
     });
 }
 
+/**
+ * Restituisce una copia dei risultati correntemente visualizzati e dei criteri
+ * usati per l'esportazione separata dei dati filtrati.
+ */
+export function getFilteredInventoryExportSnapshot() {
+    const filtri = leggiFiltriInventario();
+
+    return {
+        assets: inventoryFilteredCache.map((asset) => ({
+            id: asset.id,
+            codice_asset: asset.codice_asset || '',
+            nome: asset.nome || '',
+            categoria: inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D',
+            organizzazione: inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D',
+            versione: asset.versione || 'N/D',
+            classificazione_criticita: normalizzaCriticita(asset.classificazione_criticita)
+        })),
+        criteria: {
+            testoRicerca: filtri.testoOriginale || 'Nessuno',
+            criticita: filtri.criticita || 'Tutte',
+            categoria: filtri.categoriaId ? filtri.categoriaEtichetta : 'Tutte',
+            organizzazione: filtri.organizzazioneId ? filtri.organizzazioneEtichetta : 'Tutte',
+            numeroRisultati: inventoryFilteredCache.length
+        }
+    };
+}
+
 export async function loadAndRenderTable() {
     const assetTableBody = document.getElementById('asset-table-body');
-    const searchInput = document.getElementById('asset-search');
     const searchStatus = document.getElementById('asset-search-status');
     if (!assetTableBody) return;
 
@@ -951,7 +1065,7 @@ export async function loadAndRenderTable() {
 
     try {
         assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Sincronizzazione in corso...</td></tr>';
-        if (searchInput) searchInput.disabled = true;
+        impostaDisponibilitaFiltriInventario(true);
         if (searchStatus) searchStatus.textContent = 'Caricamento asset…';
 
         const [data, riferimenti] = await Promise.all([
@@ -966,16 +1080,18 @@ export async function loadAndRenderTable() {
         inventoryOrganizationMap = new Map(
             riferimenti.organizzazioni.map((organizzazione) => [organizzazione.id, organizzazione.nome])
         );
+        popolaFiltriInventario(riferimenti);
 
-        if (searchInput) searchInput.disabled = false;
+        impostaDisponibilitaFiltriInventario(false);
         renderInventarioFiltrato();
     } catch (error) {
         console.error('Errore nel rendering dell’inventario:', error);
         inventoryAssetsCache = [];
         inventoryCategoryMap = new Map();
         inventoryOrganizationMap = new Map();
-        if (searchInput) searchInput.disabled = true;
-        if (searchStatus) searchStatus.textContent = 'Ricerca non disponibile.';
+        inventoryFilteredCache = [];
+        impostaDisponibilitaFiltriInventario(true);
+        if (searchStatus) searchStatus.textContent = 'Ricerca e filtri non disponibili.';
         assetTableBody.innerHTML = `<tr><td colspan="8" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
     }
 }
