@@ -15,12 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=10">
+    <link rel="stylesheet" href="src/style.css?v=11">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="src/main.js?v=14"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script type="module" src="src/main.js?v=15"></script>
     <script type="module" src="src/wizard.js?v=5"></script>
 </head>
 <body>
@@ -403,10 +404,10 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 </div>
                             </div>
 
-                            <div class="inventory-tools" role="search" aria-label="Ricerca inventario asset">
-                                <div class="inventory-search-field">
-                                    <label for="asset-search">Ricerca asset</label>
-                                    <div class="inventory-search-controls">
+                            <div class="inventory-tools" role="search" aria-label="Ricerca e filtri inventario asset">
+                                <div class="inventory-filter-grid">
+                                    <div class="inventory-filter-field inventory-search-field">
+                                        <label for="asset-search">Ricerca asset</label>
                                         <input
                                             type="search"
                                             id="asset-search"
@@ -417,18 +418,55 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                             aria-describedby="asset-search-status"
                                             aria-controls="asset-table-body"
                                         >
+                                    </div>
+
+                                    <div class="inventory-filter-field">
+                                        <label for="asset-filter-criticita">Criticità NIS2</label>
+                                        <select id="asset-filter-criticita" class="form-input" aria-controls="asset-table-body">
+                                            <option value="">Tutte le criticità</option>
+                                            <option value="Critica">Critica</option>
+                                            <option value="Alta">Alta</option>
+                                            <option value="Media">Media</option>
+                                            <option value="Bassa">Bassa</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="inventory-filter-field">
+                                        <label for="asset-filter-categoria">Categoria</label>
+                                        <select id="asset-filter-categoria" class="form-input" aria-controls="asset-table-body">
+                                            <option value="">Tutte le categorie</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="inventory-filter-field">
+                                        <label for="asset-filter-organizzazione">Organizzazione</label>
+                                        <select id="asset-filter-organizzazione" class="form-input" aria-controls="asset-table-body">
+                                            <option value="">Tutte le organizzazioni</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="inventory-filter-footer">
+                                    <p id="asset-search-status" class="inventory-search-status" role="status" aria-live="polite">
+                                        Caricamento asset…
+                                    </p>
+                                    <div class="inventory-filter-actions" aria-label="Azioni sui risultati filtrati">
                                         <button
                                             type="button"
                                             id="asset-search-clear"
                                             class="btn-secondary inventory-search-clear"
                                             aria-controls="asset-table-body"
                                             disabled
-                                        >Azzera</button>
+                                        >Azzera tutto</button>
+                                        <button
+                                            type="button"
+                                            id="btn-export-filtered"
+                                            class="btn-success inventory-export-filtered"
+                                            aria-controls="asset-table-body"
+                                            disabled
+                                        >Esporta risultati filtrati</button>
                                     </div>
                                 </div>
-                                <p id="asset-search-status" class="inventory-search-status" role="status" aria-live="polite">
-                                    Caricamento asset…
-                                </p>
                             </div>
 
                             <div class="table-wrapper">
