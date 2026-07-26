@@ -15,12 +15,12 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=9">
+    <link rel="stylesheet" href="src/style.css?v=10">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="src/main.js?v=13"></script>
+    <script type="module" src="src/main.js?v=14"></script>
     <script type="module" src="src/wizard.js?v=5"></script>
 </head>
 <body>
@@ -401,6 +401,34 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <button id="btn-trigger-import" class="btn-warning" type="button">Importa XLS</button>
                                     <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" class="visually-hidden">
                                 </div>
+                            </div>
+
+                            <div class="inventory-tools" role="search" aria-label="Ricerca inventario asset">
+                                <div class="inventory-search-field">
+                                    <label for="asset-search">Ricerca asset</label>
+                                    <div class="inventory-search-controls">
+                                        <input
+                                            type="search"
+                                            id="asset-search"
+                                            class="form-input inventory-search-input"
+                                            placeholder="Cerca per codice o nome asset"
+                                            autocomplete="off"
+                                            spellcheck="false"
+                                            aria-describedby="asset-search-status"
+                                            aria-controls="asset-table-body"
+                                        >
+                                        <button
+                                            type="button"
+                                            id="asset-search-clear"
+                                            class="btn-secondary inventory-search-clear"
+                                            aria-controls="asset-table-body"
+                                            disabled
+                                        >Azzera</button>
+                                    </div>
+                                </div>
+                                <p id="asset-search-status" class="inventory-search-status" role="status" aria-live="polite">
+                                    Caricamento asset…
+                                </p>
                             </div>
 
                             <div class="table-wrapper">
