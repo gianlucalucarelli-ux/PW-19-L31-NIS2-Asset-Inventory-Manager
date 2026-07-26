@@ -3,7 +3,8 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchAssetReferences, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=6';
+import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchAuditLogs, fetchDashboardData, fetchIncidentList } from './database.js?v=9';
+import { loadAndRenderSupplyChain } from './supplyChain.js?v=2';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -298,6 +299,7 @@ function updateWorkspaceHeader(route) {
  */
 export async function activateApplicationRoute(route) {
     const viewId = ROUTE_TO_VIEW[route] || 'inventory';
+    document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close());
 
     document.querySelectorAll('.view-section').forEach((section) => {
         section.classList.add('is-hidden');
@@ -327,8 +329,7 @@ export async function activateApplicationRoute(route) {
     } else if (route === 'audit-log') {
         await renderAuditLog();
     } else if (route === 'incidenti') {
-        // Il wizard viene inizializzato solo all'apertura esplicita della vista.
-        document.dispatchEvent(new CustomEvent('incident:wizard:open'));
+        await loadAndRenderIncidentList();
     }
 }
 
@@ -379,8 +380,32 @@ function formattaTimestampLocaleDatabase(valore) {
 
     if (!corrispondenza) return 'Data non disponibile';
 
+    /*
+     * audit_log.data_modifica è un timestamp senza fuso, ma i valori effettivi
+     * registrati dal trigger seguono la convenzione UTC. La conversione viene
+     * eseguita solo in visualizzazione, preservando integralmente lo storico.
+     */
     const [, anno, mese, giorno, ore, minuti, secondi] = corrispondenza;
-    return `${giorno}/${mese}/${anno}, ${ore}:${minuti}:${secondi}`;
+    const dataUtc = new Date(Date.UTC(
+        Number(anno),
+        Number(mese) - 1,
+        Number(giorno),
+        Number(ore),
+        Number(minuti),
+        Number(secondi)
+    ));
+
+    if (Number.isNaN(dataUtc.getTime())) return 'Data non disponibile';
+
+    return dataUtc.toLocaleString('it-IT', {
+        timeZone: 'Europe/Rome',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
 }
 
 /**
@@ -493,33 +518,35 @@ function renderDistribuzioneCriticita(asset) {
  */
 function renderRiepilogoSupplyChain(righe) {
     const dati = Array.isArray(righe) ? righe : [];
-    const nomiServizi = new Set();
-    let conAsset = 0;
-    let conFornitori = 0;
+    const servizi = new Set();
+    const asset = new Set();
+    const fornitori = new Set();
+    let percorsiDerivati = 0;
 
     dati.forEach((record) => {
-        const servizio = leggiCampo(record, ['Service_Name', 'servizio_nome', 'nome_servizio']);
-        const asset = leggiCampo(record, ['Dependent_Asset', 'asset_dipendenti', 'asset']);
-        const fornitore = leggiCampo(record, ['Vendor_Partner', 'fornitori', 'fornitore']);
+        const servizio = leggiCampo(record, ['servizioRadiceId', 'Service_Name', 'servizio_nome', 'nome_servizio']);
+        const assetCollegato = leggiCampo(record, ['assetEffettivoId', 'Dependent_Asset', 'asset_dipendenti', 'asset']);
+        const fornitore = leggiCampo(record, ['fornitoreEffettivoId', 'Vendor_Partner', 'fornitori', 'fornitore']);
 
-        if (servizio) nomiServizi.add(String(servizio));
-        if (asset && String(asset).toUpperCase() !== 'N/D') conAsset += 1;
-        if (fornitore && String(fornitore).toUpperCase() !== 'N/D') conFornitori += 1;
+        if (servizio) servizi.add(String(servizio));
+        if (assetCollegato && String(assetCollegato).toUpperCase() !== 'N/D') asset.add(String(assetCollegato));
+        if (fornitore && String(fornitore).toUpperCase() !== 'N/D') fornitori.add(String(fornitore));
+        if (record.derivata) percorsiDerivati += 1;
     });
 
-    impostaTesto('supply-services-count', nomiServizi.size || dati.length);
-    impostaTesto('supply-assets-count', conAsset);
-    impostaTesto('supply-suppliers-count', conFornitori);
+    impostaTesto('supply-services-count', servizi.size || dati.length);
+    impostaTesto('supply-assets-count', asset.size);
+    impostaTesto('supply-suppliers-count', fornitori.size);
 
     const nota = document.getElementById('supply-summary-note');
     if (!nota) return;
 
     if (dati.length === 0) {
-        nota.textContent = 'Nessuna dipendenza disponibile nella vista di reporting.';
+        nota.textContent = 'Nessuna dipendenza attiva disponibile.';
         return;
     }
 
-    nota.textContent = `${dati.length} record di reporting analizzati. Le viste multilivello saranno integrate nella fase dedicata alle relazioni.`;
+    nota.textContent = `${dati.length} percorsi attivi, di cui ${percorsiDerivati} derivati o gerarchici.`;
 }
 
 /**
@@ -727,10 +754,95 @@ async function renderAuditLog() {
 }
 
 // =========================================================================
+// ELENCO INCIDENTI COLLEGATO ALLA DASHBOARD
+// =========================================================================
+
+function mostraElencoIncidenti() {
+    document.getElementById('incident-list-container')?.classList.remove('is-hidden');
+    document.getElementById('wizard-container')?.classList.add('is-hidden');
+}
+
+function mostraWizardIncidenti() {
+    document.getElementById('incident-list-container')?.classList.add('is-hidden');
+    document.getElementById('wizard-container')?.classList.remove('is-hidden');
+    document.dispatchEvent(new CustomEvent('incident:wizard:start'));
+}
+
+function inizializzaGestioneIncidenti() {
+    const newButton = document.getElementById('incident-new-btn');
+    const backButton = document.getElementById('incident-list-back-btn');
+
+    if (newButton && !newButton.dataset.bound) {
+        newButton.dataset.bound = 'true';
+        newButton.addEventListener('click', mostraWizardIncidenti);
+    }
+    if (backButton && !backButton.dataset.bound) {
+        backButton.dataset.bound = 'true';
+        backButton.addEventListener('click', mostraElencoIncidenti);
+    }
+}
+
+async function loadAndRenderIncidentList() {
+    const tbody = document.getElementById('incident-list-body');
+    const status = document.getElementById('incident-list-status');
+    if (!tbody) return;
+
+    inizializzaGestioneIncidenti();
+    mostraElencoIncidenti();
+    tbody.innerHTML = '<tr><td colspan="7" class="table-state">Caricamento incidenti classificati…</td></tr>';
+    if (status) status.textContent = 'Caricamento incidenti…';
+
+    try {
+        const incidents = await fetchIncidentList();
+        if (status) {
+            status.textContent = incidents.length === 1
+                ? '1 incidente classificato'
+                : `${incidents.length} incidenti classificati`;
+        }
+
+        if (incidents.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="table-state">Nessun incidente operativo classificato.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = incidents.map((incident) => {
+            const severity = normalizzaCriticita(incident.severita);
+            const service = incident.servizioCodice
+                ? `${incident.servizioCodice} · ${incident.servizioNome}`
+                : incident.servizioNome;
+            return `
+                <tr>
+                    <td class="cell-id">${escapeHtml(incident.id)}</td>
+                    <td class="cell-small">${escapeHtml(formattaTimestampEuropeRome(incident.inizio))}</td>
+                    <td class="cell-primary">${escapeHtml(incident.tipologia || 'N/D')}</td>
+                    <td class="cell-primary">${escapeHtml(service)}</td>
+                    <td><span class="badge ${classeCriticita(severity)}">${escapeHtml(severity)}</span></td>
+                    <td>${escapeHtml(incident.stato)}</td>
+                    <td class="cell-small">${escapeHtml(incident.classificazioni)}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Errore caricamento elenco incidenti:', error);
+        tbody.innerHTML = `<tr><td colspan="7" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
+        if (status) status.textContent = 'Elenco incidenti non disponibile.';
+    }
+}
+
+// =========================================================================
 // FUNZIONI ESISTENTI (INVENTARIO E SUPPLY CHAIN)
 // =========================================================================
 
 let assetReferencesCache = null;
+let inventoryAssetsCache = [];
+let inventoryCategoryMap = new Map();
+let inventoryOrganizationMap = new Map();
+let inventoryResponsibleMap = new Map();
+let inventoryFilteredCache = [];
+let inventoryCurrentPage = 1;
+let inventoryPageSize = 5;
+let archiveAssetCandidate = null;
+
 
 /**
  * Popola una select conservando, quando possibile, il valore già selezionato.
@@ -797,62 +909,670 @@ async function loadAssetFormReferences(force = false) {
     return assetReferencesCache;
 }
 
+/**
+ * Normalizza il testo usato dalla ricerca locale, ignorando maiuscole,
+ * minuscole e segni diacritici.
+ */
+function normalizzaTestoRicerca(valore) {
+    return String(valore ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('it-IT')
+        .trim();
+}
+
+/**
+ * Legge i criteri correnti della ricerca e dei filtri inventario.
+ */
+function leggiFiltriInventario() {
+    const searchInput = document.getElementById('asset-search');
+    const criticitaSelect = document.getElementById('asset-filter-criticita');
+    const categoriaSelect = document.getElementById('asset-filter-categoria');
+    const organizzazioneSelect = document.getElementById('asset-filter-organizzazione');
+
+    return {
+        testoOriginale: searchInput?.value.trim() ?? '',
+        testoNormalizzato: normalizzaTestoRicerca(searchInput?.value ?? ''),
+        criticita: criticitaSelect?.value ?? '',
+        categoriaId: categoriaSelect?.value ?? '',
+        organizzazioneId: organizzazioneSelect?.value ?? '',
+        categoriaEtichetta: categoriaSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Tutte le categorie',
+        organizzazioneEtichetta: organizzazioneSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Tutte le organizzazioni'
+    };
+}
+
+function filtriInventarioAttivi(filtri) {
+    return Boolean(
+        filtri.testoOriginale
+        || filtri.criticita
+        || filtri.categoriaId
+        || filtri.organizzazioneId
+    );
+}
+
+/**
+ * Aggiorna il riepilogo accessibile dei risultati della ricerca e dei filtri.
+ */
+function aggiornaStatoRicercaAsset(totale, visualizzati, filtri) {
+    const stato = document.getElementById('asset-search-status');
+    if (!stato) return;
+
+    const etichettaRisultati = visualizzati === 1 ? 'risultato' : 'risultati';
+
+    stato.textContent = filtriInventarioAttivi(filtri)
+        ? `${visualizzati} ${etichettaRisultati} su ${totale} asset`
+        : totale === 1
+            ? '1 asset visualizzato'
+            : `${totale} asset visualizzati`;
+}
+
+/**
+ * Popola i filtri dinamici con le categorie e le organizzazioni lette da Supabase.
+ */
+function popolaFiltriInventario(riferimenti) {
+    popolaSelect(
+        document.getElementById('asset-filter-categoria'),
+        riferimenti.categorie,
+        'Tutte le categorie',
+        (categoria) => categoria.nome
+    );
+
+    popolaSelect(
+        document.getElementById('asset-filter-organizzazione'),
+        riferimenti.organizzazioni,
+        'Tutte le organizzazioni',
+        (organizzazione) => organizzazione.nome
+    );
+}
+
+function impostaDisponibilitaFiltriInventario(disabilitati) {
+    [
+        'asset-search',
+        'asset-filter-criticita',
+        'asset-filter-categoria',
+        'asset-filter-organizzazione',
+        'asset-page-size'
+    ].forEach((id) => {
+        const controllo = document.getElementById(id);
+        if (controllo) controllo.disabled = disabilitati;
+    });
+
+    const clearButton = document.getElementById('asset-search-clear');
+    const exportButton = document.getElementById('btn-export-filtered');
+    const previousButton = document.getElementById('asset-page-prev');
+    const nextButton = document.getElementById('asset-page-next');
+    if (clearButton && disabilitati) clearButton.disabled = true;
+    if (exportButton && disabilitati) exportButton.disabled = true;
+    if (previousButton && disabilitati) previousButton.disabled = true;
+    if (nextButton && disabilitati) nextButton.disabled = true;
+}
+
+/**
+ * Collega una sola volta i controlli di ricerca e filtro all'inventario.
+ */
+function inizializzaRicercaAsset() {
+    const input = document.getElementById('asset-search');
+    const criticitaSelect = document.getElementById('asset-filter-criticita');
+    const categoriaSelect = document.getElementById('asset-filter-categoria');
+    const organizzazioneSelect = document.getElementById('asset-filter-organizzazione');
+    const clearButton = document.getElementById('asset-search-clear');
+    const pageSizeSelect = document.getElementById('asset-page-size');
+    const previousButton = document.getElementById('asset-page-prev');
+    const nextButton = document.getElementById('asset-page-next');
+
+    if (
+        !input
+        || !criticitaSelect
+        || !categoriaSelect
+        || !organizzazioneSelect
+        || !clearButton
+        || !pageSizeSelect
+        || !previousButton
+        || !nextButton
+    ) return;
+
+    const applicaCriteriDallaPrimaPagina = () => {
+        inventoryCurrentPage = 1;
+        renderInventarioFiltrato();
+    };
+
+    input.oninput = applicaCriteriDallaPrimaPagina;
+    criticitaSelect.onchange = applicaCriteriDallaPrimaPagina;
+    categoriaSelect.onchange = applicaCriteriDallaPrimaPagina;
+    organizzazioneSelect.onchange = applicaCriteriDallaPrimaPagina;
+
+    pageSizeSelect.onchange = () => {
+        const nuovaDimensione = Number(pageSizeSelect.value);
+        inventoryPageSize = [5, 10, 25].includes(nuovaDimensione) ? nuovaDimensione : 5;
+        inventoryCurrentPage = 1;
+        renderInventarioFiltrato();
+    };
+
+    previousButton.onclick = () => {
+        if (inventoryCurrentPage <= 1) return;
+        inventoryCurrentPage -= 1;
+        renderInventarioFiltrato();
+        document.getElementById('asset-pagination')?.scrollIntoView({ block: 'nearest' });
+    };
+
+    nextButton.onclick = () => {
+        const totalePagine = Math.max(1, Math.ceil(inventoryFilteredCache.length / inventoryPageSize));
+        if (inventoryCurrentPage >= totalePagine) return;
+        inventoryCurrentPage += 1;
+        renderInventarioFiltrato();
+        document.getElementById('asset-pagination')?.scrollIntoView({ block: 'nearest' });
+    };
+
+    clearButton.onclick = () => {
+        input.value = '';
+        criticitaSelect.value = '';
+        categoriaSelect.value = '';
+        organizzazioneSelect.value = '';
+        inventoryCurrentPage = 1;
+        renderInventarioFiltrato();
+        input.focus();
+    };
+}
+
+/**
+ * Aggiorna riepilogo e comandi della paginazione locale.
+ */
+function aggiornaPaginazioneInventario(totaleRisultati) {
+    const previousButton = document.getElementById('asset-page-prev');
+    const nextButton = document.getElementById('asset-page-next');
+    const indicator = document.getElementById('asset-page-indicator');
+    const status = document.getElementById('asset-page-status');
+    const pageSizeSelect = document.getElementById('asset-page-size');
+
+    if (!previousButton || !nextButton || !indicator || !status || !pageSizeSelect) return;
+
+    const totalePagine = totaleRisultati === 0
+        ? 0
+        : Math.ceil(totaleRisultati / inventoryPageSize);
+
+    if (totalePagine === 0) {
+        inventoryCurrentPage = 1;
+        previousButton.disabled = true;
+        nextButton.disabled = true;
+        indicator.textContent = 'Pagina 0 di 0';
+        status.textContent = 'Nessun elemento da paginare';
+        pageSizeSelect.value = String(inventoryPageSize);
+        return;
+    }
+
+    inventoryCurrentPage = Math.min(Math.max(inventoryCurrentPage, 1), totalePagine);
+
+    const primoElemento = ((inventoryCurrentPage - 1) * inventoryPageSize) + 1;
+    const ultimoElemento = Math.min(inventoryCurrentPage * inventoryPageSize, totaleRisultati);
+
+    previousButton.disabled = inventoryCurrentPage === 1;
+    nextButton.disabled = inventoryCurrentPage === totalePagine;
+    indicator.textContent = `Pagina ${inventoryCurrentPage} di ${totalePagine}`;
+    status.textContent = `Elementi ${primoElemento}–${ultimoElemento} di ${totaleRisultati}`;
+    pageSizeSelect.value = String(inventoryPageSize);
+}
+
+
+function formattaDataBreve(valore) {
+    if (!valore) return 'N/D';
+    const data = new Date(`${String(valore).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(data.getTime())) return 'N/D';
+    return data.toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+function creaCampoDettaglio(etichetta, valore, classe = '') {
+    return `
+        <div class="asset-detail-field ${classe}">
+            <dt>${escapeHtml(etichetta)}</dt>
+            <dd>${escapeHtml(valore || 'N/D')}</dd>
+        </div>
+    `;
+}
+
+function creaListaRelazioni(titolo, elementi, renderElemento, messaggioVuoto) {
+    const contenuto = elementi.length > 0
+        ? `<ul class="asset-detail-relation-list">${elementi.map(renderElemento).join('')}</ul>`
+        : `<p class="asset-detail-empty">${escapeHtml(messaggioVuoto)}</p>`;
+
+    return `
+        <section class="asset-detail-section">
+            <div class="asset-detail-section-heading">
+                <h3>${escapeHtml(titolo)}</h3>
+                <span class="asset-detail-count">${elementi.length}</span>
+            </div>
+            ${contenuto}
+        </section>
+    `;
+}
+
+function renderRelazioniAsset(relazioni) {
+    const container = document.getElementById('asset-detail-relations');
+    if (!container) return;
+
+    const servizi = Array.isArray(relazioni?.servizi) ? relazioni.servizi : [];
+    const vulnerabilita = Array.isArray(relazioni?.vulnerabilita) ? relazioni.vulnerabilita : [];
+    const fornitori = Array.isArray(relazioni?.fornitori) ? relazioni.fornitori : [];
+
+    const sezioneServizi = creaListaRelazioni(
+        'Servizi collegati',
+        servizi,
+        (servizio) => `
+            <li>
+                <div class="asset-detail-relation-title">
+                    <strong>${escapeHtml(servizio.codice || 'Servizio')}</strong>
+                    <span>${escapeHtml(servizio.tipoDipendenza)}</span>
+                </div>
+                <p>${escapeHtml(servizio.nome || 'N/D')}</p>
+                ${servizio.descrizione ? `<small>${escapeHtml(servizio.descrizione)}</small>` : ''}
+            </li>
+        `,
+        'Nessun servizio attivo collegato.'
+    );
+
+    const sezioneVulnerabilita = creaListaRelazioni(
+        'Vulnerabilità associate',
+        vulnerabilita,
+        (record) => `
+            <li>
+                <div class="asset-detail-relation-title">
+                    <strong>${escapeHtml(record.codice || 'Vulnerabilità')}</strong>
+                    <span class="badge ${classeCriticita(normalizzaCriticita(record.severita))}">${escapeHtml(record.severita)}</span>
+                </div>
+                <p>Remediation: ${escapeHtml(record.statoRemediation)}</p>
+                <small>Rilevata: ${escapeHtml(formattaDataBreve(record.dataRilevamento))}</small>
+                ${record.descrizione ? `<small>${escapeHtml(record.descrizione)}</small>` : ''}
+            </li>
+        `,
+        'Nessuna vulnerabilità attiva associata.'
+    );
+
+    const sezioneFornitori = creaListaRelazioni(
+        'Fornitori collegati',
+        fornitori,
+        (fornitore) => `
+            <li>
+                <div class="asset-detail-relation-title">
+                    <strong>${escapeHtml(fornitore.codice || 'Fornitore')}</strong>
+                    <span>${escapeHtml(fornitore.tipoRelazione)}</span>
+                </div>
+                <p>${escapeHtml(fornitore.nome || 'N/D')}${fornitore.relazionePrimaria ? ' · Primario' : ''}</p>
+                ${fornitore.email ? `<small>${escapeHtml(fornitore.email)}</small>` : ''}
+                <small>Validità: ${escapeHtml(formattaDataBreve(fornitore.validoDal))}${fornitore.validoAl ? ` – ${escapeHtml(formattaDataBreve(fornitore.validoAl))}` : ' – attiva'}</small>
+                ${fornitore.riferimentoContratto ? `<small>Riferimento: ${escapeHtml(fornitore.riferimentoContratto)}</small>` : ''}
+            </li>
+        `,
+        'Nessun fornitore attivo collegato.'
+    );
+
+    container.innerHTML = sezioneServizi + sezioneVulnerabilita + sezioneFornitori;
+}
+
+async function apriDettaglioAsset(asset) {
+    const dialog = document.getElementById('asset-detail-dialog');
+    const title = document.getElementById('asset-detail-title');
+    const subtitle = document.getElementById('asset-detail-subtitle');
+    const overview = document.getElementById('asset-detail-overview');
+    const relations = document.getElementById('asset-detail-relations');
+    const status = document.getElementById('asset-detail-status');
+
+    if (!dialog || !title || !subtitle || !overview || !relations || !status) return;
+
+    const categoria = assetReferencesCache?.categorie?.find(
+        (record) => Number(record.id) === Number(asset.categoria_asset_id)
+    );
+    const organizzazione = assetReferencesCache?.organizzazioni?.find(
+        (record) => Number(record.id) === Number(asset.organizzazione_id)
+    );
+    const responsabile = inventoryResponsibleMap.get(Number(asset.responsabile_id));
+    const nominativoResponsabile = responsabile
+        ? `${responsabile.nome || ''} ${responsabile.cognome || ''}`.trim()
+        : 'Non assegnato';
+
+    title.textContent = asset.nome || 'Dettaglio asset';
+    subtitle.textContent = asset.codice_asset || `Asset ID ${asset.id}`;
+    status.textContent = 'Caricamento delle relazioni associate…';
+
+    const criticita = normalizzaCriticita(asset.classificazione_criticita);
+    overview.innerHTML = `
+        <section class="asset-detail-section asset-detail-section--overview">
+            <div class="asset-detail-section-heading">
+                <h3>Dati identificativi e organizzativi</h3>
+                <span class="badge ${classeCriticita(criticita)}">${escapeHtml(criticita)}</span>
+            </div>
+            <dl class="asset-detail-grid">
+                ${creaCampoDettaglio('ID', asset.id)}
+                ${creaCampoDettaglio('Codice asset', asset.codice_asset)}
+                ${creaCampoDettaglio('Nome', asset.nome)}
+                ${creaCampoDettaglio('Categoria', categoria?.nome || inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D')}
+                ${creaCampoDettaglio('Organizzazione', organizzazione?.nome || inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D')}
+                ${creaCampoDettaglio('Responsabile', nominativoResponsabile)}
+                ${creaCampoDettaglio('E-mail responsabile', responsabile?.email || 'N/D')}
+                ${creaCampoDettaglio('Telefono responsabile', responsabile?.telefono || 'N/D')}
+                ${creaCampoDettaglio('Versione', asset.versione || 'N/D')}
+                ${creaCampoDettaglio('Ubicazione', asset.ubicazione || 'N/D')}
+                ${creaCampoDettaglio('Data inserimento', formattaDataBreve(asset.data_inserimento))}
+                ${creaCampoDettaglio('Stato', asset.attiva === false ? 'Archiviato' : 'Attivo')}
+                ${creaCampoDettaglio('Descrizione', asset.descrizione || 'Nessuna descrizione disponibile', 'asset-detail-field--wide')}
+            </dl>
+        </section>
+    `;
+
+    relations.innerHTML = `
+        <section class="asset-detail-section">
+            <div class="asset-detail-loading" role="status">
+                <span class="loading-spinner" aria-hidden="true"></span>
+                <span>Recupero di servizi, vulnerabilità e fornitori…</span>
+            </div>
+        </section>
+    `;
+
+    if (!dialog.open) dialog.showModal();
+
+    try {
+        const datiRelazioni = await fetchAssetDetailRelations(asset.id);
+        if (!dialog.open || Number(dialog.dataset.assetId) !== Number(asset.id)) return;
+        renderRelazioniAsset(datiRelazioni);
+        status.textContent = 'Dettaglio completo caricato.';
+    } catch (error) {
+        console.error('Errore nel caricamento del dettaglio asset:', error);
+        if (!dialog.open || Number(dialog.dataset.assetId) !== Number(asset.id)) return;
+        relations.innerHTML = `
+            <section class="asset-detail-section">
+                <p class="error-msg">Impossibile caricare le relazioni associate: ${escapeHtml(error.message)}</p>
+            </section>
+        `;
+        status.textContent = 'Dati principali disponibili; relazioni non caricate.';
+    }
+}
+
+function inizializzaDialogDettaglioAsset() {
+    const dialog = document.getElementById('asset-detail-dialog');
+    if (!dialog || dialog.dataset.initialized === 'true') return;
+
+    dialog.dataset.initialized = 'true';
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+        dialog.removeAttribute('data-asset-id');
+    });
+}
+
+function chiudiDialogArchiviazione() {
+    const dialog = document.getElementById('asset-archive-dialog');
+    if (dialog?.open) dialog.close();
+}
+
+function apriDialogArchiviazione(asset) {
+    const dialog = document.getElementById('asset-archive-dialog');
+    const subtitle = document.getElementById('asset-archive-subtitle');
+    const reason = document.getElementById('asset-archive-reason');
+    const status = document.getElementById('asset-archive-status');
+    if (!dialog || !reason || !status) return;
+
+    archiveAssetCandidate = asset;
+    if (subtitle) subtitle.textContent = `${asset.codice_asset} · ${asset.nome}`;
+    reason.value = '';
+    status.textContent = 'Nessuna cancellazione fisica verrà eseguita.';
+    if (!dialog.open) dialog.showModal();
+    window.setTimeout(() => reason.focus(), 0);
+}
+
+function inizializzaDialogArchiviazione() {
+    const dialog = document.getElementById('asset-archive-dialog');
+    const form = document.getElementById('asset-archive-form');
+    const cancel = document.getElementById('asset-archive-cancel');
+    const close = document.getElementById('asset-archive-close');
+    const confirm = document.getElementById('asset-archive-confirm');
+    const reason = document.getElementById('asset-archive-reason');
+    const status = document.getElementById('asset-archive-status');
+
+    if (!dialog || !form || dialog.dataset.initialized === 'true') return;
+    dialog.dataset.initialized = 'true';
+
+    cancel?.addEventListener('click', chiudiDialogArchiviazione);
+    close?.addEventListener('click', chiudiDialogArchiviazione);
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) chiudiDialogArchiviazione();
+    });
+    dialog.addEventListener('close', () => {
+        archiveAssetCandidate = null;
+        form.reset();
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!archiveAssetCandidate) return;
+
+        const motivo = reason?.value.trim() || '';
+        const defaultLabel = confirm?.textContent || 'Archivia asset';
+
+        try {
+            if (confirm) {
+                confirm.disabled = true;
+                confirm.textContent = 'Archiviazione…';
+            }
+            if (status) status.textContent = 'Aggiornamento controllato in corso…';
+
+            const archived = await archiveAsset(archiveAssetCandidate.id, motivo);
+            chiudiDialogArchiviazione();
+            await loadAndRenderTable();
+            window.alert(`Asset ${archived.codice_asset} archiviato logicamente.`);
+        } catch (error) {
+            console.error('Errore archiviazione asset:', error);
+            if (status) status.textContent = error.message || 'Archiviazione non riuscita.';
+        } finally {
+            if (confirm) {
+                confirm.disabled = false;
+                confirm.textContent = defaultLabel;
+            }
+        }
+    });
+}
+
+/**
+ * Disegna le righe dell'inventario usando esclusivamente i dati già caricati.
+ * Ricerca, filtri e paginazione non eseguono nuove query e non modificano il database.
+ */
+function renderInventarioFiltrato() {
+    const assetTableBody = document.getElementById('asset-table-body');
+    const clearButton = document.getElementById('asset-search-clear');
+    const exportButton = document.getElementById('btn-export-filtered');
+    if (!assetTableBody) return;
+
+    const filtri = leggiFiltriInventario();
+    inventoryFilteredCache = inventoryAssetsCache.filter((asset) => {
+        if (filtri.testoNormalizzato) {
+            const codice = normalizzaTestoRicerca(asset.codice_asset);
+            const nome = normalizzaTestoRicerca(asset.nome);
+            if (!codice.includes(filtri.testoNormalizzato) && !nome.includes(filtri.testoNormalizzato)) {
+                return false;
+            }
+        }
+
+        if (filtri.criticita && normalizzaCriticita(asset.classificazione_criticita) !== filtri.criticita) {
+            return false;
+        }
+
+        if (filtri.categoriaId && String(asset.categoria_asset_id ?? '') !== filtri.categoriaId) {
+            return false;
+        }
+
+        if (filtri.organizzazioneId && String(asset.organizzazione_id ?? '') !== filtri.organizzazioneId) {
+            return false;
+        }
+
+        return true;
+    });
+
+    if (clearButton) clearButton.disabled = !filtriInventarioAttivi(filtri);
+    if (exportButton) exportButton.disabled = inventoryFilteredCache.length === 0;
+
+    aggiornaStatoRicercaAsset(
+        inventoryAssetsCache.length,
+        inventoryFilteredCache.length,
+        filtri
+    );
+
+    aggiornaPaginazioneInventario(inventoryFilteredCache.length);
+
+    if (inventoryFilteredCache.length === 0) {
+        const messaggio = filtriInventarioAttivi(filtri)
+            ? 'Nessun asset soddisfa i criteri di ricerca e filtro selezionati.'
+            : 'Nessun asset attivo censito.';
+        assetTableBody.innerHTML = `<tr><td colspan="8" class="table-state">${escapeHtml(messaggio)}</td></tr>`;
+        return;
+    }
+
+    const indiceIniziale = (inventoryCurrentPage - 1) * inventoryPageSize;
+    const assetPaginaCorrente = inventoryFilteredCache.slice(
+        indiceIniziale,
+        indiceIniziale + inventoryPageSize
+    );
+
+    assetTableBody.innerHTML = assetPaginaCorrente.map((asset) => {
+        const criticita = normalizzaCriticita(asset.classificazione_criticita);
+        const badgeClass = classeCriticita(criticita);
+
+        return `
+            <tr>
+                <td class="cell-id">${escapeHtml(asset.id)}</td>
+                <td class="cell-primary">${escapeHtml(asset.codice_asset)}</td>
+                <td class="cell-primary">${escapeHtml(asset.nome)}</td>
+                <td class="cell-secondary">${escapeHtml(inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D')}</td>
+                <td class="cell-secondary">${escapeHtml(inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D')}</td>
+                <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
+                <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
+                <td class="cell-actions">
+                    <div class="cell-action-group">
+                        <button class="btn-detail" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>
+                        <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
+                        <button class="btn-archive" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Archivia</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    assetTableBody.querySelectorAll('.btn-detail').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = inventoryAssetsCache.find((item) => item.id === id);
+            if (asset) {
+                const dialog = document.getElementById('asset-detail-dialog');
+                if (dialog) dialog.dataset.assetId = String(asset.id);
+                await apriDettaglioAsset(asset);
+            }
+        });
+    });
+
+    assetTableBody.querySelectorAll('.btn-edit').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = inventoryAssetsCache.find((item) => item.id === id);
+            if (asset) {
+                await caricaAssetNelForm(asset);
+            }
+        });
+    });
+
+    assetTableBody.querySelectorAll('.btn-archive').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = inventoryAssetsCache.find((item) => item.id === id);
+            if (asset) apriDialogArchiviazione(asset);
+        });
+    });
+}
+
+/**
+ * Restituisce una copia dei risultati correntemente visualizzati e dei criteri
+ * usati per l'esportazione separata dei dati filtrati.
+ */
+export function getFilteredInventoryExportSnapshot() {
+    const filtri = leggiFiltriInventario();
+
+    return {
+        assets: inventoryFilteredCache.map((asset) => {
+            const responsible = inventoryResponsibleMap.get(Number(asset.responsabile_id));
+            return {
+                id: asset.id,
+                codice_asset: asset.codice_asset || '',
+                nome: asset.nome || '',
+                categoria: inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D',
+                organizzazione: inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D',
+                responsabile: responsible
+                    ? `${responsible.nome || ''} ${responsible.cognome || ''}`.trim()
+                    : 'N/D',
+                email_responsabile: responsible?.email || '',
+                versione: asset.versione || 'N/D',
+                ubicazione: asset.ubicazione || 'N/D',
+                descrizione: asset.descrizione || '',
+                data_inserimento: asset.data_inserimento || '',
+                classificazione_criticita: normalizzaCriticita(asset.classificazione_criticita)
+            };
+        }),
+        criteria: {
+            testoRicerca: filtri.testoOriginale || 'Nessuno',
+            criticita: filtri.criticita || 'Tutte',
+            categoria: filtri.categoriaId ? filtri.categoriaEtichetta : 'Tutte',
+            organizzazione: filtri.organizzazioneId ? filtri.organizzazioneEtichetta : 'Tutte',
+            numeroRisultati: inventoryFilteredCache.length
+        }
+    };
+}
+
 export async function loadAndRenderTable() {
     const assetTableBody = document.getElementById('asset-table-body');
+    const searchStatus = document.getElementById('asset-search-status');
     if (!assetTableBody) return;
+
+    inizializzaRicercaAsset();
+    inizializzaDialogDettaglioAsset();
+    inizializzaDialogArchiviazione();
 
     try {
         assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Sincronizzazione in corso...</td></tr>';
+        impostaDisponibilitaFiltriInventario(true);
+        if (searchStatus) searchStatus.textContent = 'Caricamento asset…';
 
         const [data, riferimenti] = await Promise.all([
             fetchAssets(),
             fetchAssetReferences()
         ]);
         assetReferencesCache = riferimenti;
-
-        if (!Array.isArray(data) || data.length === 0) {
-            assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Nessun asset attivo censito.</td></tr>';
-            return;
-        }
-
-        const categorie = new Map(
+        inventoryAssetsCache = Array.isArray(data) ? data : [];
+        inventoryCurrentPage = 1;
+        inventoryPageSize = 5;
+        inventoryCategoryMap = new Map(
             riferimenti.categorie.map((categoria) => [categoria.id, categoria.nome])
         );
-        const organizzazioni = new Map(
+        inventoryOrganizationMap = new Map(
             riferimenti.organizzazioni.map((organizzazione) => [organizzazione.id, organizzazione.nome])
         );
+        inventoryResponsibleMap = new Map(
+            riferimenti.responsabili.map((responsabile) => [Number(responsabile.id), responsabile])
+        );
+        popolaFiltriInventario(riferimenti);
 
-        assetTableBody.innerHTML = data.map((asset) => {
-            const criticita = normalizzaCriticita(asset.classificazione_criticita);
-            const badgeClass = classeCriticita(criticita);
-
-            return `
-                <tr>
-                    <td class="cell-id">${escapeHtml(asset.id)}</td>
-                    <td class="cell-primary">${escapeHtml(asset.codice_asset)}</td>
-                    <td class="cell-primary">${escapeHtml(asset.nome)}</td>
-                    <td class="cell-secondary">${escapeHtml(categorie.get(asset.categoria_asset_id) || 'N/D')}</td>
-                    <td class="cell-secondary">${escapeHtml(organizzazioni.get(asset.organizzazione_id) || 'N/D')}</td>
-                    <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
-                    <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
-                    <td class="cell-actions">
-                        <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        document.querySelectorAll('.btn-edit').forEach((button) => {
-            button.addEventListener('click', async (event) => {
-                const id = Number(event.currentTarget.getAttribute('data-id'));
-                const asset = data.find((item) => item.id === id);
-                if (asset) {
-                    await caricaAssetNelForm(asset);
-                }
-            });
-        });
+        impostaDisponibilitaFiltriInventario(false);
+        renderInventarioFiltrato();
     } catch (error) {
         console.error('Errore nel rendering dell’inventario:', error);
+        inventoryAssetsCache = [];
+        inventoryCategoryMap = new Map();
+        inventoryOrganizationMap = new Map();
+        inventoryResponsibleMap = new Map();
+        inventoryFilteredCache = [];
+        inventoryCurrentPage = 1;
+        inventoryPageSize = 5;
+        aggiornaPaginazioneInventario(0);
+        impostaDisponibilitaFiltriInventario(true);
+        if (searchStatus) searchStatus.textContent = 'Ricerca e filtri non disponibili.';
         assetTableBody.innerHTML = `<tr><td colspan="8" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
     }
 }
@@ -904,29 +1624,4 @@ export function mostraDashboardInterfaccia(session, accessState) {
     showAuthenticatedInterface(session, accessState);
 }
 
-export async function loadAndRenderSupplyChain() {
-    const container = document.getElementById('supply-chain-table-body');
-    if (!container) return;
 
-    try {
-        container.innerHTML = '<tr><td colspan="5" class="table-state">Estrazione dati in corso...</td></tr>';
-        const data = await fetchSupplyChain();
-        if (!data || data.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="table-state">Nessuna dipendenza registrata.</td></tr>';
-            return;
-        }
-
-        container.innerHTML = data.map(item => `
-            <tr>
-                <td class="cell-primary">${item.Service_Name || 'N/D'}</td>
-                <td>${item.Service_Type || 'N/D'}</td>
-                <td class="cell-primary">${item.Dependent_Asset || 'N/D'}</td>
-                <td>${item.Vendor_Partner || 'N/D'}</td>
-                <td class="cell-small">${item.Vendor_Contact || 'N/D'}</td>
-            </tr>
-        `).join('');
-    } catch (err) {
-        console.error("Errore rendering Supply Chain:", err);
-        container.innerHTML = `<tr><td colspan="5" class="error-msg">Errore: ${err.message}</td></tr>`;
-    }
-}
