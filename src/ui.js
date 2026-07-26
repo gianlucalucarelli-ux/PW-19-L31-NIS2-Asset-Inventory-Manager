@@ -5,10 +5,11 @@
 
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260726-d2';
-import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d2';
+import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
 import { navigateTo } from './router.js?build=20260726-d2';
-import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d2';
-import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d2';
+import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
+import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d3';
+import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -396,63 +397,10 @@ function escapeHtml(valore) {
 }
 
 /**
- * Formatta un timestamp PostgreSQL senza fuso orario conservando l'ora locale
- * già registrata dal database Europe/Rome.
+ * Formatta in modo uniforme i timestamp del database nel fuso Europe/Rome.
  */
-function formattaTimestampLocaleDatabase(valore) {
-    const testo = String(valore ?? '').trim();
-    const corrispondenza = testo.match(
-        /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/
-    );
-
-    if (!corrispondenza) return 'Data non disponibile';
-
-    /*
-     * audit_log.data_modifica è un timestamp senza fuso, ma i valori effettivi
-     * registrati dal trigger seguono la convenzione UTC. La conversione viene
-     * eseguita solo in visualizzazione, preservando integralmente lo storico.
-     */
-    const [, anno, mese, giorno, ore, minuti, secondi] = corrispondenza;
-    const dataUtc = new Date(Date.UTC(
-        Number(anno),
-        Number(mese) - 1,
-        Number(giorno),
-        Number(ore),
-        Number(minuti),
-        Number(secondi)
-    ));
-
-    if (Number.isNaN(dataUtc.getTime())) return 'Data non disponibile';
-
-    return dataUtc.toLocaleString('it-IT', {
-        timeZone: 'Europe/Rome',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-}
-
-/**
- * Formatta timestamp dotati di fuso o offset nel fuso operativo Europe/Rome.
- */
-function formattaTimestampEuropeRome(valore) {
-    if (!valore) return 'Data non disponibile';
-
-    const data = new Date(valore);
-    if (Number.isNaN(data.getTime())) return 'Data non disponibile';
-
-    return data.toLocaleString('it-IT', {
-        timeZone: 'Europe/Rome',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
+function formattaTimestampApplicativo(valore) {
+    return formatRomeDateTime(valore, 'Data non disponibile');
 }
 
 
@@ -601,7 +549,7 @@ function renderIncidentiRecenti(incidenti) {
         titolo.textContent = `${tipologia} #${incidente.id}`;
 
         const dettaglio = document.createElement('span');
-        const inizio = formattaTimestampEuropeRome(incidente.inizio);
+        const inizio = formattaTimestampApplicativo(incidente.inizio);
         const stato = incidente.fine ? 'Chiuso' : 'Aperto';
         dettaglio.textContent = `${inizio} · ${stato}`;
 
@@ -640,7 +588,7 @@ function renderAuditRecente(logs) {
         titolo.textContent = `${log.operazione || 'OPERAZIONE'} · ${entita}`;
 
         const dettaglio = document.createElement('span');
-        const data = formattaTimestampLocaleDatabase(log.data_modifica);
+        const data = formattaTimestampApplicativo(log.data_modifica);
         const utente = leggiCampo(log, ['utente_email', 'utente'], 'Sistema');
         dettaglio.textContent = `${data} · ${utente}`;
 
@@ -694,15 +642,7 @@ export async function loadAndRenderDashboard() {
         renderIncidentiRecenti(dati.incidentiRecenti);
         renderAuditRecente(dati.auditRecente);
 
-        const dataAggiornamento = new Date();
-        const dataOraFormattata = dataAggiornamento.toLocaleString('it-IT', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
+        const dataOraFormattata = formatRomeDateTime(new Date(), 'Data non disponibile');
 
         const aggiornamentoParziale = dati.errori.length > 0;
         const messaggioCompatto = aggiornamentoParziale
@@ -1171,7 +1111,7 @@ async function apriDettaglioAsset(asset) {
                 ${creaCampoDettaglio('Ubicazione', asset.ubicazione || 'N/D')}
                 ${creaCampoDettaglio('Data inserimento', formattaDataBreve(asset.data_inserimento))}
                 ${creaCampoDettaglio('Stato', asset.attiva === false ? 'Archiviato' : 'Attivo')}
-                ${asset.attiva === false ? creaCampoDettaglio('Archiviato il', formattaTimestampEuropeRome(asset.archiviato_il)) : ''}
+                ${asset.attiva === false ? creaCampoDettaglio('Archiviato il', formattaTimestampApplicativo(asset.archiviato_il)) : ''}
                 ${asset.attiva === false ? creaCampoDettaglio('Archiviato da', asset.archiviato_da || 'N/D') : ''}
                 ${asset.attiva === false ? creaCampoDettaglio('Motivo archiviazione', asset.motivo_archiviazione || 'N/D', 'asset-detail-field--wide') : ''}
                 ${creaCampoDettaglio('Descrizione', asset.descrizione || 'Nessuna descrizione disponibile', 'asset-detail-field--wide')}
@@ -1250,7 +1190,7 @@ function renderArchivedAssets() {
             <td class="cell-id">${escapeHtml(asset.id)}</td>
             <td class="cell-primary">${escapeHtml(asset.codice_asset || 'N/D')}</td>
             <td class="cell-primary">${escapeHtml(asset.nome || 'N/D')}</td>
-            <td class="cell-small">${escapeHtml(formattaTimestampEuropeRome(asset.archiviato_il))}</td>
+            <td class="cell-small">${escapeHtml(formattaTimestampApplicativo(asset.archiviato_il))}</td>
             <td class="cell-secondary archived-reason-cell">${escapeHtml(asset.motivo_archiviazione || 'N/D')}</td>
             <td class="cell-actions">
                 <button class="btn-detail archived-asset-detail-btn" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>

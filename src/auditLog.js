@@ -4,6 +4,7 @@
 // ===============================================================================================================
 
 import { fetchAuditLogs } from './database.js?build=20260726-d2';
+import { formatRomeDateTime, parseDatabaseTimestamp, formatRomeFileDate } from './dateTime.js?build=20260726-d3';
 
 const state = {
     rows: [],
@@ -39,19 +40,7 @@ function readFirst(row, keys, fallback = '') {
 }
 
 function formatTimestamp(value) {
-    if (!value) return 'N/D';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-
-    return new Intl.DateTimeFormat('it-IT', {
-        timeZone: 'Europe/Rome',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    }).format(date);
+    return formatRomeDateTime(value, 'N/D');
 }
 
 function getRowId(row) {
@@ -106,7 +95,7 @@ function filterRows() {
     const end = filters.to ? new Date(`${filters.to}T23:59:59.999`) : null;
 
     state.filtered = state.rows.filter((row) => {
-        const rowDate = row.data_modifica ? new Date(row.data_modifica) : null;
+        const rowDate = row.data_modifica ? parseDatabaseTimestamp(row.data_modifica) : null;
         if (text && !getSearchText(row).includes(text)) return false;
         if (filters.table && getTable(row) !== filters.table) return false;
         if (filters.operation && String(row.operazione ?? '') !== filters.operation) return false;
@@ -247,12 +236,7 @@ function resetFilters() {
 }
 
 function formatDateForFile(date = new Date()) {
-    return new Intl.DateTimeFormat('sv-SE', {
-        timeZone: 'Europe/Rome',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).format(date);
+    return formatRomeFileDate(date);
 }
 
 function downloadBlob(blob, filename) {

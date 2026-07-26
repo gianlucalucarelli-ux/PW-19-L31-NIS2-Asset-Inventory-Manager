@@ -10,8 +10,9 @@ import {
     updateIncidente,
     fetchReportIncidente,
     verificaAccessoIncidenti
-} from './incidentService.js?build=20260726-d2';
+} from './incidentService.js?build=20260726-d3';
 import { navigateTo } from './router.js?build=20260726-d2';
+import { nowDatabaseUtcTimestamp } from './dateTime.js?build=20260726-d3';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -217,7 +218,7 @@ async function salvaPrimoPasso() {
 
     if (!eventoId) {
         const nuovoIncidente = await startIncidente({
-            inizio: new Date().toISOString(),
+            inizio: nowDatabaseUtcTimestamp(),
             severita: 'Media',
             tipologia: selectedRadio.value
         });

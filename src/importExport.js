@@ -2,6 +2,8 @@
    FILE: src/importExport.js - Modulo Import/Export (SheetJS Wrapper)
    ========================================================================= */
 
+import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
+
 /**
  * Esporta la lista degli asset correnti in un file Excel (.xlsx)
  * @param {Array} assetsList - Array di oggetti ricevuto dalla vista Supabase
@@ -274,7 +276,7 @@ export async function exportArchivedAssetsToExcel(assetsList) {
             descrizione: asset.descrizione ?? '',
             dataInserimento: asset.data_inserimento ?? '',
             criticita: asset.classificazione_criticita ?? 'Bassa',
-            archiviatoIl: asset.archiviato_il ?? '',
+            archiviatoIl: asset.archiviato_il ? formatRomeDateTime(asset.archiviato_il, '') : '',
             archiviatoDa: asset.archiviato_da ?? '',
             motivo: asset.motivo_archiviazione ?? ''
         });

@@ -1,14 +1,15 @@
 // ===============================================================================================================
 // FILE: src/incidentManagement.js
-// DESCRIZIONE: Elenchi incidenti aperti/chiusi, dettaglio, chiusura controllata ed esportazione XLS/CSV.
+// DESCRIZIONE: Elenchi incidenti aperti/chiusi, dettaglio, chiusura controllata ed esportazione XLS.
 // ===============================================================================================================
 
 import {
     closeIncident,
     fetchIncidentDetail,
     fetchIncidentList
-} from './incidentService.js?build=20260726-d2';
+} from './incidentService.js?build=20260726-d3';
 import { navigateTo } from './router.js?build=20260726-d2';
+import { formatRomeDateTime, formatRomeFileDate, getRomeDateTimeLocalValue } from './dateTime.js?build=20260726-d3';
 
 const PAGE_SIZE_DEFAULT = 10;
 
@@ -29,14 +30,7 @@ function escapeHtml(value) {
 }
 
 function formatDateTime(value) {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return new Intl.DateTimeFormat('it-IT', {
-        dateStyle: 'short',
-        timeStyle: 'medium',
-        timeZone: 'Europe/Rome'
-    }).format(date);
+    return formatRomeDateTime(value, '—');
 }
 
 function normalizeSeverity(value) {
@@ -193,6 +187,26 @@ function renderTable() {
     if (reset) reset.disabled = !filters.search && !filters.severity && !filters.service;
 }
 
+function buildIncidentReport(classifications = []) {
+    const valuesForStep = (step) => {
+        const values = classifications
+            .filter((item) => Number(item.passo) === step)
+            .map((item) => {
+                const name = String(item.nome_esteso || '').trim();
+                const code = String(item.codice_acn || '').trim();
+                return [name, code].filter(Boolean).join(' ');
+            })
+            .filter(Boolean);
+
+        return values.length > 0 ? values.join(', ') : '[dato non inserito]';
+    };
+
+    return `L'incidente ha comportato ${valuesForStep(2)}, causato da ${valuesForStep(3)}. `
+        + `La severità è stata valutata come ${valuesForStep(4)}. `
+        + `L'attacco è stato caratterizzato da minacce di tipo ${valuesForStep(5)} `
+        + `ad opera di attori classificabili come ${valuesForStep(6)}.`;
+}
+
 async function showIncidentDetail(id) {
     const dialog = document.getElementById('incident-detail-dialog');
     const content = document.getElementById('incident-detail-content');
@@ -229,6 +243,10 @@ async function showIncidentDetail(id) {
                 </dl>
             </section>
             <section class="asset-detail-section">
+                <h3>Riepilogo report</h3>
+                <p class="section-intro">${escapeHtml(buildIncidentReport(classifications))}</p>
+            </section>
+            <section class="asset-detail-section">
                 <h3>Classificazione ACN</h3>
                 ${classifications.length
                     ? `<ul class="incident-classification-list">${classifications.map((item) => `<li><strong>${escapeHtml(item.codice_acn || '—')}</strong> · ${escapeHtml(item.nome_esteso || 'N/D')}</li>`).join('')}</ul>`
@@ -242,9 +260,7 @@ async function showIncidentDetail(id) {
 }
 
 function localDateTimeValue() {
-    const now = new Date();
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 16);
+    return getRomeDateTimeLocalValue();
 }
 
 function openCloseDialog(id) {
@@ -326,7 +342,7 @@ function exportRows() {
 }
 
 function fileDate() {
-    return new Date().toISOString().slice(0, 10);
+    return formatRomeFileDate();
 }
 
 function downloadBlob(content, type, fileName) {
@@ -339,15 +355,6 @@ function downloadBlob(content, type, fileName) {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-}
-
-function exportCsv() {
-    const rows = exportRows();
-    if (rows.length === 0) return;
-    const headers = Object.keys(rows[0]);
-    const quote = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
-    const csv = [headers.map(quote).join(';'), ...rows.map((row) => headers.map((header) => quote(row[header])).join(';'))].join('\r\n');
-    downloadBlob(`\uFEFF${csv}`, 'text/csv;charset=utf-8', `incidenti_${state.mode}_${fileDate()}.csv`);
 }
 
 async function exportXlsx() {
@@ -420,7 +427,6 @@ function bindEvents() {
         if (button.dataset.incidentAction === 'detail') showIncidentDetail(id);
         if (button.dataset.incidentAction === 'close') openCloseDialog(id);
     });
-    document.getElementById('incident-export-csv')?.addEventListener('click', exportCsv);
     document.getElementById('incident-export-xlsx')?.addEventListener('click', async () => {
         try { await exportXlsx(); } catch (error) { window.alert(error.message); }
     });

@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase.js?build=20260726-d2';
 import { getCurrentSession, resolveAccessState } from './auth.js?build=20260726-d2';
+import { romeLocalInputToDatabaseUtc } from './dateTime.js?build=20260726-d3';
 
 /**
  * Verifica che la sessione corrente sia valida e che l'utente abbia completato
@@ -292,7 +293,12 @@ export async function closeIncident(eventId, payload = {}) {
     const id = Number(eventId);
     const resolution = String(payload.resolution || '').trim();
     const cause = String(payload.cause || '').trim();
-    const closedAt = new Date(payload.closedAt);
+    let closedAt;
+    try {
+        closedAt = romeLocalInputToDatabaseUtc(payload.closedAt);
+    } catch {
+        closedAt = '';
+    }
 
     if (!Number.isInteger(id) || id <= 0) {
         throw new Error('Identificativo incidente non valido.');
@@ -300,7 +306,7 @@ export async function closeIncident(eventId, payload = {}) {
     if (resolution.length < 10) {
         throw new Error('La risoluzione deve contenere almeno 10 caratteri.');
     }
-    if (Number.isNaN(closedAt.getTime())) {
+    if (!closedAt) {
         throw new Error('Data e ora di chiusura non valide.');
     }
 
@@ -313,7 +319,7 @@ export async function closeIncident(eventId, payload = {}) {
     const { data, error } = await supabase
         .from('evento_servizio')
         .update({
-            fine: closedAt.toISOString(),
+            fine: closedAt,
             causa: closurePayload
         })
         .eq('id', id)
