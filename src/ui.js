@@ -7,7 +7,7 @@ import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetai
 import { loadAndRenderSupplyChain } from './supplyChain.js?v=5';
 import { loadAndRenderAuditLog } from './auditLog.js?v=2';
 import { navigateTo } from './router.js?v=3';
-import { exportArchivedAssetsToExcel } from './importExport.js?v=5';
+import { exportArchivedAssetsToExcel } from './importExport.js?v=6';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.

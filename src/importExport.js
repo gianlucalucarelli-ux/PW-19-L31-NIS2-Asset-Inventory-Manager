@@ -218,6 +218,119 @@ export async function exportFilteredAssetsToExcel(assetsList, criteria = {}) {
 }
 
 /**
+ * Esporta gli asset archiviati logicamente con i metadati di conservazione.
+ * Il file è di sola consultazione e non contiene funzioni di ripristino.
+ */
+export async function exportArchivedAssetsToExcel(assetsList) {
+    if (!Array.isArray(assetsList) || assetsList.length === 0) {
+        alert('Nessun asset archiviato disponibile per l’esportazione.');
+        return;
+    }
+
+    if (typeof ExcelJS === 'undefined') {
+        throw new Error('Modulo ExcelJS non disponibile. Ricaricare la pagina e riprovare.');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'NIS2 Asset Inventory Manager';
+    workbook.lastModifiedBy = 'NIS2 Asset Inventory Manager';
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const worksheet = workbook.addWorksheet('Asset archiviati', {
+        views: [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }],
+        properties: { defaultRowHeight: 20 }
+    });
+
+    worksheet.columns = [
+        { header: 'ID', key: 'id', width: 10 },
+        { header: 'Codice asset', key: 'codice', width: 24 },
+        { header: 'Nome asset', key: 'nome', width: 34 },
+        { header: 'Categoria', key: 'categoria', width: 34 },
+        { header: 'Organizzazione', key: 'organizzazione', width: 38 },
+        { header: 'Responsabile', key: 'responsabile', width: 32 },
+        { header: 'E-mail responsabile', key: 'emailResponsabile', width: 36 },
+        { header: 'Versione', key: 'versione', width: 24 },
+        { header: 'Ubicazione', key: 'ubicazione', width: 30 },
+        { header: 'Descrizione', key: 'descrizione', width: 52 },
+        { header: 'Data inserimento', key: 'dataInserimento', width: 22 },
+        { header: 'Criticità NIS2', key: 'criticita', width: 18 },
+        { header: 'Archiviato il', key: 'archiviatoIl', width: 24 },
+        { header: 'Archiviato da', key: 'archiviatoDa', width: 38 },
+        { header: 'Motivo archiviazione', key: 'motivo', width: 54 }
+    ];
+
+    assetsList.forEach((asset) => {
+        worksheet.addRow({
+            id: asset.id ?? '',
+            codice: asset.codice_asset ?? '',
+            nome: asset.nome ?? '',
+            categoria: asset.categoria ?? asset.categoria_nome ?? 'N/D',
+            organizzazione: asset.organizzazione ?? asset.organizzazione_nome ?? 'N/D',
+            responsabile: asset.responsabile ?? asset.responsabile_nome ?? 'Non assegnato',
+            emailResponsabile: asset.email_responsabile ?? asset.responsabile_email ?? '',
+            versione: asset.versione ?? 'N/D',
+            ubicazione: asset.ubicazione ?? 'N/D',
+            descrizione: asset.descrizione ?? '',
+            dataInserimento: asset.data_inserimento ?? '',
+            criticita: asset.classificazione_criticita ?? 'Bassa',
+            archiviatoIl: asset.archiviato_il ?? '',
+            archiviatoDa: asset.archiviato_da ?? '',
+            motivo: asset.motivo_archiviazione ?? ''
+        });
+    });
+
+    const header = worksheet.getRow(1);
+    header.height = 28;
+    header.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7C3AED' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = { bottom: { style: 'medium', color: { argb: 'FF5B21B6' } } };
+    });
+
+    worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        row.eachCell((cell, columnNumber) => {
+            cell.alignment = {
+                vertical: 'top',
+                horizontal: columnNumber === 1 ? 'center' : 'left',
+                wrapText: true
+            };
+            cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+            if (rowNumber % 2 === 0) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F4FF' } };
+            }
+        });
+    });
+
+    worksheet.autoFilter = { from: 'A1', to: `O${worksheet.rowCount}` };
+
+    const metadata = workbook.addWorksheet('Metadati esportazione');
+    metadata.columns = [
+        { header: 'Voce', key: 'voce', width: 34 },
+        { header: 'Valore', key: 'valore', width: 64 }
+    ];
+    metadata.addRows([
+        {
+            voce: 'Data esportazione',
+            valore: new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'medium' }).format(new Date())
+        },
+        { voce: 'Stato record', valore: 'Archiviati logicamente (attiva = false)' },
+        { voce: 'Numero asset', valore: assetsList.length },
+        { voce: 'Nota', valore: 'Nessuna cancellazione fisica o operazione di ripristino è inclusa nel file.' }
+    ]);
+    metadata.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    scaricaBufferExcel(buffer, `inventario_asset_archiviati_${dataLocalePerNomeFile()}.xlsx`);
+}
+
+/**
  * Scarica il modello ufficiale di importazione e un foglio di supporto con i
  * valori controllati correntemente disponibili nel database.
  */
