@@ -11,14 +11,14 @@ import {
     updateSupplier,
     archiveSupplier,
     fetchSupplierDetail
-} from './supplierService.js?build=20260726-f1';
-import { navigateTo } from './router.js?build=20260726-f1';
-import { t } from './i18n.js?build=20260726-f1';
+} from './supplierService.js?build=20260726-h1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
+import { t } from './i18n.js?build=20260726-h1';
 import {
     exportRowsToExcel,
     downloadImportTemplate,
     readFirstSheetRows
-} from './entitySpreadsheet.js?build=20260726-f1';
+} from './entitySpreadsheet.js?build=20260726-h1';
 
 let initialized = false;
 let suppliersCache = [];
@@ -30,6 +30,7 @@ let pageSize = 10;
 let archiveCandidate = null;
 let pendingImport = null;
 let pendingEditSupplier = null;
+let activeFormSupplier = null;
 
 function escapeHtml(value) {
     const element = document.createElement('div');
@@ -64,6 +65,25 @@ function setStatus(id, message, error = false) {
     if (!element) return;
     element.textContent = message;
     element.classList.toggle('error-msg', error);
+}
+
+function applySupplierFormContext(supplier = null) {
+    activeFormSupplier = supplier;
+    const isEditing = Boolean(supplier?.id);
+    const title = document.getElementById('supplier-form-title');
+    const submit = document.getElementById('supplier-submit');
+
+    if (title) title.textContent = isEditing ? t('Modifica fornitore') : t('Nuovo fornitore');
+    if (submit) submit.textContent = isEditing ? t('Aggiorna fornitore') : t('Salva fornitore');
+
+    document.dispatchEvent(new CustomEvent('app:workspace-context', {
+        detail: {
+            section: 'Fornitori',
+            label: 'FORNITORI',
+            title: isEditing ? 'Modifica fornitore' : 'Nuovo fornitore',
+            navigationRoute: isEditing ? 'suppliers' : 'add-supplier'
+        }
+    }));
 }
 
 function readFilters() {
@@ -108,11 +128,11 @@ function renderSuppliers() {
             <td>${escapeHtml(supplier.tipo_fornitore?.nome || 'N/D')}</td>
             <td>${escapeHtml(supplier.indirizzo || 'N/D')}</td>
             <td>${escapeHtml(supplier.contatto_email || 'N/D')}</td>
-            <td>
-                <div class="table-actions">
-                    <button type="button" class="btn-table" data-supplier-action="detail" data-id="${supplier.id}">${escapeHtml(t('Dettaglio'))}</button>
-                    <button type="button" class="btn-table" data-supplier-action="edit" data-id="${supplier.id}">${escapeHtml(t('Modifica'))}</button>
-                    <button type="button" class="btn-table btn-table-danger" data-supplier-action="archive" data-id="${supplier.id}">${escapeHtml(t('Cessa'))}</button>
+            <td class="cell-actions">
+                <div class="cell-action-group">
+                    <button type="button" class="btn-detail" data-supplier-action="detail" data-id="${supplier.id}" aria-haspopup="dialog">${escapeHtml(t('Dettaglio'))}</button>
+                    <button type="button" class="btn-edit" data-supplier-action="edit" data-id="${supplier.id}">${escapeHtml(t('Modifica'))}</button>
+                    <button type="button" class="btn-archive" data-supplier-action="archive" data-id="${supplier.id}" aria-haspopup="dialog">${escapeHtml(t('Cessa'))}</button>
                 </div>
             </td>
         </tr>
@@ -159,8 +179,7 @@ async function prepareSupplierForm(supplier = null) {
     document.getElementById('supplier-type').value = supplier?.tipo_fornitore_id || referencesCache.tipi[0]?.id || '';
     document.getElementById('supplier-address').value = supplier?.indirizzo || '';
     document.getElementById('supplier-email').value = supplier?.contatto_email || '';
-    document.getElementById('supplier-form-title').textContent = supplier ? t('Modifica fornitore') : t('Nuovo fornitore');
-    document.getElementById('supplier-submit').textContent = supplier ? t('Aggiorna fornitore') : t('Salva fornitore');
+    applySupplierFormContext(supplier);
     setStatus('supplier-form-status', '');
 }
 
@@ -190,36 +209,91 @@ async function submitSupplierForm(event) {
     }
 }
 
-function listHtml(items, emptyMessage) {
-    if (!items.length) return `<p class="text-muted">${escapeHtml(emptyMessage)}</p>`;
-    return `<ul class="detail-list">${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
+function detailField(label, value, wide = false) {
+    return `
+        <div class="asset-detail-field${wide ? ' asset-detail-field--wide' : ''}">
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(value || 'N/D')}</dd>
+        </div>
+    `;
+}
+
+function relationSection(title, items, emptyMessage) {
+    const body = items.length
+        ? `<ul class="asset-detail-relation-list">${items.map((item) => `<li>${item}</li>`).join('')}</ul>`
+        : `<p class="asset-detail-empty">${escapeHtml(emptyMessage)}</p>`;
+    return `
+        <section class="asset-detail-section">
+            <div class="asset-detail-section-heading">
+                <h3>${escapeHtml(title)}</h3>
+                <span class="asset-detail-count">${items.length}</span>
+            </div>
+            ${body}
+        </section>
+    `;
 }
 
 async function showSupplierDetail(supplier) {
     const dialog = document.getElementById('supplier-detail-dialog');
     const content = document.getElementById('supplier-detail-content');
+    const subtitle = document.getElementById('supplier-detail-subtitle');
     if (!dialog || !content) return;
+
+    if (subtitle) subtitle.textContent = `${supplier.codice_fornitore} · ${supplier.nome}`;
     content.innerHTML = `<p class="table-state">${escapeHtml(t('Caricamento dettaglio…'))}</p>`;
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
+
     try {
         const detail = await fetchSupplierDetail(supplier.id);
         const record = detail.supplier;
-        content.innerHTML = `
-            <div class="asset-detail-grid detail-grid-wide">
-                <div><span>${escapeHtml(t('Codice fornitore'))}</span><strong>${escapeHtml(record.codice_fornitore)}</strong></div>
-                <div><span>${escapeHtml(t('Nome fornitore'))}</span><strong>${escapeHtml(record.nome)}</strong></div>
-                <div><span>${escapeHtml(t('Tipo fornitore'))}</span><strong>${escapeHtml(record.tipo_fornitore?.nome || 'N/D')}</strong></div>
-                <div><span>${escapeHtml(t('E-mail contatto'))}</span><strong>${escapeHtml(record.contatto_email || 'N/D')}</strong></div>
-                <div class="detail-span-full"><span>${escapeHtml(t('Indirizzo'))}</span><strong>${escapeHtml(record.indirizzo || 'N/D')}</strong></div>
+        if (subtitle) subtitle.textContent = `${record.codice_fornitore} · ${record.nome}`;
+
+        const services = detail.services.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>${escapeHtml(item.servizio.codice_servizio)}</strong>
+                <span>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</span>
             </div>
-            <div class="entity-relation-grid">
-                <section><h3>${escapeHtml(t('Servizi collegati'))} (${detail.services.length})</h3>${listHtml(detail.services.map((item) => `<strong>${escapeHtml(item.servizio.codice_servizio)}</strong> · ${escapeHtml(item.servizio.nome)} <small>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</small>`), t('Nessun servizio collegato.'))}</section>
-                <section><h3>${escapeHtml(t('Asset collegati'))} (${detail.assets.length})</h3>${listHtml(detail.assets.map((item) => `<strong>${escapeHtml(item.asset.codice_asset)}</strong> · ${escapeHtml(item.asset.nome)} <small>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</small>`), t('Nessun asset collegato.'))}</section>
-                <section><h3>${escapeHtml(t('Gerarchia fornitori'))} (${detail.hierarchy.length})</h3>${listHtml(detail.hierarchy.map((item) => `<strong>${escapeHtml(item.direction)}</strong> · ${escapeHtml(item.related.codice_fornitore)} · ${escapeHtml(item.related.nome)} <small>${escapeHtml(item.tipo?.codice || '')}</small>`), t('Nessuna relazione di subfornitura.'))}</section>
+            <p>${escapeHtml(item.servizio.nome)}</p>
+        `);
+        const assets = detail.assets.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>${escapeHtml(item.asset.codice_asset)}</strong>
+                <span>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</span>
+            </div>
+            <p>${escapeHtml(item.asset.nome)}</p>
+        `);
+        const hierarchy = detail.hierarchy.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>${escapeHtml(item.direction)}</strong>
+                <span>${escapeHtml(item.related.codice_fornitore)}</span>
+            </div>
+            <p>${escapeHtml(item.related.nome)}</p>
+            ${item.tipo?.codice ? `<small>${escapeHtml(item.tipo.codice)}</small>` : ''}
+        `);
+
+        content.innerHTML = `
+            <section class="asset-detail-section entity-detail-overview">
+                <div class="asset-detail-section-heading"><h3>${escapeHtml(t('Dati fornitore'))}</h3></div>
+                <dl class="asset-detail-grid">
+                    ${detailField(t('Codice fornitore'), record.codice_fornitore)}
+                    ${detailField(t('Nome fornitore'), record.nome)}
+                    ${detailField(t('Tipo fornitore'), record.tipo_fornitore?.nome || 'N/D')}
+                    ${detailField(t('E-mail contatto'), record.contatto_email || 'N/D')}
+                    ${detailField(t('Indirizzo'), record.indirizzo || 'N/D', true)}
+                </dl>
+            </section>
+            <div class="asset-detail-relations entity-detail-relations">
+                ${relationSection(t('Servizi collegati'), services, t('Nessun servizio collegato.'))}
+                ${relationSection(t('Asset collegati'), assets, t('Nessun asset collegato.'))}
+                ${relationSection(t('Gerarchia fornitori'), hierarchy, t('Nessuna relazione di subfornitura.'))}
             </div>
         `;
     } catch (error) {
-        content.innerHTML = `<p class="error-msg">${escapeHtml(formatError(error))}</p>`;
+        content.innerHTML = `
+            <section class="asset-detail-section">
+                <p class="error-msg">${escapeHtml(formatError(error))}</p>
+            </section>
+        `;
     }
 }
 
@@ -494,6 +568,7 @@ function bindEvents() {
     document.addEventListener('app:language-changed', () => {
         renderSuppliers();
         if (archivedSuppliersCache.length) loadArchivedSuppliers();
+        if (getCurrentRoute() === 'add-supplier') applySupplierFormContext(activeFormSupplier);
     });
 }
 

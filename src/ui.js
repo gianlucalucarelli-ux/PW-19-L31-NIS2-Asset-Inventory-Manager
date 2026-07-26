@@ -6,14 +6,14 @@
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260726-d2';
 import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
-import { navigateTo, getCurrentRoute } from './router.js?build=20260726-f1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d4';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
-import { loadOrganizationView } from './organizationManagement.js?build=20260726-f1';
-import { loadServiceView } from './serviceManagement.js?build=20260726-f1';
-import { loadSupplierView } from './supplierManagement.js?build=20260726-f1';
-import { t } from './i18n.js?build=20260726-f1';
+import { loadOrganizationView } from './organizationManagement.js?build=20260726-h1';
+import { loadServiceView } from './serviceManagement.js?build=20260726-h1';
+import { loadSupplierView } from './supplierManagement.js?build=20260726-h1';
+import { t } from './i18n.js?build=20260726-h1';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -339,6 +339,75 @@ const ROUTE_METADATA = {
     }
 };
 
+const SIDEBAR_GROUP_STORAGE_KEY = 'nis2-sidebar-open-group';
+let sidebarNavigationInitialized = false;
+
+function setNavigationGroupExpanded(group, expanded) {
+    if (!group) return;
+    const toggle = group.querySelector(':scope > .navigation-group__toggle');
+    if (!toggle) return;
+    toggle.setAttribute('aria-expanded', String(Boolean(expanded)));
+    group.classList.toggle('is-expanded', Boolean(expanded));
+}
+
+function initializeSidebarNavigation() {
+    if (sidebarNavigationInitialized) return;
+    sidebarNavigationInitialized = true;
+
+    const groups = [...document.querySelectorAll('.navigation-group[data-menu-group]')];
+    const savedGroup = localStorage.getItem(SIDEBAR_GROUP_STORAGE_KEY);
+
+    groups.forEach((group) => {
+        const toggle = group.querySelector(':scope > .navigation-group__toggle');
+        if (!toggle) return;
+
+        const shouldStartExpanded = savedGroup
+            ? group.dataset.menuGroup === savedGroup
+            : toggle.getAttribute('aria-expanded') === 'true';
+        setNavigationGroupExpanded(group, shouldStartExpanded);
+
+        toggle.addEventListener('click', () => {
+            const willExpand = toggle.getAttribute('aria-expanded') !== 'true';
+            groups.forEach((candidate) => setNavigationGroupExpanded(candidate, false));
+            setNavigationGroupExpanded(group, willExpand);
+
+            if (willExpand) localStorage.setItem(SIDEBAR_GROUP_STORAGE_KEY, group.dataset.menuGroup || '');
+            else localStorage.removeItem(SIDEBAR_GROUP_STORAGE_KEY);
+        });
+    });
+}
+
+function keepRouteVisibleInsideSidebar(routeControl) {
+    const navigation = routeControl?.closest('.sidebar-navigation');
+    if (!navigation) return;
+
+    window.requestAnimationFrame(() => {
+        const navigationRect = navigation.getBoundingClientRect();
+        const controlRect = routeControl.getBoundingClientRect();
+        const safeGap = 10;
+
+        if (controlRect.top < navigationRect.top + safeGap) {
+            navigation.scrollTop -= (navigationRect.top + safeGap) - controlRect.top;
+        } else if (controlRect.bottom > navigationRect.bottom - safeGap) {
+            navigation.scrollTop += controlRect.bottom - (navigationRect.bottom - safeGap);
+        }
+    });
+}
+
+function revealNavigationGroupForRoute(route) {
+    initializeSidebarNavigation();
+    const routeControl = [...document.querySelectorAll('.sidebar-navigation [data-route]')]
+        .find((control) => control.dataset.route === route);
+    const activeGroup = routeControl?.closest('.navigation-group[data-menu-group]');
+    if (!activeGroup) return;
+
+    document.querySelectorAll('.navigation-group[data-menu-group]').forEach((group) => {
+        setNavigationGroupExpanded(group, group === activeGroup);
+    });
+    localStorage.setItem(SIDEBAR_GROUP_STORAGE_KEY, activeGroup.dataset.menuGroup || '');
+    keepRouteVisibleInsideSidebar(routeControl);
+}
+
 /**
  * Aggiorna l'evidenziazione dei controlli di navigazione e gli attributi accessibili.
  */
@@ -360,28 +429,58 @@ function updateNavigationState(route) {
             control.removeAttribute('aria-current');
         }
     });
+
+    revealNavigationGroupForRoute(route);
 }
 
 /**
  * Aggiorna titolo, breadcrumb e titolo della scheda del browser.
  */
-function updateWorkspaceHeader(route) {
-    const metadata = ROUTE_METADATA[route] || ROUTE_METADATA.dashboard;
+let workspaceContextOverride = null;
+
+function updateWorkspaceHeader(route, override = null) {
+    const metadata = override || ROUTE_METADATA[route] || ROUTE_METADATA.dashboard;
     const breadcrumbSection = document.getElementById('breadcrumb-section');
     const breadcrumbCurrent = document.getElementById('breadcrumb-current');
     const pageSectionLabel = document.getElementById('page-section-label');
     const pageTitle = document.getElementById('page-title');
 
-    if (breadcrumbSection) breadcrumbSection.textContent = metadata.section;
-    if (breadcrumbCurrent) breadcrumbCurrent.textContent = metadata.title;
-    if (pageSectionLabel) pageSectionLabel.textContent = metadata.label;
-    if (pageTitle) pageTitle.textContent = metadata.title;
+    if (breadcrumbSection) breadcrumbSection.textContent = t(metadata.section);
+    if (breadcrumbCurrent) breadcrumbCurrent.textContent = t(metadata.title);
+    if (pageSectionLabel) pageSectionLabel.textContent = t(metadata.label);
+    if (pageTitle) pageTitle.textContent = t(metadata.title);
 
     document.title = `${t(metadata.title)} | NIS2 Asset Inventory Manager`;
 }
 
+function resetApplicationScrollPosition() {
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    if (scrollingElement) {
+        scrollingElement.scrollTop = 0;
+        scrollingElement.scrollLeft = 0;
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
+    const workspace = document.getElementById('app-workspace');
+    if (workspace) {
+        workspace.scrollTop = 0;
+        workspace.scrollLeft = 0;
+    }
+}
+
+document.addEventListener('app:workspace-context', (event) => {
+    const detail = event.detail || {};
+    workspaceContextOverride = detail.title ? detail : null;
+    updateWorkspaceHeader(getCurrentRoute(), workspaceContextOverride);
+
+    if (detail.navigationRoute) {
+        updateNavigationState(detail.navigationRoute);
+    }
+});
+
 document.addEventListener('app:language-changed', () => {
-    updateWorkspaceHeader(getCurrentRoute());
+    updateWorkspaceHeader(getCurrentRoute(), workspaceContextOverride);
 });
 
 /**
@@ -389,6 +488,8 @@ document.addEventListener('app:language-changed', () => {
  */
 export async function activateApplicationRoute(route) {
     const viewId = ROUTE_TO_VIEW[route] || 'inventory';
+    workspaceContextOverride = null;
+    resetApplicationScrollPosition();
     document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close());
 
     document.querySelectorAll('.view-section').forEach((section) => {
@@ -433,6 +534,8 @@ export async function activateApplicationRoute(route) {
     } else if (route === 'nuova-segnalazione') {
         openNewIncidentWizard();
     }
+
+    window.requestAnimationFrame(resetApplicationScrollPosition);
 }
 
 // =========================================================================
@@ -771,6 +874,8 @@ let inventoryCurrentPage = 1;
 let inventoryPageSize = 5;
 let archiveAssetCandidate = null;
 let archivedAssetsCache = [];
+let archivedAssetsCurrentPage = 1;
+let archivedAssetsPageSize = 10;
 
 
 /**
@@ -1245,6 +1350,35 @@ function archivedAssetExportRows() {
     }));
 }
 
+function aggiornaPaginazioneAssetArchiviati(totaleRisultati) {
+    const previousButton = document.getElementById('archived-assets-page-prev');
+    const nextButton = document.getElementById('archived-assets-page-next');
+    const indicator = document.getElementById('archived-assets-page-indicator');
+    const status = document.getElementById('archived-assets-page-status');
+    const pageSizeSelect = document.getElementById('archived-assets-page-size');
+    if (!previousButton || !nextButton || !indicator || !status || !pageSizeSelect) return;
+
+    const totalePagine = totaleRisultati === 0 ? 0 : Math.ceil(totaleRisultati / archivedAssetsPageSize);
+    if (totalePagine === 0) {
+        archivedAssetsCurrentPage = 1;
+        previousButton.disabled = true;
+        nextButton.disabled = true;
+        indicator.textContent = `${t('Pagina')} 0 ${t('di')} 0`;
+        status.textContent = `0 ${t('risultati')}`;
+        pageSizeSelect.value = String(archivedAssetsPageSize);
+        return;
+    }
+
+    archivedAssetsCurrentPage = Math.min(Math.max(archivedAssetsCurrentPage, 1), totalePagine);
+    const primoElemento = ((archivedAssetsCurrentPage - 1) * archivedAssetsPageSize) + 1;
+    const ultimoElemento = Math.min(archivedAssetsCurrentPage * archivedAssetsPageSize, totaleRisultati);
+    previousButton.disabled = archivedAssetsCurrentPage === 1;
+    nextButton.disabled = archivedAssetsCurrentPage === totalePagine;
+    indicator.textContent = `${t('Pagina')} ${archivedAssetsCurrentPage} ${t('di')} ${totalePagine}`;
+    status.textContent = `${primoElemento}–${ultimoElemento} ${t('di')} ${totaleRisultati}`;
+    pageSizeSelect.value = String(archivedAssetsPageSize);
+}
+
 function renderArchivedAssets() {
     const tbody = document.getElementById('archived-assets-table-body');
     const status = document.getElementById('archived-assets-status');
@@ -1252,22 +1386,26 @@ function renderArchivedAssets() {
     if (!tbody) return;
 
     if (exportButton) exportButton.disabled = archivedAssetsCache.length === 0;
-    if (status) status.textContent = `${archivedAssetsCache.length} asset archiviati`;
+    if (status) status.textContent = `${archivedAssetsCache.length} ${t('asset archiviati')}`;
+    aggiornaPaginazioneAssetArchiviati(archivedAssetsCache.length);
 
     if (archivedAssetsCache.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="table-state">Nessun asset archiviato disponibile.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="6" class="table-state">${escapeHtml(t('Nessun asset archiviato disponibile.'))}</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = archivedAssetsCache.map((asset) => `
+    const indiceIniziale = (archivedAssetsCurrentPage - 1) * archivedAssetsPageSize;
+    const righePagina = archivedAssetsCache.slice(indiceIniziale, indiceIniziale + archivedAssetsPageSize);
+
+    tbody.innerHTML = righePagina.map((asset) => `
         <tr>
             <td class="cell-id">${escapeHtml(asset.id)}</td>
             <td class="cell-primary">${escapeHtml(asset.codice_asset || 'N/D')}</td>
             <td class="cell-primary">${escapeHtml(asset.nome || 'N/D')}</td>
             <td class="cell-small">${escapeHtml(formattaTimestampApplicativo(asset.archiviato_il))}</td>
             <td class="cell-secondary archived-reason-cell">${escapeHtml(asset.motivo_archiviazione || 'N/D')}</td>
-            <td class="cell-actions">
-                <button class="btn-detail archived-asset-detail-btn" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>
+            <td class="cell-actions cell-actions--single">
+                <button class="btn-detail archived-asset-detail-btn" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">${escapeHtml(t('Dettaglio'))}</button>
             </td>
         </tr>
     `).join('');
@@ -1287,6 +1425,9 @@ function renderArchivedAssets() {
 
 function inizializzaVistaAssetArchiviati() {
     const exportButton = document.getElementById('btn-export-archived-assets');
+    const pageSizeSelect = document.getElementById('archived-assets-page-size');
+    const previousButton = document.getElementById('archived-assets-page-prev');
+    const nextButton = document.getElementById('archived-assets-page-next');
     if (!exportButton || exportButton.dataset.bound === 'true') return;
 
     exportButton.dataset.bound = 'true';
@@ -1294,15 +1435,37 @@ function inizializzaVistaAssetArchiviati() {
         const defaultLabel = exportButton.textContent;
         try {
             exportButton.disabled = true;
-            exportButton.textContent = 'Esportazione…';
+            exportButton.textContent = t('Esportazione…');
             await exportArchivedAssetsToExcel(archivedAssetExportRows());
         } catch (error) {
             console.error('Errore esportazione asset archiviati:', error);
-            window.alert(`Esportazione non riuscita: ${error.message}`);
+            window.alert(`${t('Esportazione non riuscita')}: ${error.message}`);
         } finally {
             exportButton.textContent = defaultLabel;
             exportButton.disabled = archivedAssetsCache.length === 0;
         }
+    });
+
+    pageSizeSelect?.addEventListener('change', () => {
+        const nextSize = Number(pageSizeSelect.value);
+        archivedAssetsPageSize = [5, 10, 25].includes(nextSize) ? nextSize : 10;
+        archivedAssetsCurrentPage = 1;
+        renderArchivedAssets();
+    });
+
+    previousButton?.addEventListener('click', () => {
+        if (archivedAssetsCurrentPage <= 1) return;
+        archivedAssetsCurrentPage -= 1;
+        renderArchivedAssets();
+        document.getElementById('archived-assets-pagination')?.scrollIntoView({ block: 'nearest' });
+    });
+
+    nextButton?.addEventListener('click', () => {
+        const totalePagine = Math.max(1, Math.ceil(archivedAssetsCache.length / archivedAssetsPageSize));
+        if (archivedAssetsCurrentPage >= totalePagine) return;
+        archivedAssetsCurrentPage += 1;
+        renderArchivedAssets();
+        document.getElementById('archived-assets-pagination')?.scrollIntoView({ block: 'nearest' });
     });
 }
 
@@ -1320,6 +1483,7 @@ async function loadAndRenderArchivedAssets() {
 
     try {
         archivedAssetsCache = await fetchArchivedAssets();
+        archivedAssetsCurrentPage = 1;
         renderArchivedAssets();
     } catch (error) {
         console.error('Errore caricamento asset archiviati:', error);

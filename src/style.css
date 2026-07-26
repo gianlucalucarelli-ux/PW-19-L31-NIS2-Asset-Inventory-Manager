@@ -3262,3 +3262,339 @@ tbody tr:last-child td {
         grid-column: auto;
     }
 }
+
+/* ===============================================================================================================
+   PATCH G - UNIFORMAZIONE UI, NAVIGAZIONE E CONSULTAZIONE ARCHIVI
+   - Menu applicativo a sezioni comprimibili con scorrimento interno
+   - Dettagli Servizi/Fornitori allineati al Dettaglio Asset
+   - Asset archiviati con paginazione e senza doppio scorrimento verticale
+   - Azioni tabellari uniformi e descrizioni leggibili
+   =============================================================================================================== */
+
+.app-sidebar {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: calc(100vh - 112px);
+}
+
+.sidebar-navigation {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.sidebar-navigation::-webkit-scrollbar,
+.asset-detail-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+.sidebar-navigation::-webkit-scrollbar-thumb,
+.asset-detail-body::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: var(--border-strong);
+    background-clip: padding-box;
+}
+
+.navigation-group {
+    gap: 4px;
+    padding: 5px 0;
+}
+
+.navigation-group__toggle {
+    display: flex;
+    width: 100%;
+    min-height: 36px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-low);
+    background: transparent;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.navigation-group__toggle:hover,
+.navigation-group__toggle:focus-visible,
+.navigation-group__toggle[aria-expanded="true"] {
+    color: var(--text-high);
+    background: var(--bg-soft);
+}
+
+.navigation-group__chevron {
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform var(--transition-fast);
+}
+
+.navigation-group__toggle[aria-expanded="true"] .navigation-group__chevron {
+    transform: rotate(180deg);
+}
+
+.navigation-group__items {
+    display: grid;
+    gap: 5px;
+    padding-top: 3px;
+}
+
+.navigation-group__toggle[aria-expanded="false"] + .navigation-group__items {
+    display: none;
+}
+
+.navigation-group.is-expanded {
+    padding-bottom: 8px;
+}
+
+.navigation-group.is-expanded .navigation-group__toggle {
+    color: var(--primary);
+}
+
+#service-table-body td:nth-child(2) strong,
+#service-table-body td:nth-child(2) small,
+#supplier-table-body td:nth-child(2) strong,
+#supplier-table-body td:nth-child(2) small {
+    display: block;
+}
+
+#service-table-body td:nth-child(2) small,
+#supplier-table-body td:nth-child(2) small {
+    margin-top: 4px;
+    color: var(--text-low);
+    line-height: 1.4;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.pagination-controls > label {
+    color: var(--text-low);
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.pagination-controls .compact-select {
+    min-width: 76px;
+}
+
+.pagination-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.entity-detail-dialog {
+    width: min(1080px, calc(100vw - 32px));
+}
+
+.entity-detail-dialog .asset-detail-shell {
+    height: min(820px, calc(100vh - 32px));
+}
+
+.entity-detail-dialog .asset-detail-header > div {
+    min-width: 0;
+}
+
+.entity-detail-dialog .asset-detail-subtitle {
+    overflow-wrap: anywhere;
+}
+
+.entity-detail-overview .asset-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.entity-detail-overview .asset-detail-field {
+    display: flex;
+    min-height: 92px;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.entity-detail-relations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.entity-detail-relations .asset-detail-section {
+    min-width: 0;
+}
+
+.entity-detail-relations .asset-detail-relation-list li {
+    min-height: 74px;
+}
+
+.archived-assets-view {
+    overflow: visible;
+}
+
+.archived-assets-view .view-header {
+    margin-bottom: 18px;
+}
+
+.archived-assets-status {
+    margin: 0 0 12px;
+    padding: 0;
+}
+
+.archived-assets-table-wrapper {
+    max-height: none;
+    margin: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.archived-assets-note {
+    margin: 0;
+    padding: 16px 0 0;
+}
+
+#archived-assets-pagination {
+    margin-top: 18px;
+}
+
+.cell-actions--single {
+    min-width: 120px;
+}
+
+.cell-actions--single .btn-detail {
+    width: 100%;
+    min-height: 40px;
+}
+
+@media (max-width: 980px) {
+    .entity-detail-overview .asset-detail-grid,
+    .entity-detail-relations {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 780px) {
+    .app-sidebar {
+        max-height: none;
+    }
+
+    .sidebar-navigation {
+        display: grid;
+        grid-template-columns: 1fr;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .pagination-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pagination-actions {
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 620px) {
+    .entity-detail-overview .asset-detail-grid,
+    .entity-detail-relations {
+        grid-template-columns: 1fr;
+    }
+
+    .pagination-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .pagination-actions button {
+        width: 100%;
+    }
+}
+
+
+/* ===============================================================================================================
+   PATCH H - CORREZIONI EMERSE DAL VIDEO DI COLLAUDO
+   - La voce attiva viene portata in vista senza spostare la pagina principale
+   - Ogni cambio rotta riparte dalla parte alta del contenuto
+   - Titolo, breadcrumb e menu distinguono Nuovo da Modifica
+   - Sidebar compatta, stabile e leggibile anche con molte sezioni
+   =============================================================================================================== */
+
+html {
+    scroll-behavior: auto;
+}
+
+#app-workspace {
+    scroll-margin-top: 96px;
+    outline: none;
+}
+
+.app-sidebar {
+    align-self: start;
+    overscroll-behavior: contain;
+}
+
+.sidebar-header {
+    position: relative;
+    z-index: 2;
+    background: var(--bg-card);
+}
+
+.sidebar-navigation {
+    scroll-behavior: smooth;
+}
+
+.navigation-group__items .menu-btn {
+    min-height: 42px;
+}
+
+.entity-detail-dialog[open] {
+    position: fixed;
+    inset: 0;
+    display: block;
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+}
+
+.entity-detail-dialog .asset-detail-body {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.entity-detail-dialog .asset-detail-field dt,
+.entity-detail-dialog .asset-detail-field dd {
+    width: 100%;
+}
+
+.entity-detail-dialog .asset-detail-field dd {
+    overflow-wrap: anywhere;
+}
+
+#service-table-body .cell-action-group,
+#supplier-table-body .cell-action-group {
+    align-items: stretch;
+}
+
+#service-table-body td,
+#supplier-table-body td {
+    vertical-align: middle;
+}
+
+@media (min-width: 781px) {
+    .app-sidebar {
+        min-height: 320px;
+    }
+}

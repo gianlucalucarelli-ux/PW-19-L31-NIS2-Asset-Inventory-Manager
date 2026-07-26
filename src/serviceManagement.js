@@ -12,14 +12,14 @@ import {
     updateService,
     archiveService,
     fetchServiceDetail
-} from './serviceService.js?build=20260726-f1';
-import { navigateTo } from './router.js?build=20260726-f1';
-import { t } from './i18n.js?build=20260726-f1';
+} from './serviceService.js?build=20260726-h1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
+import { t } from './i18n.js?build=20260726-h1';
 import {
     exportRowsToExcel,
     downloadImportTemplate,
     readFirstSheetRows
-} from './entitySpreadsheet.js?build=20260726-f1';
+} from './entitySpreadsheet.js?build=20260726-h1';
 
 let initialized = false;
 let servicesCache = [];
@@ -31,6 +31,7 @@ let pageSize = 10;
 let archiveCandidate = null;
 let pendingImport = null;
 let pendingEditService = null;
+let activeFormService = null;
 
 function escapeHtml(value) {
     const element = document.createElement('div');
@@ -67,6 +68,25 @@ function setStatus(id, message, error = false) {
     if (!element) return;
     element.textContent = message;
     element.classList.toggle('error-msg', error);
+}
+
+function applyServiceFormContext(service = null) {
+    activeFormService = service;
+    const isEditing = Boolean(service?.id);
+    const title = document.getElementById('service-form-title');
+    const submit = document.getElementById('service-submit');
+
+    if (title) title.textContent = isEditing ? t('Modifica servizio') : t('Nuovo servizio');
+    if (submit) submit.textContent = isEditing ? t('Aggiorna servizio') : t('Salva servizio');
+
+    document.dispatchEvent(new CustomEvent('app:workspace-context', {
+        detail: {
+            section: 'Servizi',
+            label: 'SERVIZI',
+            title: isEditing ? 'Modifica servizio' : 'Nuovo servizio',
+            navigationRoute: isEditing ? 'services' : 'add-service'
+        }
+    }));
 }
 
 function personLabel(person) {
@@ -141,11 +161,11 @@ function renderServices() {
             <td>${escapeHtml(service.tipo_servizio?.nome || 'N/D')}</td>
             <td><span class="badge status-active">${escapeHtml(serviceStateLabel(service))}</span></td>
             <td>${escapeHtml(personLabel(service.responsabile))}</td>
-            <td>
-                <div class="table-actions">
-                    <button type="button" class="btn-table" data-service-action="detail" data-id="${service.id}">${escapeHtml(t('Dettaglio'))}</button>
-                    <button type="button" class="btn-table" data-service-action="edit" data-id="${service.id}">${escapeHtml(t('Modifica'))}</button>
-                    <button type="button" class="btn-table btn-table-danger" data-service-action="archive" data-id="${service.id}">${escapeHtml(t('Cessa'))}</button>
+            <td class="cell-actions">
+                <div class="cell-action-group">
+                    <button type="button" class="btn-detail" data-service-action="detail" data-id="${service.id}" aria-haspopup="dialog">${escapeHtml(t('Dettaglio'))}</button>
+                    <button type="button" class="btn-edit" data-service-action="edit" data-id="${service.id}">${escapeHtml(t('Modifica'))}</button>
+                    <button type="button" class="btn-archive" data-service-action="archive" data-id="${service.id}" aria-haspopup="dialog">${escapeHtml(t('Cessa'))}</button>
                 </div>
             </td>
         </tr>
@@ -211,8 +231,6 @@ async function prepareServiceForm(service = null) {
 
     const id = document.getElementById('service-id');
     const code = document.getElementById('service-code');
-    const title = document.getElementById('service-form-title');
-    const submit = document.getElementById('service-submit');
     if (id) id.value = service?.id || '';
     if (code) code.value = service?.codice_servizio || await fetchNextServiceCode();
     document.getElementById('service-name').value = service?.nome || '';
@@ -221,8 +239,7 @@ async function prepareServiceForm(service = null) {
     document.getElementById('service-type').value = service?.tipo_servizio_id || referencesCache.tipi[0]?.id || '';
     document.getElementById('service-state').value = service?.stato_servizio_id || referencesCache.stati[0]?.id || '';
     updateResponsibleOptions(service?.responsabile_id || '');
-    if (title) title.textContent = service ? t('Modifica servizio') : t('Nuovo servizio');
-    if (submit) submit.textContent = service ? t('Aggiorna servizio') : t('Salva servizio');
+    applyServiceFormContext(service);
     setStatus('service-form-status', '');
 }
 
@@ -258,39 +275,100 @@ async function submitServiceForm(event) {
     }
 }
 
-function listHtml(items, emptyMessage) {
-    if (!items.length) return `<p class="text-muted">${escapeHtml(emptyMessage)}</p>`;
-    return `<ul class="detail-list">${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
+function detailField(label, value, wide = false) {
+    return `
+        <div class="asset-detail-field${wide ? ' asset-detail-field--wide' : ''}">
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(value || 'N/D')}</dd>
+        </div>
+    `;
+}
+
+function relationSection(title, items, emptyMessage) {
+    const body = items.length
+        ? `<ul class="asset-detail-relation-list">${items.map((item) => `<li>${item}</li>`).join('')}</ul>`
+        : `<p class="asset-detail-empty">${escapeHtml(emptyMessage)}</p>`;
+    return `
+        <section class="asset-detail-section">
+            <div class="asset-detail-section-heading">
+                <h3>${escapeHtml(title)}</h3>
+                <span class="asset-detail-count">${items.length}</span>
+            </div>
+            ${body}
+        </section>
+    `;
 }
 
 async function showServiceDetail(service) {
     const dialog = document.getElementById('service-detail-dialog');
     const content = document.getElementById('service-detail-content');
+    const subtitle = document.getElementById('service-detail-subtitle');
     if (!dialog || !content) return;
+
+    if (subtitle) subtitle.textContent = `${service.codice_servizio} · ${service.nome}`;
     content.innerHTML = `<p class="table-state">${escapeHtml(t('Caricamento dettaglio…'))}</p>`;
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
+
     try {
         const detail = await fetchServiceDetail(service.id);
         const record = detail.service;
-        content.innerHTML = `
-            <div class="asset-detail-grid detail-grid-wide">
-                <div><span>${escapeHtml(t('Codice servizio'))}</span><strong>${escapeHtml(record.codice_servizio)}</strong></div>
-                <div><span>${escapeHtml(t('Nome servizio'))}</span><strong>${escapeHtml(record.nome)}</strong></div>
-                <div><span>${escapeHtml(t('Soggetto NIS2'))}</span><strong>${escapeHtml(record.organizzazione?.nome || 'N/D')}</strong></div>
-                <div><span>${escapeHtml(t('Tipo servizio'))}</span><strong>${escapeHtml(record.tipo_servizio?.nome || 'N/D')}</strong></div>
-                <div><span>${escapeHtml(t('Stato servizio'))}</span><strong>${escapeHtml(serviceStateLabel(record))}</strong></div>
-                <div><span>${escapeHtml(t('Responsabile'))}</span><strong>${escapeHtml(personLabel(record.responsabile))}</strong></div>
-                <div class="detail-span-full"><span>${escapeHtml(t('Descrizione'))}</span><strong>${escapeHtml(record.descrizione || 'N/D')}</strong></div>
+        if (subtitle) subtitle.textContent = `${record.codice_servizio} · ${record.nome}`;
+
+        const assets = detail.assets.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>${escapeHtml(item.asset.codice_asset)}</strong>
+                <span>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</span>
             </div>
-            <div class="entity-relation-grid">
-                <section><h3>${escapeHtml(t('Asset collegati'))} (${detail.assets.length})</h3>${listHtml(detail.assets.map((item) => `<strong>${escapeHtml(item.asset.codice_asset)}</strong> · ${escapeHtml(item.asset.nome)} <small>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</small>`), t('Nessun asset collegato.'))}</section>
-                <section><h3>${escapeHtml(t('Fornitori collegati'))} (${detail.suppliers.length})</h3>${listHtml(detail.suppliers.map((item) => `<strong>${escapeHtml(item.fornitore.codice_fornitore)}</strong> · ${escapeHtml(item.fornitore.nome)} <small>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</small>`), t('Nessun fornitore collegato.'))}</section>
-                <section><h3>${escapeHtml(t('Gerarchia servizi'))} (${detail.hierarchy.length})</h3>${listHtml(detail.hierarchy.map((item) => `<strong>${escapeHtml(item.direction)}</strong> · ${escapeHtml(item.related.codice_servizio)} · ${escapeHtml(item.related.nome)}`), t('Nessuna relazione gerarchica.'))}</section>
-                <section><h3>${escapeHtml(t('Incidenti recenti'))} (${detail.incidents.length})</h3>${listHtml(detail.incidents.map((item) => `<strong>#${item.id}</strong> · ${escapeHtml(item.tipologia || 'Incidente')} · ${escapeHtml(item.severita || 'N/D')} · ${escapeHtml(item.fine ? t('Chiuso') : t('Aperto'))}`), t('Nessun incidente associato.'))}</section>
+            <p>${escapeHtml(item.asset.nome)}</p>
+        `);
+        const suppliers = detail.suppliers.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>${escapeHtml(item.fornitore.codice_fornitore)}</strong>
+                <span>${escapeHtml(item.tipo?.codice || item.tipo?.descrizione || '')}</span>
+            </div>
+            <p>${escapeHtml(item.fornitore.nome)}</p>
+        `);
+        const hierarchy = detail.hierarchy.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>${escapeHtml(item.direction)}</strong>
+                <span>${escapeHtml(item.related.codice_servizio)}</span>
+            </div>
+            <p>${escapeHtml(item.related.nome)}</p>
+        `);
+        const incidents = detail.incidents.map((item) => `
+            <div class="asset-detail-relation-title">
+                <strong>#${escapeHtml(item.id)}</strong>
+                <span>${escapeHtml(item.fine ? t('Chiuso') : t('Aperto'))}</span>
+            </div>
+            <p>${escapeHtml(item.tipologia || 'Incidente')} · ${escapeHtml(item.severita || 'N/D')}</p>
+        `);
+
+        content.innerHTML = `
+            <section class="asset-detail-section entity-detail-overview">
+                <div class="asset-detail-section-heading"><h3>${escapeHtml(t('Dati servizio'))}</h3></div>
+                <dl class="asset-detail-grid">
+                    ${detailField(t('Codice servizio'), record.codice_servizio)}
+                    ${detailField(t('Nome servizio'), record.nome)}
+                    ${detailField(t('Soggetto NIS2'), record.organizzazione?.nome || 'N/D')}
+                    ${detailField(t('Tipo servizio'), record.tipo_servizio?.nome || 'N/D')}
+                    ${detailField(t('Stato servizio'), serviceStateLabel(record))}
+                    ${detailField(t('Responsabile'), personLabel(record.responsabile))}
+                    ${detailField(t('Descrizione'), record.descrizione || 'N/D', true)}
+                </dl>
+            </section>
+            <div class="asset-detail-relations entity-detail-relations">
+                ${relationSection(t('Asset collegati'), assets, t('Nessun asset collegato.'))}
+                ${relationSection(t('Fornitori collegati'), suppliers, t('Nessun fornitore collegato.'))}
+                ${relationSection(t('Gerarchia servizi'), hierarchy, t('Nessuna relazione gerarchica.'))}
+                ${relationSection(t('Incidenti recenti'), incidents, t('Nessun incidente associato.'))}
             </div>
         `;
     } catch (error) {
-        content.innerHTML = `<p class="error-msg">${escapeHtml(formatError(error))}</p>`;
+        content.innerHTML = `
+            <section class="asset-detail-section">
+                <p class="error-msg">${escapeHtml(formatError(error))}</p>
+            </section>
+        `;
     }
 }
 
@@ -609,6 +687,7 @@ function bindEvents() {
     document.addEventListener('app:language-changed', () => {
         renderServices();
         if (archivedServicesCache.length) loadArchivedServices();
+        if (getCurrentRoute() === 'add-service') applyServiceFormContext(activeFormService);
     });
 }
 
