@@ -334,36 +334,71 @@ if (btnIndietro) {
     });
 }
 
-async function copiaTestoNegliAppunti(testo) {
-    if (navigator.clipboard?.writeText && window.isSecureContext) {
-        await navigator.clipboard.writeText(testo);
-        return;
+function copiaConComandoCompatibilita(elemento, testo) {
+    if (!(elemento instanceof HTMLTextAreaElement)) return false;
+
+    const elementoAttivo = document.activeElement;
+    const inizioSelezione = elemento.selectionStart;
+    const fineSelezione = elemento.selectionEnd;
+
+    try {
+        elemento.focus({ preventScroll: true });
+        elemento.select();
+        elemento.setSelectionRange(0, testo.length);
+
+        return document.execCommand('copy') === true;
+    } catch (error) {
+        console.warn('Fallback document.execCommand non disponibile:', error);
+        return false;
+    } finally {
+        if (Number.isInteger(inizioSelezione) && Number.isInteger(fineSelezione)) {
+            elemento.setSelectionRange(inizioSelezione, fineSelezione);
+        }
+
+        if (elementoAttivo instanceof HTMLElement) {
+            elementoAttivo.focus({ preventScroll: true });
+        }
+    }
+}
+
+async function copiaTestoNegliAppunti(elemento, testo) {
+    /*
+     * Il metodo compatibile viene eseguito immediatamente durante il clic,
+     * mantenendo l'attivazione utente richiesta da alcuni browser.
+     */
+    const copiaCompatibile = copiaConComandoCompatibilita(elemento, testo);
+    let copiaModerna = false;
+
+    try {
+        if (window.isSecureContext && navigator.clipboard?.write && window.ClipboardItem) {
+            const contenuto = new Blob([testo], {
+                type: 'text/plain;charset=utf-8'
+            });
+
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'text/plain': contenuto })
+            ]);
+            copiaModerna = true;
+        } else if (window.isSecureContext && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(testo);
+            copiaModerna = true;
+        }
+    } catch (error) {
+        console.warn('Clipboard API non disponibile; usato il metodo compatibile:', error);
     }
 
-    const areaTemporanea = document.createElement('textarea');
-    areaTemporanea.value = testo;
-    areaTemporanea.setAttribute('readonly', '');
-    areaTemporanea.style.position = 'fixed';
-    areaTemporanea.style.opacity = '0';
-    document.body.appendChild(areaTemporanea);
-    areaTemporanea.select();
-    areaTemporanea.setSelectionRange(0, areaTemporanea.value.length);
-
-    const copiato = document.execCommand('copy');
-    areaTemporanea.remove();
-
-    if (!copiato) {
-        throw new Error('Il browser non ha consentito la copia automatica.');
+    if (!copiaCompatibile && !copiaModerna) {
+        throw new Error('Il browser non ha confermato la copia negli appunti.');
     }
 }
 
 const copyButton = document.getElementById('btn-copia');
 if (copyButton) {
     copyButton.addEventListener('click', async () => {
-        const copyText = document.getElementById('report-output');
-        const testo = String(copyText?.value || '').trim();
+        const reportOutput = document.getElementById('report-output');
+        const testo = String(reportOutput?.value ?? '').trim();
 
-        if (!testo) {
+        if (!(reportOutput instanceof HTMLTextAreaElement) || !testo) {
             window.alert('Non è presente alcun testo da copiare.');
             return;
         }
@@ -373,17 +408,27 @@ if (copyButton) {
         copyButton.textContent = 'Copia in corso…';
 
         try {
-            await copiaTestoNegliAppunti(testo);
+            await copiaTestoNegliAppunti(reportOutput, testo);
             copyButton.textContent = 'Copiato ✓';
+
             window.setTimeout(() => {
                 copyButton.textContent = etichettaOriginale;
                 copyButton.disabled = false;
-            }, 1400);
+            }, 1600);
         } catch (error) {
             console.error('Errore durante la copia del report:', error);
+
             copyButton.textContent = etichettaOriginale;
             copyButton.disabled = false;
-            window.alert('Copia non riuscita. Seleziona il testo e usa Ctrl+C.');
+
+            reportOutput.focus({ preventScroll: true });
+            reportOutput.select();
+            reportOutput.setSelectionRange(0, reportOutput.value.length);
+
+            window.alert(
+                'Il browser ha bloccato la copia automatica. '
+                + 'Il report è selezionato: premi Ctrl+C.'
+            );
         }
     });
 }
