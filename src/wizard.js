@@ -10,8 +10,8 @@ import {
     updateIncidente,
     fetchReportIncidente,
     verificaAccessoIncidenti
-} from './incidentService.js?v=2';
-import { navigateTo } from './router.js?v=5';
+} from './incidentService.js?build=20260726-d2';
+import { navigateTo } from './router.js?build=20260726-d2';
 
 let passoCorrente = 1;
 let eventoId = null;
@@ -346,7 +346,7 @@ const restartButton = document.getElementById('btn-restart-incident');
 if (restartButton) {
     restartButton.addEventListener('click', async () => {
         resetIncidentWizardState();
-        await navigateTo('incidenti', { force: true });
+        await navigateTo('nuova-segnalazione', { force: true });
     });
 }
 

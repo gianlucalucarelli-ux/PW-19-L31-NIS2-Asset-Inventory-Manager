@@ -3,7 +3,7 @@
 // DESCRIZIONE: Gestione centralizzata di autenticazione, sessione e verifica MFA.
 // ===========================================================================================
 
-import { supabase } from './supabase.js';
+import { supabase } from './supabase.js?build=20260726-d2';
 
 const DOCENTE_EMAIL = 'docentepegaso@gmail.com';
 

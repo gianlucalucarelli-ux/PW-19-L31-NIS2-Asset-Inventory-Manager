@@ -3,11 +3,12 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData, fetchIncidentList } from './database.js?v=12';
-import { loadAndRenderSupplyChain } from './supplyChain.js?v=5';
-import { loadAndRenderAuditLog } from './auditLog.js?v=3';
-import { navigateTo } from './router.js?v=5';
-import { exportArchivedAssetsToExcel } from './importExport.js?v=6';
+import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
+import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260726-d2';
+import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d2';
+import { navigateTo } from './router.js?build=20260726-d2';
+import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d2';
+import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d2';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -208,7 +209,9 @@ const ROUTE_TO_VIEW = {
     'add-asset': 'add-asset',
     'supply-chain': 'supply-chain',
     'audit-log': 'audit-log',
-    incidenti: 'incidenti',
+    'incidenti-aperti': 'incidenti',
+    'incidenti-chiusi': 'incidenti',
+    'nuova-segnalazione': 'incidenti',
     riepilogo: 'riepilogo',
     info: 'info'
 };
@@ -244,10 +247,20 @@ const ROUTE_METADATA = {
         label: 'SICUREZZA E CONFORMITÀ',
         title: 'Audit Log'
     },
-    incidenti: {
-        section: 'Sicurezza e conformità',
-        label: 'SICUREZZA E CONFORMITÀ',
-        title: 'Gestione Incidenti'
+    'incidenti-aperti': {
+        section: 'Incidenti',
+        label: 'INCIDENTI',
+        title: 'Incidenti aperti'
+    },
+    'incidenti-chiusi': {
+        section: 'Incidenti',
+        label: 'INCIDENTI',
+        title: 'Incidenti chiusi'
+    },
+    'nuova-segnalazione': {
+        section: 'Incidenti',
+        label: 'INCIDENTI',
+        title: 'Nuova segnalazione'
     },
     riepilogo: {
         section: 'Sicurezza e conformità',
@@ -338,8 +351,12 @@ export async function activateApplicationRoute(route) {
         await loadAndRenderSupplyChain();
     } else if (route === 'audit-log') {
         await loadAndRenderAuditLog();
-    } else if (route === 'incidenti') {
-        await loadAndRenderIncidentList();
+    } else if (route === 'incidenti-aperti') {
+        await loadIncidentManagementView('open');
+    } else if (route === 'incidenti-chiusi') {
+        await loadIncidentManagementView('closed');
+    } else if (route === 'nuova-segnalazione') {
+        openNewIncidentWizard();
     }
 }
 
@@ -722,87 +739,9 @@ export async function loadAndRenderDashboard() {
 }
 
 // =========================================================================
-// FUNZIONI DI SUPPORTO VISTE (AUDIT E INCIDENTI)
+// GESTIONE INCIDENTI
+// La logica operativa e' isolata in incidentManagement.js.
 // =========================================================================
-
-// =========================================================================
-// ELENCO INCIDENTI COLLEGATO ALLA DASHBOARD
-// =========================================================================
-
-function mostraElencoIncidenti() {
-    document.getElementById('incident-list-container')?.classList.remove('is-hidden');
-    document.getElementById('wizard-container')?.classList.add('is-hidden');
-}
-
-function mostraWizardIncidenti() {
-    document.getElementById('incident-list-container')?.classList.add('is-hidden');
-    document.getElementById('wizard-container')?.classList.remove('is-hidden');
-
-    // Il comando Nuova segnalazione deve aprire direttamente il primo passo.
-    // L'evento separato mantiene wizard.js indipendente da ui.js ed evita dipendenze circolari.
-    document.dispatchEvent(new CustomEvent('incident:wizard:start'));
-}
-
-function inizializzaGestioneIncidenti() {
-    const newButton = document.getElementById('incident-new-btn');
-    const backButton = document.getElementById('incident-list-back-btn');
-
-    if (newButton && !newButton.dataset.bound) {
-        newButton.dataset.bound = 'true';
-        newButton.addEventListener('click', mostraWizardIncidenti);
-    }
-    if (backButton && !backButton.dataset.bound) {
-        backButton.dataset.bound = 'true';
-        backButton.addEventListener('click', mostraElencoIncidenti);
-    }
-}
-
-async function loadAndRenderIncidentList() {
-    const tbody = document.getElementById('incident-list-body');
-    const status = document.getElementById('incident-list-status');
-    if (!tbody) return;
-
-    inizializzaGestioneIncidenti();
-    mostraElencoIncidenti();
-    tbody.innerHTML = '<tr><td colspan="7" class="table-state">Caricamento incidenti classificati…</td></tr>';
-    if (status) status.textContent = 'Caricamento incidenti…';
-
-    try {
-        const incidents = await fetchIncidentList();
-        if (status) {
-            status.textContent = incidents.length === 1
-                ? '1 incidente classificato'
-                : `${incidents.length} incidenti classificati`;
-        }
-
-        if (incidents.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="table-state">Nessun incidente operativo classificato.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = incidents.map((incident) => {
-            const severity = normalizzaCriticita(incident.severita);
-            const service = incident.servizioCodice
-                ? `${incident.servizioCodice} · ${incident.servizioNome}`
-                : incident.servizioNome;
-            return `
-                <tr>
-                    <td class="cell-id">${escapeHtml(incident.id)}</td>
-                    <td class="cell-small">${escapeHtml(formattaTimestampEuropeRome(incident.inizio))}</td>
-                    <td class="cell-primary">${escapeHtml(incident.tipologia || 'N/D')}</td>
-                    <td class="cell-primary">${escapeHtml(service)}</td>
-                    <td><span class="badge ${classeCriticita(severity)}">${escapeHtml(severity)}</span></td>
-                    <td>${escapeHtml(incident.stato)}</td>
-                    <td class="cell-small">${escapeHtml(incident.classificazioni)}</td>
-                </tr>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Errore caricamento elenco incidenti:', error);
-        tbody.innerHTML = `<tr><td colspan="7" class="error-msg">Errore: ${escapeHtml(error.message)}</td></tr>`;
-        if (status) status.textContent = 'Elenco incidenti non disponibile.';
-    }
-}
 
 // =========================================================================
 // FUNZIONI ESISTENTI (INVENTARIO E SUPPLY CHAIN)

@@ -3,7 +3,7 @@
 // DESCRIZIONE: Ricerca, filtri e dettaglio dei percorsi multilivello della Supply Chain.
 // ===============================================================================================================
 
-import { fetchSupplyChain } from './database.js?v=11';
+import { fetchSupplyChain } from './database.js?build=20260726-d2';
 
 let supplyRows = [];
 let supplyInitialized = false;

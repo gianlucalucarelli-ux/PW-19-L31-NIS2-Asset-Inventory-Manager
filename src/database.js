@@ -3,7 +3,7 @@
 // DESCRIZIONE: Lettura e scrittura dei dati applicativi tramite Supabase e viste PostgreSQL protette da RLS.
 // ===============================================================================================================
 
-import { supabase } from './supabase.js';
+import { supabase } from './supabase.js?build=20260726-d2';
 
 /**
  * Colonne restituite dalle operazioni CRUD sugli asset.

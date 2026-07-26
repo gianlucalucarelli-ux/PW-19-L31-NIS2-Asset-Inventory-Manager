@@ -10,7 +10,9 @@ const ROTTE_VALIDE = new Set([
     'add-asset',
     'supply-chain',
     'audit-log',
-    'incidenti',
+    'incidenti-aperti',
+    'incidenti-chiusi',
+    'nuova-segnalazione',
     'riepilogo',
     'info'
 ]);
@@ -24,7 +26,11 @@ const ALIAS_ROTTE = {
     'asset-archiviati': 'archived-assets',
     'new-asset': 'add-asset',
     audit: 'audit-log',
-    incidents: 'incidenti',
+    incidenti: 'incidenti-aperti',
+    incidents: 'incidenti-aperti',
+    'open-incidents': 'incidenti-aperti',
+    'closed-incidents': 'incidenti-chiusi',
+    'new-incident': 'nuova-segnalazione',
     report: 'riepilogo',
     'info-section': 'info'
 };

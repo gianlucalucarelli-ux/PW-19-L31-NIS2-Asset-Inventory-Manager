@@ -3,7 +3,7 @@
 // DESCRIZIONE: Filtri, paginazione, dettaglio ed esportazione controllata dell'Audit Log.
 // ===============================================================================================================
 
-import { fetchAuditLogs } from './database.js?v=12';
+import { fetchAuditLogs } from './database.js?build=20260726-d2';
 
 const state = {
     rows: [],
