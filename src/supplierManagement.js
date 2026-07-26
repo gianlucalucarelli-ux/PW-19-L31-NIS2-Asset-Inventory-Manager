@@ -13,12 +13,17 @@ import {
     fetchSupplierDetail
 } from './supplierService.js?build=20260726-h1';
 import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
-import { t } from './i18n.js?build=20260726-h1';
+import { t } from './i18n.js?build=20260726-i1';
 import {
     exportRowsToExcel,
     downloadImportTemplate,
     readFirstSheetRows
 } from './entitySpreadsheet.js?build=20260726-h1';
+import {
+    startAuditVerificationWindow,
+    verifyAuditRecord,
+    verifyAuditRecords
+} from './auditVerification.js?build=20260726-i1';
 
 let initialized = false;
 let suppliersCache = [];
@@ -58,6 +63,21 @@ function formatError(error) {
     if (code === '23514') return t('Uno dei valori non rispetta i vincoli previsti dal database.');
     if (code === '42501' || /row-level security|permission denied/i.test(message)) return t('La sessione non dispone dell’autorizzazione necessaria per completare l’operazione.');
     return message || t('Errore operativo non specificato.');
+}
+
+
+function auditVerificationText(result) {
+    if (result?.verified) {
+        return result.expected > 1
+            ? `${result.found}/${result.expected} ${t('eventi Audit verificati')}.`
+            : t('Audit Log verificato.');
+    }
+    if (result?.available === false) {
+        return t('Operazione completata. Verifica Audit non disponibile: controlla la sezione Audit Log.');
+    }
+    return result?.expected > 1
+        ? `${result?.found || 0}/${result?.expected || 0} ${t('eventi Audit verificati')}. ${t('Controlla la sezione Audit Log.')}`
+        : t('Operazione completata, ma la verifica immediata dell’Audit Log non ha trovato l’evento. Controlla la sezione Audit Log.');
 }
 
 function setStatus(id, message, error = false) {
@@ -197,8 +217,17 @@ async function submitSupplierForm(event) {
             indirizzo: document.getElementById('supplier-address')?.value,
             contatto_email: document.getElementById('supplier-email')?.value
         };
+        const auditStartedAt = startAuditVerificationWindow();
+        const operation = id ? 'UPDATE' : 'INSERT';
         const saved = id ? await updateSupplier(id, payload) : await insertSupplier(payload);
-        window.alert(`${t('Fornitore salvato correttamente')}: ${saved.codice_fornitore} · ${saved.nome}`);
+        const auditResult = await verifyAuditRecord({
+            table: 'fornitore',
+            operation,
+            recordId: saved.id,
+            startedAt: auditStartedAt
+        });
+        window.alert(`${t('Fornitore salvato correttamente')}: ${saved.codice_fornitore} · ${saved.nome}
+${auditVerificationText(auditResult)}`);
         await navigateTo('suppliers', { force: true });
     } catch (error) {
         console.error('Errore salvataggio fornitore:', error);
@@ -312,10 +341,20 @@ async function submitArchive(event) {
     const button = document.getElementById('supplier-archive-confirm');
     try {
         button.disabled = true;
-        await archiveSupplier(archiveCandidate.id, document.getElementById('supplier-archive-reason')?.value);
+        const supplierToArchive = archiveCandidate;
+        const auditStartedAt = startAuditVerificationWindow();
+        const archived = await archiveSupplier(supplierToArchive.id, document.getElementById('supplier-archive-reason')?.value);
+        const auditResult = await verifyAuditRecord({
+            table: 'fornitore',
+            operation: 'UPDATE',
+            recordId: archived.id,
+            startedAt: auditStartedAt
+        });
         document.getElementById('supplier-archive-dialog')?.close();
         archiveCandidate = null;
         await loadSuppliers();
+        window.alert(`${t('Fornitore cessato correttamente')}: ${supplierToArchive.codice_fornitore} · ${supplierToArchive.nome}
+${auditVerificationText(auditResult)}`);
     } catch (error) {
         setStatus('supplier-archive-status', formatError(error), true);
     } finally {
@@ -463,16 +502,26 @@ async function confirmImport() {
     if (validItems.length === 0) return;
     const button = document.getElementById('supplier-import-confirm');
     let completed = 0;
+    const insertedIds = [];
+    const auditStartedAt = startAuditVerificationWindow();
     try {
         button.disabled = true;
         for (const item of validItems) {
             setStatus('supplier-import-status', `${t('Importazione in corso')} ${completed + 1}/${validItems.length}…`);
-            await insertSupplier(item.payload);
+            const saved = await insertSupplier(item.payload);
+            insertedIds.push(saved.id);
             completed += 1;
         }
+        const auditResult = await verifyAuditRecords({
+            table: 'fornitore',
+            operation: 'INSERT',
+            recordIds: insertedIds,
+            startedAt: auditStartedAt
+        });
         document.getElementById('supplier-import-dialog')?.close();
         pendingImport = null;
-        window.alert(`${completed} ${t('fornitori importati correttamente')}.`);
+        window.alert(`${completed} ${t('fornitori importati correttamente')}.
+${auditVerificationText(auditResult)}`);
         await loadSuppliers();
     } catch (error) {
         setStatus('supplier-import-status', `${completed}/${validItems.length}: ${formatError(error)}`, true);

@@ -11,9 +11,9 @@ import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d4';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 import { loadOrganizationView } from './organizationManagement.js?build=20260726-h1';
-import { loadServiceView } from './serviceManagement.js?build=20260726-h1';
-import { loadSupplierView } from './supplierManagement.js?build=20260726-h1';
-import { t } from './i18n.js?build=20260726-h1';
+import { loadServiceView } from './serviceManagement.js?build=20260726-i1';
+import { loadSupplierView } from './supplierManagement.js?build=20260726-i1';
+import { t } from './i18n.js?build=20260726-i1';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.

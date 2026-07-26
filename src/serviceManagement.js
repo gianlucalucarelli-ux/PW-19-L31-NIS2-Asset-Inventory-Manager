@@ -14,12 +14,17 @@ import {
     fetchServiceDetail
 } from './serviceService.js?build=20260726-h1';
 import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
-import { t } from './i18n.js?build=20260726-h1';
+import { t } from './i18n.js?build=20260726-i1';
 import {
     exportRowsToExcel,
     downloadImportTemplate,
     readFirstSheetRows
 } from './entitySpreadsheet.js?build=20260726-h1';
+import {
+    startAuditVerificationWindow,
+    verifyAuditRecord,
+    verifyAuditRecords
+} from './auditVerification.js?build=20260726-i1';
 
 let initialized = false;
 let servicesCache = [];
@@ -61,6 +66,21 @@ function formatError(error) {
         return t('La sessione non dispone dell’autorizzazione necessaria per completare l’operazione.');
     }
     return message || t('Errore operativo non specificato.');
+}
+
+
+function auditVerificationText(result) {
+    if (result?.verified) {
+        return result.expected > 1
+            ? `${result.found}/${result.expected} ${t('eventi Audit verificati')}.`
+            : t('Audit Log verificato.');
+    }
+    if (result?.available === false) {
+        return t('Operazione completata. Verifica Audit non disponibile: controlla la sezione Audit Log.');
+    }
+    return result?.expected > 1
+        ? `${result?.found || 0}/${result?.expected || 0} ${t('eventi Audit verificati')}. ${t('Controlla la sezione Audit Log.')}`
+        : t('Operazione completata, ma la verifica immediata dell’Audit Log non ha trovato l’evento. Controlla la sezione Audit Log.');
 }
 
 function setStatus(id, message, error = false) {
@@ -261,8 +281,17 @@ async function submitServiceForm(event) {
             stato_servizio_id: document.getElementById('service-state')?.value,
             responsabile_id: document.getElementById('service-responsible')?.value
         };
+        const auditStartedAt = startAuditVerificationWindow();
+        const operation = id ? 'UPDATE' : 'INSERT';
         const saved = id ? await updateService(id, payload) : await insertService(payload);
-        window.alert(`${t('Servizio salvato correttamente')}: ${saved.codice_servizio} · ${saved.nome}`);
+        const auditResult = await verifyAuditRecord({
+            table: 'servizio',
+            operation,
+            recordId: saved.id,
+            startedAt: auditStartedAt
+        });
+        window.alert(`${t('Servizio salvato correttamente')}: ${saved.codice_servizio} · ${saved.nome}
+${auditVerificationText(auditResult)}`);
         await navigateTo('services', { force: true });
     } catch (error) {
         console.error('Errore salvataggio servizio:', error);
@@ -387,10 +416,20 @@ async function submitArchive(event) {
     const submit = document.getElementById('service-archive-confirm');
     try {
         submit.disabled = true;
-        await archiveService(archiveCandidate.id, document.getElementById('service-archive-reason')?.value);
+        const serviceToArchive = archiveCandidate;
+        const auditStartedAt = startAuditVerificationWindow();
+        const archived = await archiveService(serviceToArchive.id, document.getElementById('service-archive-reason')?.value);
+        const auditResult = await verifyAuditRecord({
+            table: 'servizio',
+            operation: 'UPDATE',
+            recordId: archived.id,
+            startedAt: auditStartedAt
+        });
         document.getElementById('service-archive-dialog')?.close();
         archiveCandidate = null;
         await loadServices();
+        window.alert(`${t('Servizio cessato correttamente')}: ${serviceToArchive.codice_servizio} · ${serviceToArchive.nome}
+${auditVerificationText(auditResult)}`);
     } catch (error) {
         setStatus('service-archive-status', formatError(error), true);
     } finally {
@@ -563,16 +602,26 @@ async function confirmImport() {
     if (validItems.length === 0) return;
     const button = document.getElementById('service-import-confirm');
     let completed = 0;
+    const insertedIds = [];
+    const auditStartedAt = startAuditVerificationWindow();
     try {
         button.disabled = true;
         for (const item of validItems) {
             setStatus('service-import-status', `${t('Importazione in corso')} ${completed + 1}/${validItems.length}…`);
-            await insertService(item.payload);
+            const saved = await insertService(item.payload);
+            insertedIds.push(saved.id);
             completed += 1;
         }
+        const auditResult = await verifyAuditRecords({
+            table: 'servizio',
+            operation: 'INSERT',
+            recordIds: insertedIds,
+            startedAt: auditStartedAt
+        });
         document.getElementById('service-import-dialog')?.close();
         pendingImport = null;
-        window.alert(`${completed} ${t('servizi importati correttamente')}.`);
+        window.alert(`${completed} ${t('servizi importati correttamente')}.
+${auditVerificationText(auditResult)}`);
         await loadServices();
     } catch (error) {
         setStatus('service-import-status', `${completed}/${validItems.length}: ${formatError(error)}`, true);
