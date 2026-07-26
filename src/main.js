@@ -13,7 +13,7 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?v=14';
+} from './ui.js?v=15';
 import {
     initializeRouter,
     navigateTo,
@@ -27,7 +27,7 @@ import {
     observeAuthState,
     signOut
 } from './auth.js';
-import { fetchAssetsForExport, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=6';
+import { fetchAssetsForExport, insertAsset, updateAsset, bulkInsertAssets } from './database.js?v=7';
 import { exportToExcel, exportFilteredAssetsToExcel, parseExcelFile } from './importExport.js?v=2';
 
 initTheme();

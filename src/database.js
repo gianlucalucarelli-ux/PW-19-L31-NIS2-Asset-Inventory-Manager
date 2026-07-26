@@ -77,7 +77,7 @@ export async function fetchAssetReferences() {
             .order('nome', { ascending: true }),
         supabase
             .from('responsabile')
-            .select('id, nome, cognome, email, organizzazione_id')
+            .select('id, nome, cognome, email, telefono, organizzazione_id')
             .eq('attiva', true)
             .order('cognome', { ascending: true })
             .order('nome', { ascending: true })
@@ -98,6 +98,154 @@ export async function fetchAssetReferences() {
         organizzazioni: organizzazioniResult.data ?? [],
         responsabili: responsabiliResult.data ?? []
     };
+}
+
+
+/**
+ * Carica le relazioni attive associate a un asset per la vista di dettaglio.
+ * Le query sono di sola lettura, rispettano RLS e non modificano il database.
+ */
+export async function fetchAssetDetailRelations(assetId) {
+    const id = Number(assetId);
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new Error('Identificativo asset non valido.');
+    }
+
+    const [serviziResult, vulnerabilitaResult, fornitoriResult] = await Promise.all([
+        supabase
+            .from('servizio_dipendenza_asset')
+            .select('servizio_id, tipo_dipendenza_servizio_id, descrizione, attiva')
+            .eq('asset_id', id)
+            .eq('attiva', true),
+        supabase
+            .from('asset_vulnerabilita')
+            .select('vulnerabilita_id, data_rilevamento, stato_remediation, attiva')
+            .eq('asset_id', id)
+            .eq('attiva', true),
+        supabase
+            .from('asset_fornitore')
+            .select('id, fornitore_id, tipo_relazione_asset_fornitore_id, descrizione, riferimento_contratto, relazione_primaria, valido_dal, valido_al, attiva')
+            .eq('asset_id', id)
+            .eq('attiva', true)
+    ]);
+
+    const erroriRelazioni = [
+        serviziResult.error,
+        vulnerabilitaResult.error,
+        fornitoriResult.error
+    ].filter(Boolean);
+
+    if (erroriRelazioni.length > 0) throw erroriRelazioni[0];
+
+    const relazioniServizi = serviziResult.data ?? [];
+    const relazioniVulnerabilita = vulnerabilitaResult.data ?? [];
+    const relazioniFornitori = fornitoriResult.data ?? [];
+
+    const valoriUnici = (righe, campo) => [...new Set(
+        righe
+            .map((riga) => Number(riga?.[campo]))
+            .filter((valore) => Number.isInteger(valore) && valore > 0)
+    )];
+
+    const servizioIds = valoriUnici(relazioniServizi, 'servizio_id');
+    const tipoDipendenzaIds = valoriUnici(relazioniServizi, 'tipo_dipendenza_servizio_id');
+    const vulnerabilitaIds = valoriUnici(relazioniVulnerabilita, 'vulnerabilita_id');
+    const fornitoreIds = valoriUnici(relazioniFornitori, 'fornitore_id');
+    const tipoRelazioneIds = valoriUnici(relazioniFornitori, 'tipo_relazione_asset_fornitore_id');
+
+    const queryPerIds = (tabella, colonne, ids) => ids.length === 0
+        ? Promise.resolve({ data: [], error: null })
+        : supabase.from(tabella).select(colonne).in('id', ids);
+
+    const [
+        serviziLookup,
+        tipiDipendenzaLookup,
+        vulnerabilitaLookup,
+        fornitoriLookup,
+        tipiRelazioneLookup
+    ] = await Promise.all([
+        queryPerIds('servizio', 'id, codice_servizio, nome, descrizione, attiva', servizioIds),
+        queryPerIds('tipo_dipendenza_servizio', 'id, codice, descrizione', tipoDipendenzaIds),
+        queryPerIds('vulnerabilita', 'id, codice_bollettino, descrizione_rischio, livello_severita, data_pubblicazione', vulnerabilitaIds),
+        queryPerIds('fornitore', 'id, codice_fornitore, nome, contatto_email, attiva', fornitoreIds),
+        queryPerIds('tipo_relazione_asset_fornitore', 'id, codice, descrizione', tipoRelazioneIds)
+    ]);
+
+    const erroriLookup = [
+        serviziLookup.error,
+        tipiDipendenzaLookup.error,
+        vulnerabilitaLookup.error,
+        fornitoriLookup.error,
+        tipiRelazioneLookup.error
+    ].filter(Boolean);
+
+    if (erroriLookup.length > 0) throw erroriLookup[0];
+
+    const creaMappa = (righe) => new Map((righe ?? []).map((riga) => [Number(riga.id), riga]));
+    const serviziMap = creaMappa(serviziLookup.data);
+    const tipiDipendenzaMap = creaMappa(tipiDipendenzaLookup.data);
+    const vulnerabilitaMap = creaMappa(vulnerabilitaLookup.data);
+    const fornitoriMap = creaMappa(fornitoriLookup.data);
+    const tipiRelazioneMap = creaMappa(tipiRelazioneLookup.data);
+
+    const servizi = relazioniServizi
+        .map((relazione) => {
+            const servizio = serviziMap.get(Number(relazione.servizio_id));
+            const tipo = tipiDipendenzaMap.get(Number(relazione.tipo_dipendenza_servizio_id));
+            if (!servizio) return null;
+
+            return {
+                id: servizio.id,
+                codice: servizio.codice_servizio,
+                nome: servizio.nome,
+                descrizione: relazione.descrizione || servizio.descrizione || '',
+                tipoDipendenza: tipo?.codice || tipo?.descrizione || 'Non specificata'
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
+
+    const vulnerabilita = relazioniVulnerabilita
+        .map((relazione) => {
+            const record = vulnerabilitaMap.get(Number(relazione.vulnerabilita_id));
+            if (!record) return null;
+
+            return {
+                id: record.id,
+                codice: record.codice_bollettino,
+                descrizione: record.descrizione_rischio || '',
+                severita: record.livello_severita || 'Non specificata',
+                dataPubblicazione: record.data_pubblicazione || null,
+                dataRilevamento: relazione.data_rilevamento || null,
+                statoRemediation: relazione.stato_remediation || 'Non specificato'
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => String(a.codice).localeCompare(String(b.codice), 'it'));
+
+    const fornitori = relazioniFornitori
+        .map((relazione) => {
+            const fornitore = fornitoriMap.get(Number(relazione.fornitore_id));
+            const tipo = tipiRelazioneMap.get(Number(relazione.tipo_relazione_asset_fornitore_id));
+            if (!fornitore) return null;
+
+            return {
+                id: fornitore.id,
+                codice: fornitore.codice_fornitore,
+                nome: fornitore.nome,
+                email: fornitore.contatto_email || '',
+                tipoRelazione: tipo?.codice || tipo?.descrizione || 'Non specificata',
+                descrizione: relazione.descrizione || '',
+                riferimentoContratto: relazione.riferimento_contratto || '',
+                relazionePrimaria: Boolean(relazione.relazione_primaria),
+                validoDal: relazione.valido_dal || null,
+                validoAl: relazione.valido_al || null
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
+
+    return { servizi, vulnerabilita, fornitori };
 }
 
 /**

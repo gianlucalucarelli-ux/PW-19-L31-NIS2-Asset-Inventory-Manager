@@ -3,7 +3,7 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchAssetReferences, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=6';
+import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, fetchSupplyChain, fetchAuditLogs, fetchDashboardData } from './database.js?v=7';
 import { navigateTo } from './router.js?v=3';
 
 /**
@@ -298,6 +298,8 @@ function updateWorkspaceHeader(route) {
  */
 export async function activateApplicationRoute(route) {
     const viewId = ROUTE_TO_VIEW[route] || 'inventory';
+    const detailDialog = document.getElementById('asset-detail-dialog');
+    if (detailDialog?.open) detailDialog.close();
 
     document.querySelectorAll('.view-section').forEach((section) => {
         section.classList.add('is-hidden');
@@ -758,6 +760,7 @@ let assetReferencesCache = null;
 let inventoryAssetsCache = [];
 let inventoryCategoryMap = new Map();
 let inventoryOrganizationMap = new Map();
+let inventoryResponsibleMap = new Map();
 let inventoryFilteredCache = [];
 let inventoryCurrentPage = 1;
 let inventoryPageSize = 5;
@@ -1031,6 +1034,196 @@ function aggiornaPaginazioneInventario(totaleRisultati) {
     pageSizeSelect.value = String(inventoryPageSize);
 }
 
+
+function formattaDataBreve(valore) {
+    if (!valore) return 'N/D';
+    const data = new Date(`${String(valore).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(data.getTime())) return 'N/D';
+    return data.toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+function creaCampoDettaglio(etichetta, valore, classe = '') {
+    return `
+        <div class="asset-detail-field ${classe}">
+            <dt>${escapeHtml(etichetta)}</dt>
+            <dd>${escapeHtml(valore || 'N/D')}</dd>
+        </div>
+    `;
+}
+
+function creaListaRelazioni(titolo, elementi, renderElemento, messaggioVuoto) {
+    const contenuto = elementi.length > 0
+        ? `<ul class="asset-detail-relation-list">${elementi.map(renderElemento).join('')}</ul>`
+        : `<p class="asset-detail-empty">${escapeHtml(messaggioVuoto)}</p>`;
+
+    return `
+        <section class="asset-detail-section">
+            <div class="asset-detail-section-heading">
+                <h3>${escapeHtml(titolo)}</h3>
+                <span class="asset-detail-count">${elementi.length}</span>
+            </div>
+            ${contenuto}
+        </section>
+    `;
+}
+
+function renderRelazioniAsset(relazioni) {
+    const container = document.getElementById('asset-detail-relations');
+    if (!container) return;
+
+    const servizi = Array.isArray(relazioni?.servizi) ? relazioni.servizi : [];
+    const vulnerabilita = Array.isArray(relazioni?.vulnerabilita) ? relazioni.vulnerabilita : [];
+    const fornitori = Array.isArray(relazioni?.fornitori) ? relazioni.fornitori : [];
+
+    const sezioneServizi = creaListaRelazioni(
+        'Servizi collegati',
+        servizi,
+        (servizio) => `
+            <li>
+                <div class="asset-detail-relation-title">
+                    <strong>${escapeHtml(servizio.codice || 'Servizio')}</strong>
+                    <span>${escapeHtml(servizio.tipoDipendenza)}</span>
+                </div>
+                <p>${escapeHtml(servizio.nome || 'N/D')}</p>
+                ${servizio.descrizione ? `<small>${escapeHtml(servizio.descrizione)}</small>` : ''}
+            </li>
+        `,
+        'Nessun servizio attivo collegato.'
+    );
+
+    const sezioneVulnerabilita = creaListaRelazioni(
+        'Vulnerabilità associate',
+        vulnerabilita,
+        (record) => `
+            <li>
+                <div class="asset-detail-relation-title">
+                    <strong>${escapeHtml(record.codice || 'Vulnerabilità')}</strong>
+                    <span class="badge ${classeCriticita(normalizzaCriticita(record.severita))}">${escapeHtml(record.severita)}</span>
+                </div>
+                <p>Remediation: ${escapeHtml(record.statoRemediation)}</p>
+                <small>Rilevata: ${escapeHtml(formattaDataBreve(record.dataRilevamento))}</small>
+                ${record.descrizione ? `<small>${escapeHtml(record.descrizione)}</small>` : ''}
+            </li>
+        `,
+        'Nessuna vulnerabilità attiva associata.'
+    );
+
+    const sezioneFornitori = creaListaRelazioni(
+        'Fornitori collegati',
+        fornitori,
+        (fornitore) => `
+            <li>
+                <div class="asset-detail-relation-title">
+                    <strong>${escapeHtml(fornitore.codice || 'Fornitore')}</strong>
+                    <span>${escapeHtml(fornitore.tipoRelazione)}</span>
+                </div>
+                <p>${escapeHtml(fornitore.nome || 'N/D')}${fornitore.relazionePrimaria ? ' · Primario' : ''}</p>
+                ${fornitore.email ? `<small>${escapeHtml(fornitore.email)}</small>` : ''}
+                <small>Validità: ${escapeHtml(formattaDataBreve(fornitore.validoDal))}${fornitore.validoAl ? ` – ${escapeHtml(formattaDataBreve(fornitore.validoAl))}` : ' – attiva'}</small>
+                ${fornitore.riferimentoContratto ? `<small>Riferimento: ${escapeHtml(fornitore.riferimentoContratto)}</small>` : ''}
+            </li>
+        `,
+        'Nessun fornitore attivo collegato.'
+    );
+
+    container.innerHTML = sezioneServizi + sezioneVulnerabilita + sezioneFornitori;
+}
+
+async function apriDettaglioAsset(asset) {
+    const dialog = document.getElementById('asset-detail-dialog');
+    const title = document.getElementById('asset-detail-title');
+    const subtitle = document.getElementById('asset-detail-subtitle');
+    const overview = document.getElementById('asset-detail-overview');
+    const relations = document.getElementById('asset-detail-relations');
+    const status = document.getElementById('asset-detail-status');
+
+    if (!dialog || !title || !subtitle || !overview || !relations || !status) return;
+
+    const categoria = assetReferencesCache?.categorie?.find(
+        (record) => Number(record.id) === Number(asset.categoria_asset_id)
+    );
+    const organizzazione = assetReferencesCache?.organizzazioni?.find(
+        (record) => Number(record.id) === Number(asset.organizzazione_id)
+    );
+    const responsabile = inventoryResponsibleMap.get(Number(asset.responsabile_id));
+    const nominativoResponsabile = responsabile
+        ? `${responsabile.nome || ''} ${responsabile.cognome || ''}`.trim()
+        : 'Non assegnato';
+
+    title.textContent = asset.nome || 'Dettaglio asset';
+    subtitle.textContent = asset.codice_asset || `Asset ID ${asset.id}`;
+    status.textContent = 'Caricamento delle relazioni associate…';
+
+    const criticita = normalizzaCriticita(asset.classificazione_criticita);
+    overview.innerHTML = `
+        <section class="asset-detail-section asset-detail-section--overview">
+            <div class="asset-detail-section-heading">
+                <h3>Dati identificativi e organizzativi</h3>
+                <span class="badge ${classeCriticita(criticita)}">${escapeHtml(criticita)}</span>
+            </div>
+            <dl class="asset-detail-grid">
+                ${creaCampoDettaglio('ID', asset.id)}
+                ${creaCampoDettaglio('Codice asset', asset.codice_asset)}
+                ${creaCampoDettaglio('Nome', asset.nome)}
+                ${creaCampoDettaglio('Categoria', categoria?.nome || inventoryCategoryMap.get(asset.categoria_asset_id) || 'N/D')}
+                ${creaCampoDettaglio('Organizzazione', organizzazione?.nome || inventoryOrganizationMap.get(asset.organizzazione_id) || 'N/D')}
+                ${creaCampoDettaglio('Responsabile', nominativoResponsabile)}
+                ${creaCampoDettaglio('E-mail responsabile', responsabile?.email || 'N/D')}
+                ${creaCampoDettaglio('Telefono responsabile', responsabile?.telefono || 'N/D')}
+                ${creaCampoDettaglio('Versione', asset.versione || 'N/D')}
+                ${creaCampoDettaglio('Ubicazione', asset.ubicazione || 'N/D')}
+                ${creaCampoDettaglio('Data inserimento', formattaDataBreve(asset.data_inserimento))}
+                ${creaCampoDettaglio('Stato', asset.attiva === false ? 'Archiviato' : 'Attivo')}
+                ${creaCampoDettaglio('Descrizione', asset.descrizione || 'Nessuna descrizione disponibile', 'asset-detail-field--wide')}
+            </dl>
+        </section>
+    `;
+
+    relations.innerHTML = `
+        <section class="asset-detail-section">
+            <div class="asset-detail-loading" role="status">
+                <span class="loading-spinner" aria-hidden="true"></span>
+                <span>Recupero di servizi, vulnerabilità e fornitori…</span>
+            </div>
+        </section>
+    `;
+
+    if (!dialog.open) dialog.showModal();
+
+    try {
+        const datiRelazioni = await fetchAssetDetailRelations(asset.id);
+        if (!dialog.open || Number(dialog.dataset.assetId) !== Number(asset.id)) return;
+        renderRelazioniAsset(datiRelazioni);
+        status.textContent = 'Dettaglio completo caricato.';
+    } catch (error) {
+        console.error('Errore nel caricamento del dettaglio asset:', error);
+        if (!dialog.open || Number(dialog.dataset.assetId) !== Number(asset.id)) return;
+        relations.innerHTML = `
+            <section class="asset-detail-section">
+                <p class="error-msg">Impossibile caricare le relazioni associate: ${escapeHtml(error.message)}</p>
+            </section>
+        `;
+        status.textContent = 'Dati principali disponibili; relazioni non caricate.';
+    }
+}
+
+function inizializzaDialogDettaglioAsset() {
+    const dialog = document.getElementById('asset-detail-dialog');
+    if (!dialog || dialog.dataset.initialized === 'true') return;
+
+    dialog.dataset.initialized = 'true';
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+        dialog.removeAttribute('data-asset-id');
+    });
+}
+
 /**
  * Disegna le righe dell'inventario usando esclusivamente i dati già caricati.
  * Ricerca, filtri e paginazione non eseguono nuove query e non modificano il database.
@@ -1105,11 +1298,24 @@ function renderInventarioFiltrato() {
                 <td class="cell-secondary">${escapeHtml(asset.versione || 'N/D')}</td>
                 <td><span class="badge ${badgeClass}">${escapeHtml(criticita)}</span></td>
                 <td class="cell-actions">
+                    <button class="btn-detail" data-id="${escapeHtml(asset.id)}" type="button" aria-haspopup="dialog">Dettaglio</button>
                     <button class="btn-edit" data-id="${escapeHtml(asset.id)}" type="button">Modifica</button>
                 </td>
             </tr>
         `;
     }).join('');
+
+    assetTableBody.querySelectorAll('.btn-detail').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.getAttribute('data-id'));
+            const asset = inventoryAssetsCache.find((item) => item.id === id);
+            if (asset) {
+                const dialog = document.getElementById('asset-detail-dialog');
+                if (dialog) dialog.dataset.assetId = String(asset.id);
+                await apriDettaglioAsset(asset);
+            }
+        });
+    });
 
     assetTableBody.querySelectorAll('.btn-edit').forEach((button) => {
         button.addEventListener('click', async (event) => {
@@ -1155,6 +1361,7 @@ export async function loadAndRenderTable() {
     if (!assetTableBody) return;
 
     inizializzaRicercaAsset();
+    inizializzaDialogDettaglioAsset();
 
     try {
         assetTableBody.innerHTML = '<tr><td colspan="8" class="table-state">Sincronizzazione in corso...</td></tr>';
@@ -1175,6 +1382,9 @@ export async function loadAndRenderTable() {
         inventoryOrganizationMap = new Map(
             riferimenti.organizzazioni.map((organizzazione) => [organizzazione.id, organizzazione.nome])
         );
+        inventoryResponsibleMap = new Map(
+            riferimenti.responsabili.map((responsabile) => [Number(responsabile.id), responsabile])
+        );
         popolaFiltriInventario(riferimenti);
 
         impostaDisponibilitaFiltriInventario(false);
@@ -1184,6 +1394,7 @@ export async function loadAndRenderTable() {
         inventoryAssetsCache = [];
         inventoryCategoryMap = new Map();
         inventoryOrganizationMap = new Map();
+        inventoryResponsibleMap = new Map();
         inventoryFilteredCache = [];
         inventoryCurrentPage = 1;
         inventoryPageSize = 5;
