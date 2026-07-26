@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=17">
+    <link rel="stylesheet" href="src/style.css?v=18">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?v=21"></script>
+    <script type="module" src="src/main.js?v=22"></script>
     <script type="module" src="src/wizard.js?v=6"></script>
 </head>
 <body>
@@ -176,6 +176,10 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <button type="button" class="menu-btn" data-route="add-asset">
                                 <span aria-hidden="true">➕</span>
                                 <span>Nuovo Asset</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="archived-assets">
+                                <span aria-hidden="true">🗄️</span>
+                                <span>Asset archiviati</span>
                             </button>
                         </div>
 
@@ -397,9 +401,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <p class="section-intro">Dati protetti da autenticazione, policy RLS e tracciamento delle operazioni.</p>
                                 </div>
                                 <div class="action-group" aria-label="Azioni inventario">
-                                    <button type="button" class="btn-primary" data-route="add-asset">Nuovo Asset</button>
                                     <button id="btn-export-xls" class="btn-success" type="button">Esporta XLS</button>
-                                    <button id="btn-show-archived-assets" class="btn-archived" type="button" aria-haspopup="dialog">Asset archiviati</button>
                                     <button id="btn-download-import-template" class="btn-template" type="button">Modello import</button>
                                     <button id="btn-trigger-import" class="btn-warning" type="button">Importa XLS</button>
                                     <input type="file" id="import-xls-input" accept=".xlsx, .xls, .csv" class="visually-hidden">
@@ -583,43 +585,32 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             </form>
                         </dialog>
 
-                        <dialog id="archived-assets-dialog" class="asset-detail-dialog archived-assets-dialog" aria-labelledby="archived-assets-title" aria-describedby="archived-assets-subtitle">
-                            <div class="asset-detail-shell archived-assets-shell">
-                                <header class="asset-detail-header">
-                                    <div>
-                                        <p class="eyebrow">ARCHIVIO LOGICO</p>
-                                        <h2 id="archived-assets-title">Asset archiviati</h2>
-                                        <p id="archived-assets-subtitle" class="asset-detail-subtitle">Consultazione in sola lettura dei record esclusi dalle viste operative.</p>
-                                    </div>
-                                    <button id="archived-assets-close" class="asset-detail-close" type="button" aria-label="Chiudi archivio asset" title="Chiudi">×</button>
-                                </header>
-                                <div class="asset-detail-body">
-                                    <div class="archived-assets-toolbar">
-                                        <p id="archived-assets-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento asset archiviati…</p>
-                                        <button id="btn-export-archived-assets" class="btn-success" type="button" disabled>Esporta archiviati XLS</button>
-                                    </div>
-                                    <div class="table-wrapper archived-assets-table-wrapper">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th scope="col">ID</th>
-                                                    <th scope="col">Codice</th>
-                                                    <th scope="col">Nome asset</th>
-                                                    <th scope="col">Archiviato il</th>
-                                                    <th scope="col">Motivazione</th>
-                                                    <th scope="col">Azioni</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="archived-assets-table-body"></tbody>
-                                        </table>
-                                    </div>
+                        <section id="view-archived-assets" class="view-section card archived-assets-view is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Asset archiviati</h2>
+                                    <p class="section-intro">Consultazione in sola lettura dei record esclusi dall'inventario operativo.</p>
                                 </div>
-                                <footer class="asset-detail-footer">
-                                    <span>Nessun ripristino o DELETE viene eseguito da questa vista.</span>
-                                    <button id="archived-assets-footer-close" class="btn-secondary" type="button">Chiudi</button>
-                                </footer>
+                                <button id="btn-export-archived-assets" class="btn-success" type="button" disabled>Esporta archiviati XLS</button>
                             </div>
-                        </dialog>
+                            <p id="archived-assets-status" class="inventory-search-status archived-assets-status" role="status" aria-live="polite">Caricamento asset archiviati…</p>
+                            <div class="table-wrapper archived-assets-table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">ID</th>
+                                            <th scope="col">Codice</th>
+                                            <th scope="col">Nome asset</th>
+                                            <th scope="col">Archiviato il</th>
+                                            <th scope="col">Motivazione</th>
+                                            <th scope="col">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="archived-assets-table-body"></tbody>
+                                </table>
+                            </div>
+                            <p class="archived-assets-note">Vista di sola lettura: nessun ripristino e nessuna cancellazione fisica vengono eseguiti.</p>
+                        </section>
 
                         <dialog id="asset-import-dialog" class="asset-detail-dialog asset-import-dialog" aria-labelledby="asset-import-title">
                             <div class="asset-detail-shell asset-import-shell">
@@ -832,9 +823,46 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="view-header">
                                 <div>
                                     <h2>Audit Log</h2>
-                                    <p class="section-intro">Tracciamento storico delle operazioni eseguite sui dati applicativi.</p>
+                                    <p class="section-intro">Tracciamento storico, ricerca ed esportazione delle operazioni applicative.</p>
                                 </div>
                             </div>
+
+                            <div class="audit-tools" role="search" aria-label="Filtri Audit Log">
+                                <div class="audit-filter-grid">
+                                    <div class="inventory-filter-field audit-search-field">
+                                        <label for="audit-search">Ricerca libera</label>
+                                        <input id="audit-search" type="search" class="form-input" placeholder="Record, utente, asset, servizio o fornitore" aria-controls="audit-table-body">
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="audit-filter-table">Tabella</label>
+                                        <select id="audit-filter-table" class="form-input" aria-controls="audit-table-body"><option value="">Tutte le tabelle</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="audit-filter-operation">Operazione</label>
+                                        <select id="audit-filter-operation" class="form-input" aria-controls="audit-table-body"><option value="">Tutte le operazioni</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="audit-filter-user">Utente</label>
+                                        <select id="audit-filter-user" class="form-input" aria-controls="audit-table-body"><option value="">Tutti gli utenti</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="audit-filter-from">Dal</label>
+                                        <input id="audit-filter-from" type="date" class="form-input" aria-controls="audit-table-body">
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="audit-filter-to">Al</label>
+                                        <input id="audit-filter-to" type="date" class="form-input" aria-controls="audit-table-body">
+                                    </div>
+                                </div>
+                                <div class="inventory-filter-footer">
+                                    <p id="audit-filter-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento Audit Log…</p>
+                                    <div class="inventory-filter-actions">
+                                        <button id="audit-filter-reset" type="button" class="btn-secondary">Azzera filtri</button>
+                                        <button id="audit-export" type="button" class="btn-success" disabled>Esporta risultati</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="table-wrapper">
                                 <table>
                                     <thead>
@@ -844,12 +872,58 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                             <th scope="col">Entità</th>
                                             <th scope="col">Record</th>
                                             <th scope="col">Utente</th>
+                                            <th scope="col">Azioni</th>
                                         </tr>
                                     </thead>
                                     <tbody id="audit-table-body"></tbody>
                                 </table>
                             </div>
+
+                            <nav class="inventory-pagination" aria-label="Paginazione Audit Log">
+                                <div class="inventory-pagination-summary">
+                                    <label for="audit-page-size">Righe per pagina</label>
+                                    <select id="audit-page-size" class="form-input inventory-page-size" aria-controls="audit-table-body">
+                                        <option value="10" selected>10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <span id="audit-page-status" class="inventory-page-status" role="status" aria-live="polite">0 eventi</span>
+                                </div>
+                                <div class="inventory-pagination-actions">
+                                    <button id="audit-page-prev" type="button" class="btn-secondary" disabled>Precedente</button>
+                                    <span id="audit-page-indicator" class="inventory-page-indicator" aria-live="polite">Pagina 1 di 1</span>
+                                    <button id="audit-page-next" type="button" class="btn-secondary" disabled>Successiva</button>
+                                </div>
+                            </nav>
                         </section>
+
+                        <dialog id="audit-detail-dialog" class="asset-detail-dialog audit-detail-dialog" aria-labelledby="audit-detail-title" aria-describedby="audit-detail-subtitle">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">AUDIT LOG</p>
+                                        <h2 id="audit-detail-title">Dettaglio evento</h2>
+                                        <p id="audit-detail-subtitle" class="asset-detail-subtitle">—</p>
+                                    </div>
+                                    <form method="dialog"><button class="asset-detail-close" type="submit" aria-label="Chiudi dettaglio audit" title="Chiudi">×</button></form>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div id="audit-detail-overview"></div>
+                                    <div class="audit-payload-grid">
+                                        <section>
+                                            <h3>Valore precedente</h3>
+                                            <pre id="audit-detail-before" class="audit-json-payload"></pre>
+                                        </section>
+                                        <section>
+                                            <h3>Valore nuovo</h3>
+                                            <pre id="audit-detail-after" class="audit-json-payload"></pre>
+                                        </section>
+                                    </div>
+                                </div>
+                                <footer class="asset-detail-footer"><form method="dialog"><button class="btn-secondary" type="submit">Chiudi</button></form></footer>
+                            </div>
+                        </dialog>
+
 
                         <section id="view-incidenti" class="view-section is-hidden">
                             <div id="incident-list-container" class="card">
