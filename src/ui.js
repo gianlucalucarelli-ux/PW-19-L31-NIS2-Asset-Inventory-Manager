@@ -3,7 +3,7 @@
 // DESCRIZIONE: Manipolazione del DOM, attivazione delle viste applicative e gestione del tema.
 // ===============================================================================================================
 
-import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchAuditLogs, fetchDashboardData, fetchIncidentList } from './database.js?v=9';
+import { fetchAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchAuditLogs, fetchDashboardData, fetchIncidentList } from './database.js?v=10';
 import { loadAndRenderSupplyChain } from './supplyChain.js?v=3';
 import { navigateTo } from './router.js?v=3';
 
