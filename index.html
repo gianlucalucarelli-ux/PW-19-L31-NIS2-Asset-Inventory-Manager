@@ -15,14 +15,14 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?v=20">
+    <link rel="stylesheet" href="src/style.css?v=21">
     <link rel="stylesheet" href="src/wizard.css?v=3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?v=25"></script>
-    <script type="module" src="src/wizard.js?v=8"></script>
+    <script type="module" src="src/main.js?v=26"></script>
+    <script type="module" src="src/wizard.js?v=9"></script>
 </head>
 <body>
     <div id="app-boot-screen" class="app-boot-screen" role="status" aria-live="polite" aria-label="Verifica della sessione in corso">
@@ -192,14 +192,26 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                         </div>
 
                         <div class="navigation-group">
+                            <p class="navigation-group__title">Incidenti</p>
+                            <button type="button" class="menu-btn" data-route="incidenti-aperti">
+                                <span aria-hidden="true">🚨</span>
+                                <span>Incidenti aperti</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="incidenti-chiusi">
+                                <span aria-hidden="true">✅</span>
+                                <span>Incidenti chiusi</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="nuova-segnalazione">
+                                <span aria-hidden="true">➕</span>
+                                <span>Nuova segnalazione</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
                             <p class="navigation-group__title">Sicurezza</p>
                             <button type="button" class="menu-btn" data-route="audit-log">
                                 <span aria-hidden="true">📋</span>
                                 <span>Audit Log</span>
-                            </button>
-                            <button type="button" class="menu-btn" data-route="incidenti">
-                                <span aria-hidden="true">🚨</span>
-                                <span>Gestione Incidenti</span>
                             </button>
                         </div>
 
@@ -343,7 +355,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                             <p class="eyebrow">SICUREZZA</p>
                                             <h3 id="dashboard-incidents-title">Incidenti recenti</h3>
                                         </div>
-                                        <button type="button" class="btn-link" data-route="incidenti">Gestione incidenti</button>
+                                        <button type="button" class="btn-link" data-route="incidenti-aperti">Gestione incidenti</button>
                                     </div>
                                     <div id="dashboard-incidents" class="dashboard-list" aria-live="polite"></div>
                                 </section>
@@ -373,7 +385,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                         <strong>Nuovo Asset</strong>
                                         <small>Registra una nuova risorsa</small>
                                     </button>
-                                    <button type="button" class="quick-action" data-route="incidenti">
+                                    <button type="button" class="quick-action" data-route="nuova-segnalazione">
                                         <span aria-hidden="true">🚨</span>
                                         <strong>Nuova segnalazione</strong>
                                         <small>Avvia il wizard ACN</small>
@@ -929,33 +941,88 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div id="incident-list-container" class="card">
                                 <div class="view-header">
                                     <div>
-                                        <h2>Incidenti classificati</h2>
-                                        <p class="section-intro">Elenco degli eventi operativi con classificazione ACN registrata.</p>
+                                        <h2 id="incident-list-title">Incidenti aperti</h2>
+                                        <p id="incident-list-description" class="section-intro">Eventi operativi classificati.</p>
                                     </div>
-                                    <button id="incident-new-btn" class="btn-primary" type="button">Nuova segnalazione</button>
+                                    <div class="action-group">
+                                        <button id="incident-export-xlsx" class="btn-success" type="button">Esporta XLS</button>
+                                        <button id="incident-export-csv" class="btn-secondary" type="button">Esporta CSV</button>
+                                        <button class="btn-primary" type="button" data-route="nuova-segnalazione">Nuova segnalazione</button>
+                                    </div>
                                 </div>
-                                <p id="incident-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento incidenti…</p>
-                                <div class="table-wrapper">
+
+                                <div class="inventory-tools incident-tools">
+                                    <div class="inventory-filter-grid incident-filter-grid">
+                                        <div class="inventory-filter-field inventory-search-field">
+                                            <label for="incident-search">Ricerca</label>
+                                            <input id="incident-search" class="inventory-search-input" type="search" placeholder="ID, tipologia, servizio, causa o risoluzione">
+                                        </div>
+                                        <div class="inventory-filter-field">
+                                            <label for="incident-severity-filter">Severità</label>
+                                            <select id="incident-severity-filter">
+                                                <option value="">Tutte le severità</option>
+                                                <option value="Bassa">Bassa</option>
+                                                <option value="Media">Media</option>
+                                                <option value="Alta">Alta</option>
+                                                <option value="Critica">Critica</option>
+                                            </select>
+                                        </div>
+                                        <div class="inventory-filter-field">
+                                            <label for="incident-service-filter">Servizio</label>
+                                            <select id="incident-service-filter">
+                                                <option value="">Tutti i servizi</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="inventory-filter-footer">
+                                        <p id="incident-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento incidenti…</p>
+                                        <div class="inventory-filter-actions">
+                                            <button id="incident-reset-filters" class="btn-secondary" type="button" disabled>Azzera filtri</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="table-wrapper incident-table-wrapper">
                                     <table>
                                         <thead>
                                             <tr>
                                                 <th scope="col">ID</th>
                                                 <th scope="col">Inizio</th>
+                                                <th scope="col">Fine</th>
                                                 <th scope="col">Tipologia</th>
                                                 <th scope="col">Servizio</th>
                                                 <th scope="col">Severità</th>
                                                 <th scope="col">Stato</th>
                                                 <th scope="col">Classificazioni</th>
+                                                <th scope="col">Azioni</th>
                                             </tr>
                                         </thead>
                                         <tbody id="incident-list-body"></tbody>
                                     </table>
                                 </div>
+
+                                <nav class="inventory-pagination" aria-label="Paginazione incidenti">
+                                    <div class="inventory-pagination-summary">
+                                        <label for="incident-page-size">Righe</label>
+                                        <select id="incident-page-size" class="inventory-page-size">
+                                            <option value="5">5</option>
+                                            <option value="10" selected>10</option>
+                                            <option value="25">25</option>
+                                        </select>
+                                        <span id="incident-page-status" class="inventory-page-status">0 risultati</span>
+                                    </div>
+                                    <div class="inventory-pagination-actions">
+                                        <button id="incident-prev-page" class="btn-secondary" type="button">Precedente</button>
+                                        <span id="incident-page-indicator" class="inventory-page-indicator">Pagina 1 di 1</span>
+                                        <button id="incident-next-page" class="btn-secondary" type="button">Successiva</button>
+                                    </div>
+                                </nav>
                             </div>
+
                             <div id="wizard-container" class="card wizard-container is-hidden">
                                 <div class="view-header">
                                     <h2 id="step-title">Gestione Incidenti</h2>
-                                    <button id="incident-list-back-btn" class="btn-secondary" type="button">Torna all’elenco</button>
+                                    <button id="incident-list-back-btn" class="btn-secondary" type="button">Torna agli incidenti aperti</button>
                                 </div>
                                 <div id="step-content" class="wizard-content"></div>
                                 <div class="wizard-nav">
@@ -964,6 +1031,62 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 </div>
                             </div>
                         </section>
+
+                        <dialog id="incident-detail-dialog" class="asset-detail-dialog incident-detail-dialog">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">DETTAGLIO INCIDENTE</p>
+                                        <h2>Incidente classificato</h2>
+                                        <p id="incident-detail-subtitle" class="asset-detail-subtitle"></p>
+                                    </div>
+                                    <form method="dialog"><button class="asset-detail-close" type="submit" aria-label="Chiudi dettaglio">×</button></form>
+                                </header>
+                                <div id="incident-detail-content" class="asset-detail-body"></div>
+                                <footer class="asset-detail-footer"><form method="dialog"><button class="btn-secondary" type="submit">Chiudi</button></form></footer>
+                            </div>
+                        </dialog>
+
+                        <dialog id="incident-close-dialog" class="asset-detail-dialog incident-close-dialog">
+                            <div class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">OPERAZIONE CONTROLLATA</p>
+                                        <h2>Chiudi incidente</h2>
+                                        <p id="incident-close-subtitle" class="asset-detail-subtitle"></p>
+                                    </div>
+                                    <form method="dialog"><button class="asset-detail-close" type="submit" aria-label="Annulla chiusura">×</button></form>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <div class="operation-warning">
+                                        <strong>Conferma operazione sensibile</strong>
+                                        <p>L’incidente passerà tra i chiusi. Nessun dato verrà cancellato o archiviato automaticamente.</p>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="incident-close-at">Data e ora di chiusura</label>
+                                        <input id="incident-close-at" type="datetime-local" required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="incident-close-cause">Causa accertata <span class="field-optional">(facoltativa)</span></label>
+                                        <textarea id="incident-close-cause" rows="4" placeholder="Descrivi la causa accertata"></textarea>
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="incident-close-resolution">Risoluzione</label>
+                                        <textarea id="incident-close-resolution" rows="5" minlength="10" required placeholder="Descrivi le azioni di risoluzione eseguite"></textarea>
+                                        <small>Minimo 10 caratteri.</small>
+                                    </div>
+                                    <label class="confirmation-box">
+                                        <input id="incident-close-acknowledge" type="checkbox">
+                                        <span>Confermo di aver verificato l’incidente e di volerlo chiudere.</span>
+                                    </label>
+                                    <p id="incident-close-status" class="inventory-search-status" role="status">La chiusura non cancella né archivia automaticamente il record.</p>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <form method="dialog"><button class="btn-secondary" type="submit">Annulla</button></form>
+                                    <button id="incident-close-confirm" class="btn-danger" type="button" disabled>Chiudi incidente</button>
+                                </footer>
+                            </div>
+                        </dialog>
 
                         <section id="view-riepilogo" class="view-section card is-hidden">
                             <div class="view-header">
