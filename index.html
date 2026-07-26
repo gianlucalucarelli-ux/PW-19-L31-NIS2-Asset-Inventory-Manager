@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?build=20260726-e1">
+    <link rel="stylesheet" href="src/style.css?build=20260726-f1">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260726-e1"></script>
+    <script type="module" src="src/main.js?build=20260726-f1"></script>
     <script type="module" src="src/wizard.js?build=20260726-d5"></script>
 </head>
 <body>
@@ -205,6 +205,38 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <button type="button" class="menu-btn" data-route="archived-assets">
                                 <span aria-hidden="true">🗄️</span>
                                 <span>Asset archiviati</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
+                            <p class="navigation-group__title">Servizi</p>
+                            <button type="button" class="menu-btn" data-route="services">
+                                <span aria-hidden="true">🧩</span>
+                                <span>Elenco servizi</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="add-service">
+                                <span aria-hidden="true">➕</span>
+                                <span>Nuovo servizio</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="archived-services">
+                                <span aria-hidden="true">🗄️</span>
+                                <span>Servizi cessati</span>
+                            </button>
+                        </div>
+
+                        <div class="navigation-group">
+                            <p class="navigation-group__title">Fornitori</p>
+                            <button type="button" class="menu-btn" data-route="suppliers">
+                                <span aria-hidden="true">🏢</span>
+                                <span>Elenco fornitori</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="add-supplier">
+                                <span aria-hidden="true">➕</span>
+                                <span>Nuovo fornitore</span>
+                            </button>
+                            <button type="button" class="menu-btn" data-route="archived-suppliers">
+                                <span aria-hidden="true">🗄️</span>
+                                <span>Fornitori cessati</span>
                             </button>
                         </div>
 
@@ -480,6 +512,19 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 </div>
                             </section>
 
+                            <section class="organization-subsection" aria-labelledby="archived-people-table-title">
+                                <div class="section-heading-inline">
+                                    <h3 id="archived-people-table-title">Persone disattivate</h3>
+                                    <p class="text-muted">Storico in sola lettura delle persone non più operative.</p>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead><tr><th scope="col">Persona</th><th scope="col">E-mail</th><th scope="col">Telefono</th><th scope="col">Disattivata il</th><th scope="col">Motivazione</th></tr></thead>
+                                        <tbody id="organization-archived-people-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
+
                             <section class="organization-subsection" aria-labelledby="assignments-table-title">
                                 <div class="section-heading-inline">
                                     <h3 id="assignments-table-title">Incarichi NIS2/ACN</h3>
@@ -675,6 +720,195 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 </footer>
                             </form>
                         </dialog>
+                        <section id="view-services" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Servizi aziendali</h2>
+                                    <p class="section-intro">Gestione separata dei servizi erogati dal soggetto NIS2, con riferimenti organizzativi controllati.</p>
+                                </div>
+                                <div class="action-group">
+                                    <button id="service-export-btn" type="button" class="btn-success">Esporta XLS</button>
+                                    <button id="service-template-btn" type="button" class="btn-secondary">Modello import</button>
+                                    <button id="service-import-btn" type="button" class="btn-secondary">Importa XLS</button>
+                                    <input id="service-import-input" type="file" accept=".xlsx,.xls" class="visually-hidden">
+                                    <button type="button" class="btn-primary" data-route="add-service">Nuovo servizio</button>
+                                </div>
+                            </div>
+
+                            <div class="inventory-tools" role="search" aria-label="Ricerca e filtri servizi">
+                                <div class="inventory-filter-grid entity-filter-grid">
+                                    <div class="inventory-filter-field inventory-search-field">
+                                        <label for="service-search">Ricerca servizio</label>
+                                        <input id="service-search" type="search" class="form-input" placeholder="Codice, nome, organizzazione o responsabile">
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="service-organization-filter">Organizzazione</label>
+                                        <select id="service-organization-filter" class="form-input"><option value="">Tutte le organizzazioni</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="service-type-filter">Tipo servizio</label>
+                                        <select id="service-type-filter" class="form-input"><option value="">Tutti i tipi</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="service-state-filter">Stato servizio</label>
+                                        <select id="service-state-filter" class="form-input"><option value="">Tutti gli stati</option></select>
+                                    </div>
+                                </div>
+                                <div class="inventory-tools__footer">
+                                    <button id="service-filter-reset" type="button" class="btn-link">Azzera filtri</button>
+                                    <p id="service-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento servizi…</p>
+                                </div>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead><tr>
+                                        <th scope="col">Codice</th><th scope="col">Servizio</th><th scope="col">Organizzazione</th>
+                                        <th scope="col">Tipo</th><th scope="col">Stato</th><th scope="col">Responsabile</th><th scope="col">Azioni</th>
+                                    </tr></thead>
+                                    <tbody id="service-table-body"></tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-controls">
+                                <label for="service-page-size">Righe per pagina</label>
+                                <select id="service-page-size" class="form-input compact-select"><option value="5">5</option><option value="10" selected>10</option><option value="25">25</option></select>
+                                <span id="service-page-status">0 risultati</span>
+                                <div class="pagination-actions">
+                                    <button id="service-page-prev" class="btn-secondary" type="button">Precedente</button>
+                                    <span id="service-page-indicator">Pagina 1 di 1</span>
+                                    <button id="service-page-next" class="btn-secondary" type="button">Successiva</button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="view-add-service" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2 id="service-form-title">Nuovo servizio</h2>
+                                    <p class="section-intro">Registra o aggiorna un servizio mantenendo l’appartenenza esclusiva al soggetto NIS2 selezionato.</p>
+                                </div>
+                                <button id="service-form-cancel" type="button" class="btn-secondary">Torna ai servizi</button>
+                            </div>
+                            <form id="service-form" class="entity-form">
+                                <input id="service-id" type="hidden">
+                                <div class="form-grid form-grid-two">
+                                    <div class="form-field"><label for="service-code">Codice servizio</label><input id="service-code" class="form-input" maxlength="80" required></div>
+                                    <div class="form-field"><label for="service-name">Nome servizio</label><input id="service-name" class="form-input" maxlength="180" required></div>
+                                    <div class="form-field"><label for="service-organization">Soggetto NIS2</label><select id="service-organization" class="form-input" required></select></div>
+                                    <div class="form-field"><label for="service-type">Tipo servizio</label><select id="service-type" class="form-input" required></select></div>
+                                    <div class="form-field"><label for="service-state">Stato servizio</label><select id="service-state" class="form-input" required></select></div>
+                                    <div class="form-field"><label for="service-responsible">Responsabile</label><select id="service-responsible" class="form-input"></select></div>
+                                    <div class="form-field form-span-full"><label for="service-description">Descrizione</label><textarea id="service-description" class="form-input" rows="5"></textarea></div>
+                                </div>
+                                <div id="service-form-status" class="form-status" role="status" aria-live="polite"></div>
+                                <div class="form-actions"><button id="service-submit" type="submit" class="btn-primary">Salva servizio</button></div>
+                            </form>
+                        </section>
+
+                        <section id="view-archived-services" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div><h2>Servizi cessati</h2><p class="section-intro">Consultazione in sola lettura dei servizi esclusi dalle funzioni operative.</p></div>
+                                <button id="archived-services-export-btn" type="button" class="btn-success">Esporta cessati XLS</button>
+                            </div>
+                            <div class="table-wrapper"><table>
+                                <thead><tr><th scope="col">Codice</th><th scope="col">Nome</th><th scope="col">Organizzazione</th><th scope="col">Cessato il</th><th scope="col">Motivazione</th><th scope="col">Azioni</th></tr></thead>
+                                <tbody id="archived-services-body"></tbody>
+                            </table></div>
+                            <p id="archived-services-status" class="inventory-search-status" role="status" aria-live="polite"></p>
+                        </section>
+
+                        <section id="view-suppliers" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div><h2>Fornitori</h2><p class="section-intro">Anagrafica autonoma delle terze parti e dei partner tecnologici, separata dai soggetti NIS2 utilizzatori.</p></div>
+                                <div class="action-group">
+                                    <button id="supplier-export-btn" type="button" class="btn-success">Esporta XLS</button>
+                                    <button id="supplier-template-btn" type="button" class="btn-secondary">Modello import</button>
+                                    <button id="supplier-import-btn" type="button" class="btn-secondary">Importa XLS</button>
+                                    <input id="supplier-import-input" type="file" accept=".xlsx,.xls" class="visually-hidden">
+                                    <button type="button" class="btn-primary" data-route="add-supplier">Nuovo fornitore</button>
+                                </div>
+                            </div>
+                            <div class="inventory-tools" role="search" aria-label="Ricerca e filtri fornitori">
+                                <div class="inventory-filter-grid supplier-filter-grid">
+                                    <div class="inventory-filter-field inventory-search-field"><label for="supplier-search">Ricerca fornitore</label><input id="supplier-search" type="search" class="form-input" placeholder="Codice, nome, indirizzo o e-mail"></div>
+                                    <div class="inventory-filter-field"><label for="supplier-type-filter">Tipo fornitore</label><select id="supplier-type-filter" class="form-input"><option value="">Tutti i tipi</option></select></div>
+                                </div>
+                                <div class="inventory-tools__footer"><button id="supplier-filter-reset" type="button" class="btn-link">Azzera filtri</button><p id="supplier-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento fornitori…</p></div>
+                            </div>
+                            <div class="table-wrapper"><table>
+                                <thead><tr><th scope="col">Codice</th><th scope="col">Fornitore</th><th scope="col">Tipo</th><th scope="col">Indirizzo</th><th scope="col">E-mail</th><th scope="col">Azioni</th></tr></thead>
+                                <tbody id="supplier-table-body"></tbody>
+                            </table></div>
+                            <div class="pagination-controls">
+                                <label for="supplier-page-size">Righe per pagina</label><select id="supplier-page-size" class="form-input compact-select"><option value="5">5</option><option value="10" selected>10</option><option value="25">25</option></select>
+                                <span id="supplier-page-status">0 risultati</span>
+                                <div class="pagination-actions"><button id="supplier-page-prev" class="btn-secondary" type="button">Precedente</button><span id="supplier-page-indicator">Pagina 1 di 1</span><button id="supplier-page-next" class="btn-secondary" type="button">Successiva</button></div>
+                            </div>
+                        </section>
+
+                        <section id="view-add-supplier" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div><h2 id="supplier-form-title">Nuovo fornitore</h2><p class="section-intro">Registra o aggiorna una terza parte senza confonderla con il soggetto NIS2 utilizzatore.</p></div>
+                                <button id="supplier-form-cancel" type="button" class="btn-secondary">Torna ai fornitori</button>
+                            </div>
+                            <form id="supplier-form" class="entity-form">
+                                <input id="supplier-id" type="hidden">
+                                <div class="form-grid form-grid-two">
+                                    <div class="form-field"><label for="supplier-code">Codice fornitore</label><input id="supplier-code" class="form-input" maxlength="80" required></div>
+                                    <div class="form-field"><label for="supplier-name">Nome fornitore</label><input id="supplier-name" class="form-input" maxlength="180" required></div>
+                                    <div class="form-field"><label for="supplier-type">Tipo fornitore</label><select id="supplier-type" class="form-input" required></select></div>
+                                    <div class="form-field"><label for="supplier-email">E-mail contatto</label><input id="supplier-email" type="email" class="form-input" required></div>
+                                    <div class="form-field form-span-full"><label for="supplier-address">Indirizzo</label><input id="supplier-address" class="form-input" maxlength="300"></div>
+                                </div>
+                                <div id="supplier-form-status" class="form-status" role="status" aria-live="polite"></div>
+                                <div class="form-actions"><button id="supplier-submit" type="submit" class="btn-primary">Salva fornitore</button></div>
+                            </form>
+                        </section>
+
+                        <section id="view-archived-suppliers" class="view-section card is-hidden">
+                            <div class="view-header"><div><h2>Fornitori cessati</h2><p class="section-intro">Consultazione in sola lettura dei fornitori non più operativi.</p></div><button id="archived-suppliers-export-btn" type="button" class="btn-success">Esporta cessati XLS</button></div>
+                            <div class="table-wrapper"><table>
+                                <thead><tr><th scope="col">Codice</th><th scope="col">Nome</th><th scope="col">Tipo</th><th scope="col">Cessato il</th><th scope="col">Motivazione</th><th scope="col">Azioni</th></tr></thead>
+                                <tbody id="archived-suppliers-body"></tbody>
+                            </table></div>
+                            <p id="archived-suppliers-status" class="inventory-search-status" role="status" aria-live="polite"></p>
+                        </section>
+
+                        <dialog id="service-detail-dialog" class="app-dialog wide-dialog">
+                            <div class="dialog-header"><div><p class="eyebrow">DETTAGLIO SERVIZIO</p><h2>Servizio e relazioni attive</h2></div><button type="button" class="dialog-close" data-close-dialog="service-detail-dialog" aria-label="Chiudi">×</button></div>
+                            <div id="service-detail-content" class="dialog-body"></div>
+                        </dialog>
+                        <dialog id="service-archive-dialog" class="app-dialog">
+                            <form id="service-archive-form" method="dialog">
+                                <div class="dialog-header"><div><p class="eyebrow">CESSAZIONE LOGICA</p><h2>Cessa servizio</h2><p id="service-archive-subtitle" class="section-intro"></p></div><button type="button" class="dialog-close" data-close-dialog="service-archive-dialog" aria-label="Chiudi">×</button></div>
+                                <div class="dialog-body"><p>La cessazione è consentita soltanto quando non esistono relazioni o incidenti aperti.</p><div class="form-field"><label for="service-archive-reason">Motivo della cessazione</label><textarea id="service-archive-reason" class="form-input" rows="4" required></textarea></div><div id="service-archive-status" class="form-status"></div></div>
+                                <div class="dialog-actions"><button type="button" class="btn-secondary" data-close-dialog="service-archive-dialog">Annulla</button><button id="service-archive-confirm" type="submit" class="btn-danger" disabled>Conferma cessazione</button></div>
+                            </form>
+                        </dialog>
+                        <dialog id="service-import-dialog" class="app-dialog wide-dialog">
+                            <div class="dialog-header"><div><p class="eyebrow">ANTEPRIMA IMPORTAZIONE</p><h2>Verifica servizi</h2></div><button type="button" class="dialog-close" data-close-dialog="service-import-dialog" aria-label="Chiudi">×</button></div>
+                            <div class="dialog-body"><div class="table-wrapper"><table><thead><tr><th>Riga</th><th>Codice</th><th>Nome</th><th>Organizzazione</th><th>Esito</th></tr></thead><tbody id="service-import-preview-body"></tbody></table></div><p id="service-import-status" class="inventory-search-status"></p></div>
+                            <div class="dialog-actions"><button type="button" class="btn-secondary" data-close-dialog="service-import-dialog">Annulla</button><button id="service-import-confirm" type="button" class="btn-primary" disabled>Importa righe valide</button></div>
+                        </dialog>
+
+                        <dialog id="supplier-detail-dialog" class="app-dialog wide-dialog">
+                            <div class="dialog-header"><div><p class="eyebrow">DETTAGLIO FORNITORE</p><h2>Fornitore e relazioni attive</h2></div><button type="button" class="dialog-close" data-close-dialog="supplier-detail-dialog" aria-label="Chiudi">×</button></div>
+                            <div id="supplier-detail-content" class="dialog-body"></div>
+                        </dialog>
+                        <dialog id="supplier-archive-dialog" class="app-dialog">
+                            <form id="supplier-archive-form" method="dialog">
+                                <div class="dialog-header"><div><p class="eyebrow">CESSAZIONE LOGICA</p><h2>Cessa fornitore</h2><p id="supplier-archive-subtitle" class="section-intro"></p></div><button type="button" class="dialog-close" data-close-dialog="supplier-archive-dialog" aria-label="Chiudi">×</button></div>
+                                <div class="dialog-body"><p>La cessazione è consentita soltanto quando non esistono collegamenti attivi con servizi, asset o subfornitori.</p><div class="form-field"><label for="supplier-archive-reason">Motivo della cessazione</label><textarea id="supplier-archive-reason" class="form-input" rows="4" required></textarea></div><div id="supplier-archive-status" class="form-status"></div></div>
+                                <div class="dialog-actions"><button type="button" class="btn-secondary" data-close-dialog="supplier-archive-dialog">Annulla</button><button id="supplier-archive-confirm" type="submit" class="btn-danger" disabled>Conferma cessazione</button></div>
+                            </form>
+                        </dialog>
+                        <dialog id="supplier-import-dialog" class="app-dialog wide-dialog">
+                            <div class="dialog-header"><div><p class="eyebrow">ANTEPRIMA IMPORTAZIONE</p><h2>Verifica fornitori</h2></div><button type="button" class="dialog-close" data-close-dialog="supplier-import-dialog" aria-label="Chiudi">×</button></div>
+                            <div class="dialog-body"><div class="table-wrapper"><table><thead><tr><th>Riga</th><th>Codice</th><th>Nome</th><th>Tipo</th><th>Esito</th></tr></thead><tbody id="supplier-import-preview-body"></tbody></table></div><p id="supplier-import-status" class="inventory-search-status"></p></div>
+                            <div class="dialog-actions"><button type="button" class="btn-secondary" data-close-dialog="supplier-import-dialog">Annulla</button><button id="supplier-import-confirm" type="button" class="btn-primary" disabled>Importa righe valide</button></div>
+                        </dialog>
+
+
                         <section id="view-dashboard" class="view-section dashboard-view is-hidden" aria-labelledby="dashboard-overview-title">
                             <div class="dashboard-hero card">
                                 <div>
