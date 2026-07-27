@@ -15,14 +15,14 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?build=20260726-h1">
+    <link rel="stylesheet" href="src/style.css?build=20260727-m1">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260726-i1"></script>
-    <script type="module" src="src/wizard.js?build=20260726-d5"></script>
+    <script type="module" src="src/main.js?build=20260727-m1"></script>
+    <script type="module" src="src/wizard.js?build=20260727-m1"></script>
 </head>
 <body>
     <div id="app-boot-screen" class="app-boot-screen" role="status" aria-live="polite" aria-label="Verifica della sessione in corso">
@@ -223,6 +223,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             </button>
                             <div id="menu-group-relazioni" class="navigation-group__items">
                                 <button type="button" class="menu-btn" data-route="supply-chain"><span aria-hidden="true">🔗</span><span>Supply Chain</span></button>
+                                <button type="button" class="menu-btn" data-route="relationship-builder"><span aria-hidden="true">🧭</span><span>Costruzione dipendenze</span></button>
                             </div>
                         </div>
 
@@ -999,23 +1000,34 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                             <p class="eyebrow">RELAZIONI</p>
                                             <h3 id="dashboard-supply-title">Copertura Supply Chain</h3>
                                         </div>
-                                        <button type="button" class="btn-link" data-route="supply-chain">Apri relazioni</button>
+                                        <div class="dashboard-panel__actions">
+                                            <button type="button" class="btn-link" data-route="supply-chain">Apri mappa</button>
+                                            <button id="supply-manage-missing" type="button" class="btn-link btn-link--warning is-hidden" data-route="relationship-builder">Gestisci relazioni</button>
+                                        </div>
                                     </div>
-                                    <dl class="supply-summary">
+                                    <dl class="supply-summary supply-summary--coverage">
                                         <div>
-                                            <dt>Servizi mappati</dt>
+                                            <dt>Servizi attivi</dt>
                                             <dd id="supply-services-count">—</dd>
                                         </div>
                                         <div>
-                                            <dt>Con asset collegati</dt>
-                                            <dd id="supply-assets-count">—</dd>
+                                            <dt>Con almeno una relazione</dt>
+                                            <dd id="supply-mapped-count">—</dd>
                                         </div>
                                         <div>
-                                            <dt>Con fornitori collegati</dt>
-                                            <dd id="supply-suppliers-count">—</dd>
+                                            <dt>Da verificare</dt>
+                                            <dd id="supply-review-count">—</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Completamente scollegati</dt>
+                                            <dd id="supply-disconnected-count">—</dd>
                                         </div>
                                     </dl>
                                     <p id="supply-summary-note" class="dashboard-note">Caricamento dello stato delle dipendenze…</p>
+                                    <div id="supply-summary-warning" class="dashboard-warning is-hidden">
+                                        <strong>Relazioni da gestire</strong>
+                                        <ul id="supply-summary-warning-list"></ul>
+                                    </div>
                                 </section>
 
                                 <section class="dashboard-panel card dashboard-panel--wide" aria-labelledby="dashboard-incidents-title">
@@ -1444,61 +1456,101 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="view-header">
                                 <div>
                                     <h2>Mappatura Supply Chain e servizi critici</h2>
-                                    <p class="section-intro">Percorsi diretti e derivati tra servizi, asset e fornitori, con livelli gerarchici.</p>
+                                    <p class="section-intro">Consulta la catena multilivello come mappa navigabile oppure come elenco analitico dei percorsi diretti e derivati.</p>
                                 </div>
                                 <div class="action-group" aria-label="Azioni Supply Chain">
+                                    <button type="button" class="btn-secondary" data-route="relationship-builder">Costruzione dipendenze</button>
                                     <button id="btn-export-supply-chain" class="btn-success" type="button" disabled>Esporta XLS</button>
                                 </div>
                             </div>
 
-                            <div class="inventory-tools" role="search" aria-label="Ricerca e filtri Supply Chain">
-                                <div class="inventory-filter-grid supply-filter-grid">
-                                    <div class="inventory-filter-field inventory-search-field">
-                                        <label for="supply-search">Ricerca</label>
-                                        <input id="supply-search" type="search" class="form-input" placeholder="Servizio, asset, fornitore o relazione" autocomplete="off" aria-controls="supply-chain-table-body">
-                                    </div>
-                                    <div class="inventory-filter-field">
-                                        <label for="supply-filter-service">Servizio</label>
-                                        <select id="supply-filter-service" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti i servizi</option></select>
-                                    </div>
-                                    <div class="inventory-filter-field">
-                                        <label for="supply-filter-asset">Asset</label>
-                                        <select id="supply-filter-asset" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti gli asset</option></select>
-                                    </div>
-                                    <div class="inventory-filter-field">
-                                        <label for="supply-filter-supplier">Fornitore</label>
-                                        <select id="supply-filter-supplier" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti i fornitori</option></select>
-                                    </div>
-                                    <div class="inventory-filter-field">
-                                        <label for="supply-filter-origin">Origine relazione</label>
-                                        <select id="supply-filter-origin" class="form-input" aria-controls="supply-chain-table-body">
-                                            <option value="">Dirette e derivate</option>
-                                            <option value="direct">Solo dirette</option>
-                                            <option value="derived">Solo derivate</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="inventory-filter-footer">
-                                    <p id="supply-filter-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento Supply Chain…</p>
-                                    <button id="supply-filter-clear" type="button" class="btn-secondary" disabled>Azzera filtri</button>
-                                </div>
+                            <div class="view-mode-switch" role="group" aria-label="Modalità visualizzazione Supply Chain">
+                                <button id="supply-view-map" class="view-mode-switch__button is-active" type="button" aria-pressed="true">Mappa gerarchica</button>
+                                <button id="supply-view-table" class="view-mode-switch__button" type="button" aria-pressed="false">Vista analitica</button>
                             </div>
 
-                            <div class="table-wrapper">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">Servizio</th>
-                                            <th scope="col">Asset</th>
-                                            <th scope="col">Fornitore</th>
-                                            <th scope="col">Relazione</th>
-                                            <th scope="col">Livelli</th>
-                                            <th scope="col">Azioni</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="supply-chain-table-body"></tbody>
-                                </table>
-                            </div>
+                            <section id="supply-map-panel" class="supply-map-panel" aria-labelledby="supply-map-title">
+                                <div class="supply-map-toolbar">
+                                    <div>
+                                        <p class="eyebrow">GRAFO MULTILIVELLO</p>
+                                        <h3 id="supply-map-title">Servizi, asset e fornitori</h3>
+                                        <p>Ogni servizio mantiene i propri asset e fornitori; gli elementi condivisi sono evidenziati senza duplicare l'anagrafica.</p>
+                                    </div>
+                                    <div class="supply-map-toolbar__controls">
+                                        <label>
+                                            <span>Soggetto NIS2</span>
+                                            <select id="supply-map-organization" class="form-input"><option value="">Tutti i soggetti NIS2</option></select>
+                                        </label>
+                                        <label>
+                                            <span>Servizio principale</span>
+                                            <select id="supply-map-root" class="form-input"><option value="">Seleziona servizio principale</option></select>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="dependency-map-filters" aria-label="Livelli visualizzati">
+                                    <span>Mostra:</span>
+                                    <label><input id="supply-map-show-assets" type="checkbox" checked> Asset e sotto-asset</label>
+                                    <label><input id="supply-map-show-suppliers" type="checkbox" checked> Fornitori e subfornitori</label>
+                                </div>
+
+                                <p id="supply-map-status" class="inventory-search-status" role="status" aria-live="polite">Seleziona un servizio principale per esplorare la catena.</p>
+                                <div class="dependency-map-layout">
+                                    <div id="supply-map-canvas" class="dependency-map-canvas" aria-live="polite"></div>
+                                    <aside id="supply-impact-path" class="impact-path-panel" aria-label="Percorso potenziale di impatto"></aside>
+                                </div>
+                            </section>
+
+                            <section id="supply-table-panel" class="is-hidden">
+                                <div class="inventory-tools" role="search" aria-label="Ricerca e filtri Supply Chain">
+                                    <div class="inventory-filter-grid supply-filter-grid">
+                                        <div class="inventory-filter-field inventory-search-field">
+                                            <label for="supply-search">Ricerca</label>
+                                            <input id="supply-search" type="search" class="form-input" placeholder="Servizio, asset, fornitore o relazione" autocomplete="off" aria-controls="supply-chain-table-body">
+                                        </div>
+                                        <div class="inventory-filter-field">
+                                            <label for="supply-filter-service">Servizio</label>
+                                            <select id="supply-filter-service" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti i servizi</option></select>
+                                        </div>
+                                        <div class="inventory-filter-field">
+                                            <label for="supply-filter-asset">Asset</label>
+                                            <select id="supply-filter-asset" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti gli asset</option></select>
+                                        </div>
+                                        <div class="inventory-filter-field">
+                                            <label for="supply-filter-supplier">Fornitore</label>
+                                            <select id="supply-filter-supplier" class="form-input" aria-controls="supply-chain-table-body"><option value="">Tutti i fornitori</option></select>
+                                        </div>
+                                        <div class="inventory-filter-field">
+                                            <label for="supply-filter-origin">Origine relazione</label>
+                                            <select id="supply-filter-origin" class="form-input" aria-controls="supply-chain-table-body">
+                                                <option value="">Dirette e derivate</option>
+                                                <option value="direct">Solo dirette</option>
+                                                <option value="derived">Solo derivate</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="inventory-filter-footer">
+                                        <p id="supply-filter-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento Supply Chain…</p>
+                                        <button id="supply-filter-clear" type="button" class="btn-secondary" disabled>Azzera filtri</button>
+                                    </div>
+                                </div>
+
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Servizio</th>
+                                                <th scope="col">Asset</th>
+                                                <th scope="col">Fornitore</th>
+                                                <th scope="col">Relazione</th>
+                                                <th scope="col">Livelli</th>
+                                                <th scope="col">Azioni</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="supply-chain-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
                         </section>
 
                         <dialog id="supply-detail-dialog" class="asset-detail-dialog" aria-labelledby="supply-detail-title" aria-describedby="supply-detail-subtitle">
@@ -1514,6 +1566,186 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <div id="supply-detail-content" class="asset-detail-body"></div>
                                 <footer class="asset-detail-footer"><span></span><form method="dialog"><button class="btn-secondary" type="submit">Chiudi</button></form></footer>
                             </div>
+                        </dialog>
+
+                        <section id="view-relationship-builder" class="view-section card is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <h2>Costruzione dipendenze</h2>
+                                    <p class="section-intro">Definisci la Supply Chain con relazioni guidate tra servizi, sottoservizi, asset, fornitori e subfornitori.</p>
+                                </div>
+                                <div class="action-group">
+                                    <button type="button" class="btn-secondary" data-route="supply-chain">Apri Supply Chain</button>
+                                </div>
+                            </div>
+
+                            <p id="relationship-builder-status" class="relationship-builder-status" role="status" aria-live="polite">Caricamento delle relazioni…</p>
+
+                            <section class="relationship-coverage-card" aria-labelledby="relationship-coverage-title">
+                                <div class="relationship-section-heading">
+                                    <div>
+                                        <p class="eyebrow">COPERTURA</p>
+                                        <h3 id="relationship-coverage-title">Relazioni da verificare</h3>
+                                        <p>Le segnalazioni aiutano a individuare servizi scollegati o incompleti; non costituiscono errori automatici.</p>
+                                    </div>
+                                    <label class="relationship-organization-filter">
+                                        <span>Soggetto NIS2</span>
+                                        <select id="relationship-organization" class="form-input"><option value="">Tutti i soggetti NIS2</option></select>
+                                    </label>
+                                </div>
+
+                                <dl class="relationship-summary-grid">
+                                    <div><dt>Servizi attivi</dt><dd id="relationship-summary-active">—</dd></div>
+                                    <div><dt>Con relazioni</dt><dd id="relationship-summary-mapped">—</dd></div>
+                                    <div><dt>Da verificare</dt><dd id="relationship-summary-review">—</dd></div>
+                                    <div><dt>Completamente scollegati</dt><dd id="relationship-summary-disconnected">—</dd></div>
+                                </dl>
+                                <div id="relationship-review-list" class="relationship-review-list" aria-live="polite"></div>
+                            </section>
+
+                            <section id="relationship-builder-form-card" class="relationship-builder-card" aria-labelledby="relationship-form-title">
+                                <div class="relationship-section-heading">
+                                    <div>
+                                        <p class="eyebrow">PROCEDURA GUIDATA</p>
+                                        <h3 id="relationship-form-title">Aggiungi una relazione</h3>
+                                        <p>Seleziona gli elementi senza inserire manualmente codici o identificativi.</p>
+                                    </div>
+                                </div>
+
+                                <form id="relationship-form" class="relationship-form">
+                                    <div class="relationship-form-grid">
+                                        <label>
+                                            <span>Tipo di collegamento</span>
+                                            <select id="relationship-type" class="form-input" required>
+                                                <option value="SERVICE_SERVICE">Servizio → Sottoservizio</option>
+                                                <option value="SERVICE_ASSET">Servizio → Asset</option>
+                                                <option value="ASSET_ASSET">Asset → Sotto-asset</option>
+                                                <option value="SERVICE_SUPPLIER">Servizio → Fornitore</option>
+                                                <option value="ASSET_SUPPLIER">Asset → Fornitore</option>
+                                                <option value="SUPPLIER_SUPPLIER">Fornitore → Subfornitore (avanzato)</option>
+                                            </select>
+                                            <small class="form-help">Usa la subfornitura solo quando esiste un rapporto reale tra due fornitori; per il fornitore di un servizio o di un asset scegli il collegamento dedicato.</small>
+                                        </label>
+                                        <label>
+                                            <span id="relationship-source-label">Elemento principale</span>
+                                            <select id="relationship-source" class="form-input" required><option value="">Seleziona elemento principale</option></select>
+                                        </label>
+                                        <label>
+                                            <span id="relationship-target-label">Elemento collegato</span>
+                                            <select id="relationship-target" class="form-input" required><option value="">Seleziona elemento collegato</option></select>
+                                        </label>
+                                        <label>
+                                            <span>Tipo di relazione</span>
+                                            <select id="relationship-domain" class="form-input" required><option value="">Seleziona tipo di relazione</option></select>
+                                        </label>
+                                        <label id="relationship-impact-field" class="is-hidden">
+                                            <span>Impatto sul servizio superiore</span>
+                                            <select id="relationship-impact" class="form-input"><option value="">Seleziona impatto</option></select>
+                                        </label>
+                                        <label id="relationship-weight-field" class="is-hidden">
+                                            <span>Peso della dipendenza (%)</span>
+                                            <input id="relationship-weight" class="form-input" type="number" min="0" max="100" value="0">
+                                        </label>
+                                        <label id="relationship-contract-field" class="is-hidden">
+                                            <span>Riferimento contratto</span>
+                                            <input id="relationship-contract" class="form-input" type="text" maxlength="160" placeholder="Facoltativo">
+                                        </label>
+                                        <label>
+                                            <span>Ordine di visualizzazione</span>
+                                            <input id="relationship-order" class="form-input" type="number" min="1" value="1">
+                                        </label>
+                                    </div>
+
+                                    <label>
+                                        <span>Descrizione della dipendenza</span>
+                                        <textarea id="relationship-description" class="form-input" rows="3" placeholder="Descrivi brevemente il motivo del collegamento"></textarea>
+                                    </label>
+
+                                    <label id="relationship-primary-field" class="checkbox-field is-hidden">
+                                        <input id="relationship-primary" type="checkbox">
+                                        <span>Relazione primaria per l'elemento collegato</span>
+                                    </label>
+
+                                    <div id="relationship-preview" class="relationship-preview" aria-live="polite"></div>
+
+                                    <div class="form-actions">
+                                        <button id="relationship-save" class="btn-primary" type="submit">Conferma relazione</button>
+                                        <button type="reset" class="btn-secondary">Azzera campi</button>
+                                    </div>
+                                </form>
+                            </section>
+
+                            <section class="relationship-builder-card" aria-labelledby="relationship-map-builder-title">
+                                <div class="relationship-section-heading">
+                                    <div>
+                                        <p class="eyebrow">ANTEPRIMA DELLA CATENA</p>
+                                        <h3 id="relationship-map-builder-title">Mappa del servizio principale</h3>
+                                        <p>Espandi i nodi e seleziona un elemento per leggere il percorso potenziale di impatto.</p>
+                                    </div>
+                                </div>
+
+                                <div class="relationship-map-controls">
+                                    <label>
+                                        <span>Soggetto NIS2</span>
+                                        <select id="relationship-map-organization" class="form-input"><option value="">Tutti i soggetti NIS2</option></select>
+                                    </label>
+                                    <label>
+                                        <span>Servizio principale</span>
+                                        <select id="relationship-map-root" class="form-input"><option value="">Seleziona servizio principale</option></select>
+                                    </label>
+                                    <div class="dependency-map-filters">
+                                        <span>Mostra:</span>
+                                        <label><input id="relationship-show-assets" type="checkbox" checked> Asset</label>
+                                        <label><input id="relationship-show-suppliers" type="checkbox" checked> Fornitori</label>
+                                    </div>
+                                </div>
+                                <p id="relationship-map-status" class="inventory-search-status" role="status" aria-live="polite">Seleziona un servizio principale.</p>
+                                <div class="dependency-map-layout">
+                                    <div id="relationship-map-canvas" class="dependency-map-canvas"></div>
+                                    <aside id="relationship-impact-path" class="impact-path-panel" aria-label="Percorso potenziale di impatto"></aside>
+                                </div>
+                            </section>
+
+                            <section class="relationship-builder-card" aria-labelledby="relationship-active-title">
+                                <div class="relationship-section-heading">
+                                    <div>
+                                        <p class="eyebrow">GESTIONE</p>
+                                        <h3 id="relationship-active-title">Relazioni attive della tipologia selezionata</h3>
+                                        <p>Le relazioni errate vengono cessate logicamente con una motivazione; nessun record viene cancellato.</p>
+                                    </div>
+                                </div>
+                                <div class="table-wrapper">
+                                    <table>
+                                        <thead>
+                                            <tr><th>Elemento principale</th><th>Elemento collegato</th><th>Dettaglio</th><th>Azioni</th></tr>
+                                        </thead>
+                                        <tbody id="relationship-active-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </section>
+
+                        <dialog id="relationship-close-dialog" class="asset-detail-dialog" aria-labelledby="relationship-close-title">
+                            <form id="relationship-close-form" class="asset-detail-shell">
+                                <header class="asset-detail-header">
+                                    <div>
+                                        <p class="eyebrow">CESSAZIONE LOGICA</p>
+                                        <h2 id="relationship-close-title">Cessa relazione</h2>
+                                        <p class="asset-detail-subtitle">La relazione resterà nello storico e nell'Audit Log.</p>
+                                    </div>
+                                    <button id="relationship-close-x" class="asset-detail-close" type="button" aria-label="Chiudi">×</button>
+                                </header>
+                                <div class="asset-detail-body">
+                                    <label>
+                                        <span>Motivazione</span>
+                                        <textarea id="relationship-close-reason" class="form-input" rows="4" minlength="5" required placeholder="Indica perché la relazione viene cessata"></textarea>
+                                    </label>
+                                </div>
+                                <footer class="asset-detail-footer">
+                                    <button id="relationship-close-cancel" class="btn-secondary" type="button">Annulla</button>
+                                    <button id="relationship-close-confirm" class="btn-danger" type="submit">Cessa relazione</button>
+                                </footer>
+                            </form>
                         </dialog>
 
                         <section id="view-audit-log" class="view-section card is-hidden">
