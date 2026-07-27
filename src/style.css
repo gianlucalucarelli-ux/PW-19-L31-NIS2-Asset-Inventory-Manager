@@ -3598,3 +3598,585 @@ html {
         min-height: 320px;
     }
 }
+
+/* ===============================================================================================================
+   MACROAREA 3 — SUPPLY CHAIN, GRAFO MULTILIVELLO E COSTRUTTORE DELLE DIPENDENZE
+   =============================================================================================================== */
+
+.dashboard-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.65rem;
+}
+
+.btn-link--warning {
+    color: var(--warning);
+}
+
+.supply-summary--coverage {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-warning {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--warning) 55%, var(--border));
+    border-radius: var(--radius-md);
+    background: var(--warning-soft);
+}
+
+.dashboard-warning > strong {
+    display: block;
+    margin-bottom: 0.45rem;
+    color: var(--warning);
+}
+
+.dashboard-warning ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding-left: 1.15rem;
+}
+
+.dashboard-warning li strong,
+.dashboard-warning li span {
+    display: block;
+}
+
+.dashboard-warning li span {
+    color: var(--text-low);
+    font-size: 0.86rem;
+}
+
+.view-mode-switch {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin: 0.25rem 0 1.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.view-mode-switch__button {
+    min-height: 2.45rem;
+    padding: 0.55rem 0.95rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-low);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.view-mode-switch__button:hover,
+.view-mode-switch__button:focus-visible {
+    color: var(--text-high);
+    background: var(--bg-hover);
+}
+
+.view-mode-switch__button.is-active {
+    background: var(--primary);
+    color: var(--primary-contrast);
+    box-shadow: var(--shadow-button);
+}
+
+.supply-map-panel,
+.relationship-coverage-card,
+.relationship-builder-card {
+    margin-top: 1rem;
+    padding: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-soft);
+}
+
+.supply-map-toolbar,
+.relationship-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.supply-map-toolbar h3,
+.relationship-section-heading h3 {
+    margin: 0.1rem 0 0.35rem;
+}
+
+.supply-map-toolbar p,
+.relationship-section-heading p {
+    max-width: 68ch;
+    margin: 0;
+    color: var(--text-low);
+}
+
+.supply-map-toolbar__controls,
+.relationship-map-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(14rem, 1fr));
+    gap: 0.8rem;
+    min-width: min(100%, 34rem);
+}
+
+.supply-map-toolbar__controls label,
+.relationship-map-controls > label,
+.relationship-organization-filter,
+.relationship-form label {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.supply-map-toolbar__controls label > span,
+.relationship-map-controls label > span,
+.relationship-organization-filter > span,
+.relationship-form label > span {
+    color: var(--text-low);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.dependency-map-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin: 1rem 0 0.75rem;
+    color: var(--text-low);
+    font-size: 0.9rem;
+}
+
+.dependency-map-filters > span {
+    color: var(--text-high);
+    font-weight: 800;
+}
+
+.dependency-map-filters label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.dependency-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(16rem, 0.8fr);
+    gap: 1rem;
+    align-items: start;
+    margin-top: 0.75rem;
+}
+
+.dependency-map-canvas,
+.impact-path-panel {
+    min-height: 16rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.dependency-map-canvas {
+    overflow: auto;
+}
+
+.dependency-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.dependency-tree--nested {
+    position: relative;
+    margin: 0.35rem 0 0 1.2rem;
+    padding-left: 1.45rem;
+    border-left: 2px solid color-mix(in srgb, var(--primary) 34%, var(--border));
+}
+
+.dependency-tree--nested::before {
+    content: '';
+    position: absolute;
+    top: -0.15rem;
+    left: -2px;
+    width: 0.85rem;
+    border-top: 2px solid color-mix(in srgb, var(--primary) 34%, var(--border));
+}
+
+.dependency-branch {
+    position: relative;
+    margin: 0.45rem 0;
+}
+
+.dependency-tree--nested > .dependency-branch::before {
+    content: '';
+    position: absolute;
+    top: 1.45rem;
+    left: -1.45rem;
+    width: 1.05rem;
+    border-top: 2px solid color-mix(in srgb, var(--primary) 34%, var(--border));
+}
+
+.dependency-branch__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+}
+
+.dependency-branch__toggle,
+.dependency-branch__toggle-spacer {
+    flex: 0 0 1.85rem;
+    width: 1.85rem;
+    height: 1.85rem;
+    margin-top: 0.45rem;
+}
+
+.dependency-branch__toggle {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    color: var(--text-high);
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.dependency-branch__toggle:hover,
+.dependency-branch__toggle:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.dependency-node {
+    display: flex;
+    width: min(100%, 42rem);
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+    color: var(--text-high);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.dependency-node:hover,
+.dependency-node:focus-visible,
+.dependency-node.is-selected {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    transform: translateX(2px);
+}
+
+.dependency-node--asset {
+    border-left-color: var(--success);
+}
+
+.dependency-node--supplier {
+    border-left-color: var(--warning);
+}
+
+.dependency-node__icon {
+    flex: 0 0 auto;
+    font-size: 1.15rem;
+    line-height: 1.3;
+}
+
+.dependency-node__content,
+.dependency-node__heading {
+    display: grid;
+    min-width: 0;
+}
+
+.dependency-node__heading strong,
+.dependency-node__heading span,
+.dependency-node__meta {
+    overflow-wrap: anywhere;
+}
+
+.dependency-node__heading strong {
+    color: var(--primary);
+    font-size: 0.79rem;
+    letter-spacing: 0.035em;
+}
+
+.dependency-node--asset .dependency-node__heading strong {
+    color: var(--success);
+}
+
+.dependency-node--supplier .dependency-node__heading strong {
+    color: var(--warning);
+}
+
+.dependency-node__heading span {
+    font-weight: 800;
+}
+
+.dependency-node__meta {
+    margin-top: 0.2rem;
+    color: var(--text-low);
+    font-size: 0.8rem;
+}
+
+.dependency-node__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+}
+
+.dependency-node__badge {
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    color: var(--text-low);
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.dependency-node__badge--shared {
+    border-color: color-mix(in srgb, var(--info) 60%, var(--border));
+    background: var(--info-soft);
+    color: var(--info);
+}
+
+.dependency-node__badge--warning {
+    border-color: color-mix(in srgb, var(--error) 60%, var(--border));
+    background: var(--error-soft);
+    color: var(--error);
+}
+
+.impact-path-panel {
+    position: sticky;
+    top: 1rem;
+}
+
+.impact-path__heading {
+    display: grid;
+    gap: 0.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.impact-path__heading span {
+    color: var(--text-low);
+    font-size: 0.85rem;
+}
+
+.impact-path {
+    display: grid;
+    gap: 0.2rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.impact-path li {
+    display: grid;
+    grid-template-columns: 1.25rem 1fr;
+    gap: 0.45rem;
+    align-items: center;
+    min-height: 2.1rem;
+}
+
+.impact-path__marker {
+    color: var(--primary);
+    text-align: center;
+    font-weight: 900;
+}
+
+.relationship-builder-status {
+    margin: 0.5rem 0 0;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+    color: var(--text-low);
+}
+
+.relationship-builder-status--success {
+    border-color: color-mix(in srgb, var(--success) 55%, var(--border));
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.relationship-builder-status--warning {
+    border-color: color-mix(in srgb, var(--warning) 55%, var(--border));
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+.relationship-builder-status--danger {
+    border-color: color-mix(in srgb, var(--error) 55%, var(--border));
+    background: var(--error-soft);
+    color: var(--error);
+}
+
+.relationship-organization-filter {
+    min-width: min(100%, 19rem);
+}
+
+.relationship-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.relationship-summary-grid > div {
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.relationship-summary-grid dt {
+    color: var(--text-low);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.relationship-summary-grid dd {
+    margin: 0.25rem 0 0;
+    color: var(--primary);
+    font-size: 1.55rem;
+    font-weight: 900;
+}
+
+.relationship-review-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.relationship-review {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--warning);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.relationship-review--danger {
+    border-left-color: var(--error);
+}
+
+.relationship-review--success {
+    border-left-color: var(--success);
+}
+
+.relationship-review p,
+.relationship-review small {
+    display: block;
+    margin: 0.18rem 0 0;
+    color: var(--text-low);
+}
+
+.relationship-form {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.relationship-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.relationship-preview {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.relationship-preview p {
+    margin: 0;
+    color: var(--primary);
+    font-weight: 900;
+}
+
+.relationship-preview small {
+    color: var(--text-low);
+}
+
+.relationship-map-controls {
+    margin-top: 1rem;
+}
+
+.relationship-map-controls .dependency-map-filters {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+#relationship-active-body td:last-child {
+    width: 6.5rem;
+    text-align: center;
+}
+
+@media (max-width: 980px) {
+    .supply-summary--coverage,
+    .relationship-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dependency-map-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .impact-path-panel {
+        position: static;
+    }
+
+    .supply-map-toolbar,
+    .relationship-section-heading {
+        flex-direction: column;
+    }
+
+    .supply-map-toolbar__controls,
+    .relationship-map-controls {
+        width: 100%;
+    }
+}
+
+@media (max-width: 680px) {
+    .supply-map-toolbar__controls,
+    .relationship-map-controls,
+    .relationship-form-grid,
+    .supply-summary--coverage,
+    .relationship-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .relationship-review {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .relationship-review .btn-secondary {
+        width: 100%;
+    }
+
+    .dependency-tree--nested {
+        margin-left: 0.55rem;
+        padding-left: 0.85rem;
+    }
+
+    .dependency-tree--nested > .dependency-branch::before {
+        left: -0.85rem;
+        width: 0.65rem;
+    }
+}

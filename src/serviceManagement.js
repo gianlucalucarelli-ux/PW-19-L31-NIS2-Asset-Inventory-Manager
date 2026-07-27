@@ -13,8 +13,8 @@ import {
     archiveService,
     fetchServiceDetail
 } from './serviceService.js?build=20260726-h1';
-import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
-import { t } from './i18n.js?build=20260726-i1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260727-m1';
+import { t } from './i18n.js?build=20260727-m1';
 import {
     exportRowsToExcel,
     downloadImportTemplate,

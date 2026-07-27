@@ -4,16 +4,18 @@
 // ===============================================================================================================
 
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
-import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260726-d2';
+import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260727-m1';
 import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
-import { navigateTo, getCurrentRoute } from './router.js?build=20260726-h1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260727-m1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
-import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260726-d4';
+import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260727-m1';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
-import { loadOrganizationView } from './organizationManagement.js?build=20260726-h1';
-import { loadServiceView } from './serviceManagement.js?build=20260726-i1';
-import { loadSupplierView } from './supplierManagement.js?build=20260726-i1';
-import { t } from './i18n.js?build=20260726-i1';
+import { loadOrganizationView } from './organizationManagement.js?build=20260727-m1';
+import { loadServiceView } from './serviceManagement.js?build=20260727-m1';
+import { loadSupplierView } from './supplierManagement.js?build=20260727-m1';
+import { t } from './i18n.js?build=20260727-m1';
+import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-m1';
+import { fetchRelationshipCoverage } from './relationshipService.js?build=20260727-m1';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -223,6 +225,7 @@ const ROUTE_TO_VIEW = {
     'archived-assets': 'archived-assets',
     'add-asset': 'add-asset',
     'supply-chain': 'supply-chain',
+    'relationship-builder': 'relationship-builder',
     'audit-log': 'audit-log',
     'incidenti-aperti': 'incidenti',
     'incidenti-chiusi': 'incidenti',
@@ -306,6 +309,11 @@ const ROUTE_METADATA = {
         section: 'Relazioni',
         label: 'RELAZIONI',
         title: 'Supply Chain'
+    },
+    'relationship-builder': {
+        section: 'Relazioni',
+        label: 'RELAZIONI',
+        title: 'Costruzione dipendenze'
     },
     'audit-log': {
         section: 'Sicurezza e conformità',
@@ -525,6 +533,8 @@ export async function activateApplicationRoute(route) {
         }
     } else if (route === 'supply-chain') {
         await loadAndRenderSupplyChain();
+    } else if (route === 'relationship-builder') {
+        await loadRelationshipBuilder();
     } else if (route === 'audit-log') {
         await loadAndRenderAuditLog();
     } else if (route === 'incidenti-aperti') {
@@ -668,37 +678,59 @@ function renderDistribuzioneCriticita(asset) {
 /**
  * Riepiloga la copertura della Supply Chain usando i dati aggregati della vista di reporting.
  */
-function renderRiepilogoSupplyChain(righe) {
-    const dati = Array.isArray(righe) ? righe : [];
-    const servizi = new Set();
-    const asset = new Set();
-    const fornitori = new Set();
-    let percorsiDerivati = 0;
+function renderRiepilogoSupplyChain(source) {
+    const coverageData = source?.summary && Array.isArray(source?.rows) ? source : null;
 
-    dati.forEach((record) => {
-        const servizio = leggiCampo(record, ['servizioRadiceId', 'Service_Name', 'servizio_nome', 'nome_servizio']);
-        const assetCollegato = leggiCampo(record, ['assetEffettivoId', 'Dependent_Asset', 'asset_dipendenti', 'asset']);
-        const fornitore = leggiCampo(record, ['fornitoreEffettivoId', 'Vendor_Partner', 'fornitori', 'fornitore']);
+    if (coverageData) {
+        const summary = coverageData.summary;
+        impostaTesto('supply-services-count', summary.activeServices);
+        impostaTesto('supply-mapped-count', summary.mappedServices);
+        impostaTesto('supply-review-count', summary.servicesToReview);
+        impostaTesto('supply-disconnected-count', summary.disconnectedServices);
 
-        if (servizio) servizi.add(String(servizio));
-        if (assetCollegato && String(assetCollegato).toUpperCase() !== 'N/D') asset.add(String(assetCollegato));
-        if (fornitore && String(fornitore).toUpperCase() !== 'N/D') fornitori.add(String(fornitore));
-        if (record.derivata) percorsiDerivati += 1;
-    });
+        const note = document.getElementById('supply-summary-note');
+        const warning = document.getElementById('supply-summary-warning');
+        const warningList = document.getElementById('supply-summary-warning-list');
+        const manageButton = document.getElementById('supply-manage-missing');
 
-    impostaTesto('supply-services-count', servizi.size || dati.length);
-    impostaTesto('supply-assets-count', asset.size);
-    impostaTesto('supply-suppliers-count', fornitori.size);
+        if (note) {
+            note.textContent = summary.servicesToReview > 0
+                ? `${summary.servicesToReview} servizi richiedono una verifica delle dipendenze.`
+                : 'La copertura delle relazioni è completa per i servizi censiti.';
+        }
 
-    const nota = document.getElementById('supply-summary-note');
-    if (!nota) return;
-
-    if (dati.length === 0) {
-        nota.textContent = 'Nessuna dipendenza attiva disponibile.';
+        warning?.classList.toggle('is-hidden', summary.servicesToReview === 0);
+        manageButton?.classList.toggle('is-hidden', summary.servicesToReview === 0);
+        if (warningList) {
+            warningList.replaceChildren();
+            coverageData.rows
+                .filter((row) => row.needsReview)
+                .slice(0, 3)
+                .forEach((row) => {
+                    const item = document.createElement('li');
+                    const title = document.createElement('strong');
+                    title.textContent = `${row.service.codice_servizio} · ${row.service.nome}`;
+                    const detail = document.createElement('span');
+                    detail.textContent = row.issues.slice(0, 2).join(' · ');
+                    item.append(title, detail);
+                    warningList.appendChild(item);
+                });
+        }
         return;
     }
 
-    nota.textContent = `${dati.length} percorsi attivi, di cui ${percorsiDerivati} derivati o gerarchici.`;
+    const data = Array.isArray(source) ? source : [];
+    const services = new Set();
+    data.forEach((record) => {
+        const service = leggiCampo(record, ['servizioRadiceId', 'Service_Name', 'servizio_nome', 'nome_servizio']);
+        if (service) services.add(String(service));
+    });
+    impostaTesto('supply-services-count', services.size || data.length);
+    impostaTesto('supply-mapped-count', services.size || data.length);
+    impostaTesto('supply-review-count', '—');
+    impostaTesto('supply-disconnected-count', '—');
+    const note = document.getElementById('supply-summary-note');
+    if (note) note.textContent = data.length > 0 ? `${data.length} percorsi attivi rilevati.` : 'Nessuna dipendenza attiva disponibile.';
 }
 
 /**
@@ -806,6 +838,13 @@ export async function loadAndRenderDashboard() {
 
     try {
         const dati = await fetchDashboardData();
+        let relationshipCoverage = null;
+        try {
+            relationshipCoverage = (await fetchRelationshipCoverage()).coverage;
+        } catch (relationshipError) {
+            console.error('Errore caricamento copertura relazioni:', relationshipError);
+            dati.errori.push({ chiave: 'copertura-relazioni', messaggio: relationshipError.message || 'Errore non specificato' });
+        }
 
         impostaTesto('metric-assets-active', dati.metriche.assetAttivi);
         impostaTesto('metric-assets-critical', dati.metriche.assetCritici);
@@ -815,7 +854,7 @@ export async function loadAndRenderDashboard() {
         impostaTesto('metric-incidents-open', dati.metriche.incidentiAperti);
 
         renderDistribuzioneCriticita(dati.asset);
-        renderRiepilogoSupplyChain(dati.supplyChain);
+        renderRiepilogoSupplyChain(relationshipCoverage || dati.supplyChain);
         renderIncidentiRecenti(dati.incidentiRecenti);
         renderAuditRecente(dati.auditRecente);
 

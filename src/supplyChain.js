@@ -4,8 +4,11 @@
 // ===============================================================================================================
 
 import { fetchSupplyChain } from './database.js?build=20260726-d2';
+import { fetchRelationshipWorkspace, getRootServices, buildServiceDependencyTree } from './relationshipService.js?build=20260727-m1';
+import { renderDependencyTree, renderImpactPath } from './relationshipGraph.js?build=20260727-m1';
 
 let supplyRows = [];
+let supplyWorkspace = null;
 let supplyInitialized = false;
 
 function escapeHtml(value) {
@@ -474,6 +477,79 @@ function openSupplyDetail(row) {
     if (!dialog.open) dialog.showModal();
 }
 
+
+function supplyMapKinds() {
+    const kinds = ['service'];
+    if (document.getElementById('supply-map-show-assets')?.checked) kinds.push('asset');
+    if (document.getElementById('supply-map-show-suppliers')?.checked) kinds.push('supplier');
+    return kinds;
+}
+
+function supplyOrganizationOptions() {
+    return (supplyWorkspace?.organizations ?? []).map((record) => ({
+        value: record.id,
+        label: `${record.codice_organizzazione || `ORG-${record.id}`} · ${record.nome}`
+    }));
+}
+
+function populateSupplyMapRoots(selected = '') {
+    if (!supplyWorkspace) return;
+    const organizationId = document.getElementById('supply-map-organization')?.value || '';
+    const roots = getRootServices(supplyWorkspace, organizationId || null).map((record) => ({
+        value: record.id,
+        label: `${record.codice_servizio} · ${record.nome}`
+    }));
+    setSelectOptions(document.getElementById('supply-map-root'), roots, 'Seleziona servizio principale');
+    const root = document.getElementById('supply-map-root');
+    if (root && selected && roots.some((row) => String(row.value) === String(selected))) root.value = String(selected);
+    if (root && !root.value && roots.length === 1) root.value = String(roots[0].value);
+}
+
+function renderSupplyMap() {
+    const canvas = document.getElementById('supply-map-canvas');
+    const status = document.getElementById('supply-map-status');
+    const rootId = document.getElementById('supply-map-root')?.value;
+    if (!canvas) return;
+    if (!supplyWorkspace || !rootId) {
+        canvas.replaceChildren();
+        if (status) status.textContent = 'Seleziona un servizio principale per esplorare la catena.';
+        renderImpactPath(document.getElementById('supply-impact-path'), null);
+        return;
+    }
+    try {
+        const tree = buildServiceDependencyTree(supplyWorkspace, rootId);
+        const result = renderDependencyTree(canvas, tree, {
+            showKinds: supplyMapKinds(),
+            expandedDepth: 3,
+            onSelect: (node, card) => {
+                document.querySelectorAll('#supply-map-canvas .dependency-node.is-selected').forEach((row) => row.classList.remove('is-selected'));
+                card.classList.add('is-selected');
+                renderImpactPath(document.getElementById('supply-impact-path'), node);
+            }
+        });
+        if (status) status.textContent = `${result.nodes} nodi visualizzati · ${result.shared} elementi condivisi.`;
+        renderImpactPath(document.getElementById('supply-impact-path'), null);
+    } catch (error) {
+        canvas.replaceChildren();
+        if (status) status.textContent = error.message;
+    }
+}
+
+function setSupplyView(mode) {
+    const mapPanel = document.getElementById('supply-map-panel');
+    const tablePanel = document.getElementById('supply-table-panel');
+    const mapButton = document.getElementById('supply-view-map');
+    const tableButton = document.getElementById('supply-view-table');
+    const showMap = mode !== 'table';
+    mapPanel?.classList.toggle('is-hidden', !showMap);
+    tablePanel?.classList.toggle('is-hidden', showMap);
+    mapButton?.classList.toggle('is-active', showMap);
+    tableButton?.classList.toggle('is-active', !showMap);
+    mapButton?.setAttribute('aria-pressed', String(showMap));
+    tableButton?.setAttribute('aria-pressed', String(!showMap));
+    if (showMap) renderSupplyMap();
+}
+
 function initializeControls() {
     if (supplyInitialized) return;
     supplyInitialized = true;
@@ -496,6 +572,11 @@ function initializeControls() {
     });
 
     document.getElementById('btn-export-supply-chain')?.addEventListener('click', exportSupplyChain);
+    document.getElementById('supply-view-map')?.addEventListener('click', () => setSupplyView('map'));
+    document.getElementById('supply-view-table')?.addEventListener('click', () => setSupplyView('table'));
+    document.getElementById('supply-map-organization')?.addEventListener('change', () => { populateSupplyMapRoots(); renderSupplyMap(); });
+    document.getElementById('supply-map-root')?.addEventListener('change', renderSupplyMap);
+    ['supply-map-show-assets', 'supply-map-show-suppliers'].forEach((id) => document.getElementById(id)?.addEventListener('change', renderSupplyMap));
 
     const dialog = document.getElementById('supply-detail-dialog');
     dialog?.addEventListener('click', (event) => {
@@ -513,7 +594,15 @@ export async function loadAndRenderSupplyChain() {
     if (status) status.textContent = 'Caricamento Supply Chain…';
 
     try {
-        supplyRows = (await fetchSupplyChain()).map(normalizeSupplyRow);
+        const [supplyData, workspaceData] = await Promise.all([fetchSupplyChain(), fetchRelationshipWorkspace()]);
+        supplyRows = supplyData.map(normalizeSupplyRow);
+        supplyWorkspace = workspaceData;
+
+        setSelectOptions(document.getElementById('supply-map-organization'), supplyOrganizationOptions(), 'Tutti i soggetti NIS2');
+        if (supplyWorkspace.organizations.length === 1) {
+            document.getElementById('supply-map-organization').value = String(supplyWorkspace.organizations[0].id);
+        }
+        populateSupplyMapRoots();
 
         setSelectOptions(
             document.getElementById('supply-filter-service'),
@@ -532,6 +621,7 @@ export async function loadAndRenderSupplyChain() {
         );
 
         renderRows();
+        setSupplyView('map');
     } catch (error) {
         console.error('Errore rendering Supply Chain:', error);
         supplyRows = [];

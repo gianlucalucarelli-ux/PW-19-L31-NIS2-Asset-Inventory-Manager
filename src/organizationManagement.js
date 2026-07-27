@@ -18,8 +18,8 @@ import {
     insertAssignment,
     closeAssignment
 } from './organizationService.js?build=20260726-e1';
-import { navigateTo } from './router.js?build=20260726-f1';
-import { t } from './i18n.js?build=20260726-f1';
+import { navigateTo } from './router.js?build=20260727-m1';
+import { t } from './i18n.js?build=20260727-m1';
 
 let initialized = false;
 let organizationsCache = [];

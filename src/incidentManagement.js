@@ -8,7 +8,7 @@ import {
     fetchIncidentDetail,
     fetchIncidentList
 } from './incidentService.js?build=20260726-d3';
-import { navigateTo } from './router.js?build=20260726-d2';
+import { navigateTo } from './router.js?build=20260727-m1';
 import { formatRomeDateTime, formatRomeFileDate, getRomeDateTimeLocalValue } from './dateTime.js?build=20260726-d3';
 
 const PAGE_SIZE_DEFAULT = 10;

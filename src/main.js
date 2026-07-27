@@ -13,12 +13,12 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?build=20260726-i1';
+} from './ui.js?build=20260727-m1';
 import {
     initializeRouter,
     navigateTo,
     refreshCurrentRoute
-} from './router.js?build=20260726-h1';
+} from './router.js?build=20260727-m1';
 import {
     signIn,
     getCurrentSession,
@@ -29,7 +29,7 @@ import {
 } from './auth.js?build=20260726-d2';
 import { fetchAssets, fetchAssetReferences, insertAsset, updateAsset } from './database.js?build=20260726-d2';
 import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?build=20260726-d3';
-import { initI18n } from './i18n.js?build=20260726-i1';
+import { initI18n } from './i18n.js?build=20260727-m1';
 
 initTheme();
 initI18n();
