@@ -348,19 +348,6 @@ html.app-booting .app-boot-screen {
     font-size: 0.72rem;
 }
 
-.brand__build {
-    color: var(--primary);
-    font-size: 0.68rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.brand__build:not(:empty)::before {
-    content: " · ";
-    color: var(--text-low);
-    font-weight: 400;
-}
-
 .top-navigation {
     display: flex;
     justify-content: center;
@@ -1914,18 +1901,6 @@ tbody tr:last-child td {
 
 .site-footer p {
     margin: 0;
-}
-
-.site-footer__build {
-    color: var(--primary);
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.site-footer__build:not(:empty)::before {
-    content: " · ";
-    color: var(--text-low);
-    font-weight: 400;
 }
 
 @media (prefers-reduced-motion: reduce) {
