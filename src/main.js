@@ -31,8 +31,29 @@ import { fetchAssets, fetchAssetReferences, insertAsset, updateAsset } from './d
 import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?build=20260726-d3';
 import { initI18n } from './i18n.js?build=20260727-n1';
 
+/**
+ * Identifica la build realmente caricata dal browser leggendo il parametro
+ * della URL del modulo principale (es. main.js?build=20260727-o1).
+ */
+const APP_BUILD = new URL(import.meta.url).searchParams.get('build') || 'sviluppo';
+
+/**
+ * Mostra la build nella testata globale e nel footer, quindi prima del login
+ * e in ogni pagina dell'area autenticata.
+ */
+function renderApplicationBuild() {
+    const label = `Build ${APP_BUILD}`;
+
+    document.documentElement.dataset.appBuild = APP_BUILD;
+    document.querySelectorAll('[data-app-build]').forEach((element) => {
+        element.textContent = label;
+        element.title = `Versione applicazione: ${APP_BUILD}`;
+    });
+}
+
 initTheme();
 initI18n();
+renderApplicationBuild();
 
 let activeSession = null;
 let activeAccessState = null;
