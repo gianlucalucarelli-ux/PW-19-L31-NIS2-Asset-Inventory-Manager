@@ -661,7 +661,10 @@ const ENGLISH_TRANSLATIONS = new Map(Object.entries({
     'Condiviso': 'Shared',
     'Ciclo rilevato': 'Cycle detected',
     'Relazione salvata e Audit Log verificato.': 'Relationship saved and Audit Log verified.',
-    'Relazione cessata logicamente e Audit Log verificato.': 'Relationship logically closed and Audit Log verified.'
+    'Relazione cessata logicamente e Audit Log verificato.': 'Relationship logically closed and Audit Log verified.',
+    'Peso: non configurato': 'Weight: not configured',
+    'Peso non configurato': 'Weight not configured',
+    'La copertura delle relazioni è completa per i servizi censiti.': 'Relationship coverage is complete for the registered services.'
 }));
 
 const ENGLISH_PATTERNS = [
@@ -679,7 +682,11 @@ const ENGLISH_PATTERNS = [
     [/^Incarico\s+(.+)\s+assegnato correttamente\.$/i, 'Appointment $1 assigned successfully.'],
     [/^Errore:\s+(.+)$/i, 'Error: $1'],
     [/^Errore operativo:\s+(.+)$/i, 'Operational error: $1'],
-    [/^Ultimo aggiornamento:\s+(.+)$/i, 'Last updated: $1']
+    [/^Ultimo aggiornamento:\s+(.+)$/i, 'Last updated: $1'],
+    [/^1 servizio richiede una verifica delle dipendenze\.$/i, '1 service requires a dependency review.'],
+    [/^(\d+) servizi richiedono una verifica delle dipendenze\.$/i, '$1 services require a dependency review.'],
+    [/^Peso:\s*non configurato$/i, 'Weight: not configured'],
+    [/^Peso non configurato$/i, 'Weight not configured']
 ];
 
 function normalizeLanguage(value) {

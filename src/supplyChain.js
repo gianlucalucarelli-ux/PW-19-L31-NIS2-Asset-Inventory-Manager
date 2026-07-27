@@ -5,7 +5,7 @@
 
 import { fetchSupplyChain } from './database.js?build=20260726-d2';
 import { fetchRelationshipWorkspace, getRootServices, buildServiceDependencyTree } from './relationshipService.js?build=20260727-m1';
-import { renderDependencyTree, renderImpactPath } from './relationshipGraph.js?build=20260727-m1';
+import { renderDependencyTree, renderImpactPath } from './relationshipGraph.js?build=20260727-n1';
 
 let supplyRows = [];
 let supplyWorkspace = null;
@@ -94,6 +94,13 @@ function normalizeSupplyRow(row, index) {
     };
 }
 
+function syncSelectTitle(select) {
+    if (!select) return;
+    const selectedText = select.selectedOptions?.[0]?.textContent?.trim() || '';
+    select.title = selectedText;
+    select.setAttribute('aria-label', selectedText || select.getAttribute('aria-label') || 'Selezione');
+}
+
 function setSelectOptions(select, values, placeholder) {
     if (!select) return;
     const current = select.value;
@@ -114,6 +121,7 @@ function setSelectOptions(select, values, placeholder) {
     if ([...select.options].some((option) => option.value === current)) {
         select.value = current;
     }
+    syncSelectTitle(select);
 }
 
 function uniqueOptions(rows, idField, codeField, nameField) {
@@ -503,6 +511,7 @@ function populateSupplyMapRoots(selected = '') {
     const root = document.getElementById('supply-map-root');
     if (root && selected && roots.some((row) => String(row.value) === String(selected))) root.value = String(selected);
     if (root && !root.value && roots.length === 1) root.value = String(roots[0].value);
+    syncSelectTitle(root);
 }
 
 function renderSupplyMap() {
@@ -574,8 +583,8 @@ function initializeControls() {
     document.getElementById('btn-export-supply-chain')?.addEventListener('click', exportSupplyChain);
     document.getElementById('supply-view-map')?.addEventListener('click', () => setSupplyView('map'));
     document.getElementById('supply-view-table')?.addEventListener('click', () => setSupplyView('table'));
-    document.getElementById('supply-map-organization')?.addEventListener('change', () => { populateSupplyMapRoots(); renderSupplyMap(); });
-    document.getElementById('supply-map-root')?.addEventListener('change', renderSupplyMap);
+    document.getElementById('supply-map-organization')?.addEventListener('change', () => { syncSelectTitle(document.getElementById('supply-map-organization')); populateSupplyMapRoots(); renderSupplyMap(); });
+    document.getElementById('supply-map-root')?.addEventListener('change', () => { syncSelectTitle(document.getElementById('supply-map-root')); renderSupplyMap(); });
     ['supply-map-show-assets', 'supply-map-show-suppliers'].forEach((id) => document.getElementById(id)?.addEventListener('change', renderSupplyMap));
 
     const dialog = document.getElementById('supply-detail-dialog');

@@ -22,7 +22,12 @@ function relationSummary(relation) {
     const parts = [];
     if (relation.type) parts.push(relation.type);
     if (relation.impact) parts.push(`Impatto: ${relation.impact}`);
-    if (Number.isFinite(Number(relation.weight))) parts.push(`Peso: ${Number(relation.weight)}%`);
+    const numericWeight = Number(relation.weight);
+    if (relation.weight !== null && relation.weight !== undefined && String(relation.weight).trim() !== '' && numericWeight > 0) {
+        parts.push(`Peso: ${numericWeight}%`);
+    } else {
+        parts.push('Peso: non configurato');
+    }
     if (relation.primary) parts.push('Primaria');
     return parts.join(' · ');
 }

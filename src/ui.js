@@ -4,7 +4,7 @@
 // ===============================================================================================================
 
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
-import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260727-m1';
+import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260727-n1';
 import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
 import { navigateTo, getCurrentRoute } from './router.js?build=20260727-m1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
@@ -13,8 +13,8 @@ import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 import { loadOrganizationView } from './organizationManagement.js?build=20260727-m1';
 import { loadServiceView } from './serviceManagement.js?build=20260727-m1';
 import { loadSupplierView } from './supplierManagement.js?build=20260727-m1';
-import { t } from './i18n.js?build=20260727-m1';
-import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-m1';
+import { t } from './i18n.js?build=20260727-n1';
+import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-n1';
 import { fetchRelationshipCoverage } from './relationshipService.js?build=20260727-m1';
 
 /**
@@ -676,6 +676,16 @@ function renderDistribuzioneCriticita(asset) {
 }
 
 /**
+ * Restituisce il messaggio corretto al singolare o al plurale per i servizi da verificare.
+ */
+function formatRelationshipReviewMessage(count) {
+    const total = Number(count) || 0;
+    return total === 1
+        ? '1 servizio richiede una verifica delle dipendenze.'
+        : `${total} servizi richiedono una verifica delle dipendenze.`;
+}
+
+/**
  * Riepiloga la copertura della Supply Chain usando i dati aggregati della vista di reporting.
  */
 function renderRiepilogoSupplyChain(source) {
@@ -695,7 +705,7 @@ function renderRiepilogoSupplyChain(source) {
 
         if (note) {
             note.textContent = summary.servicesToReview > 0
-                ? `${summary.servicesToReview} servizi richiedono una verifica delle dipendenze.`
+                ? formatRelationshipReviewMessage(summary.servicesToReview)
                 : 'La copertura delle relazioni è completa per i servizi censiti.';
         }
 

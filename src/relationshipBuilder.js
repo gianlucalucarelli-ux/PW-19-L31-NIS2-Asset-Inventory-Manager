@@ -17,7 +17,7 @@ import {
     startRelationshipAuditWindow,
     verifyRelationshipAudit
 } from './relationshipService.js?build=20260727-m1';
-import { renderDependencyTree, renderImpactPath } from './relationshipGraph.js?build=20260727-m1';
+import { renderDependencyTree, renderImpactPath } from './relationshipGraph.js?build=20260727-n1';
 
 let workspace = null;
 let coverage = null;
@@ -26,6 +26,20 @@ let pendingClose = null;
 
 function element(id) {
     return document.getElementById(id);
+}
+
+function formatRelationshipReviewMessage(count) {
+    const total = Number(count) || 0;
+    return total === 1
+        ? '1 servizio richiede una verifica delle dipendenze.'
+        : `${total} servizi richiedono una verifica delle dipendenze.`;
+}
+
+function syncSelectTitle(select) {
+    if (!select) return;
+    const selectedText = select.selectedOptions?.[0]?.textContent?.trim() || '';
+    select.title = selectedText;
+    select.setAttribute('aria-label', selectedText || select.getAttribute('aria-label') || 'Selezione');
 }
 
 function setStatus(message, tone = '') {
@@ -49,6 +63,7 @@ function replaceOptions(select, rows, placeholder, selected = '') {
     if ([...select.options].some((row) => row.value === String(selected))) {
         select.value = String(selected);
     }
+    syncSelectTitle(select);
 }
 
 function entityRows(type, organizationId) {
@@ -166,7 +181,7 @@ function updatePreview() {
     const targetId = element('relationship-target')?.value;
     const typeText = element('relationship-domain')?.selectedOptions?.[0]?.textContent || 'Tipo non selezionato';
     const impactText = element('relationship-impact')?.selectedOptions?.[0]?.textContent || '';
-    const weight = element('relationship-weight')?.value || '0';
+    const weight = element('relationship-weight')?.value?.trim() || '';
 
     preview.replaceChildren();
     const title = document.createElement('strong');
@@ -177,7 +192,7 @@ function updatePreview() {
     path.textContent = `${source}  →  ${target}`;
     const detail = document.createElement('small');
     detail.textContent = type === RELATION_TYPES.SERVICE_SERVICE
-        ? `${typeText} · Impatto ${impactText || 'da selezionare'} · Peso ${weight}%`
+        ? `${typeText} · Impatto ${impactText || 'da selezionare'} · ${weight && Number(weight) > 0 ? `Peso ${weight}%` : 'Peso non configurato'}`
         : typeText;
     preview.append(title, path, detail);
 }
@@ -304,7 +319,7 @@ function renderActiveRelationships() {
         const target = document.createElement('td');
         target.textContent = entityLabel(workspace, config.targetEntity, row[config.targetField]);
         const detail = document.createElement('td');
-        detail.textContent = row.descrizione || (row.peso_percentuale !== undefined ? `Peso ${row.peso_percentuale || 0}%` : 'Relazione attiva');
+        detail.textContent = row.descrizione || (row.peso_percentuale !== undefined ? (Number(row.peso_percentuale) > 0 ? `Peso ${row.peso_percentuale}%` : 'Peso non configurato') : 'Relazione attiva');
         const actions = document.createElement('td');
         const close = document.createElement('button');
         close.type = 'button';
@@ -338,6 +353,7 @@ function populateMapRoots(selected = '') {
     if (!element('relationship-map-root')?.value && roots.length === 1) {
         element('relationship-map-root').value = String(roots[0].value);
     }
+    syncSelectTitle(element('relationship-map-root'));
 }
 
 function renderMap() {
@@ -486,7 +502,7 @@ function bindEvents() {
         populateMapRoots();
         renderMap();
     });
-    element('relationship-map-root')?.addEventListener('change', renderMap);
+    element('relationship-map-root')?.addEventListener('change', () => { syncSelectTitle(element('relationship-map-root')); renderMap(); });
     ['relationship-show-assets', 'relationship-show-suppliers'].forEach((id) => element(id)?.addEventListener('change', renderMap));
     document.addEventListener('app:language-changed', () => {
         if (workspace) {
@@ -519,7 +535,7 @@ export async function loadRelationshipBuilder() {
         await reloadWorkspace();
         const summary = coverage.summary;
         setStatus(summary.servicesToReview > 0
-            ? `${summary.servicesToReview} servizi richiedono una verifica delle dipendenze.`
+            ? formatRelationshipReviewMessage(summary.servicesToReview)
             : 'Tutti i servizi dispongono di relazioni operative da consultare.', summary.servicesToReview > 0 ? 'warning' : 'success');
     } catch (error) {
         console.error('Errore caricamento costruttore relazioni:', error);
