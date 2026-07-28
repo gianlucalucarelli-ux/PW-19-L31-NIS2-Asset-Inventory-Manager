@@ -15,13 +15,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="src/style.css?build=20260727-n1">
+    <link rel="stylesheet" href="src/style.css?build=20260728-p2">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260727-n1"></script>
+    <script type="module" src="src/main.js?build=20260728-p2"></script>
     <script type="module" src="src/wizard.js?build=20260727-m1"></script>
 </head>
 <body>
@@ -1752,7 +1752,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="view-header">
                                 <div>
                                     <h2>Audit Log</h2>
-                                    <p class="section-intro">Tracciamento storico, ricerca ed esportazione delle operazioni applicative.</p>
+                                    <p class="section-intro">Tracciamento storico, accessi al database, ricerca ed esportazione delle operazioni applicative.</p>
                                 </div>
                             </div>
 
@@ -1760,11 +1760,15 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                 <div class="audit-filter-grid">
                                     <div class="inventory-filter-field audit-search-field">
                                         <label for="audit-search">Ricerca libera</label>
-                                        <input id="audit-search" type="search" class="form-input" placeholder="Record, utente, asset, servizio o fornitore" aria-controls="audit-table-body">
+                                        <input id="audit-search" type="search" class="form-input" placeholder="Record, utente, entità, asset, servizio o fornitore" aria-controls="audit-table-body">
                                     </div>
                                     <div class="inventory-filter-field">
                                         <label for="audit-filter-table">Tabella</label>
                                         <select id="audit-filter-table" class="form-input" aria-controls="audit-table-body"><option value="">Tutte le tabelle</option></select>
+                                    </div>
+                                    <div class="inventory-filter-field">
+                                        <label for="audit-filter-entity">Entità</label>
+                                        <select id="audit-filter-entity" class="form-input" aria-controls="audit-table-body"><option value="">Tutte le entità</option></select>
                                     </div>
                                     <div class="inventory-filter-field">
                                         <label for="audit-filter-operation">Operazione</label>
