@@ -5,7 +5,7 @@
 
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260727-n1';
-import { loadAndRenderAuditLog } from './auditLog.js?build=20260726-d3';
+import { loadAndRenderAuditLog } from './auditLog.js?build=20260728-q1';
 import { navigateTo, getCurrentRoute } from './router.js?build=20260727-m1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260727-m1';
@@ -13,7 +13,7 @@ import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 import { loadOrganizationView } from './organizationManagement.js?build=20260727-m1';
 import { loadServiceView } from './serviceManagement.js?build=20260727-m1';
 import { loadSupplierView } from './supplierManagement.js?build=20260727-m1';
-import { t } from './i18n.js?build=20260727-n1';
+import { t } from './i18n.js?build=20260728-p2';
 import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-n1';
 import { fetchRelationshipCoverage } from './relationshipService.js?build=20260727-m1';
 

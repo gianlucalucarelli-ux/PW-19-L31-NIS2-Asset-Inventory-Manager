@@ -13,7 +13,7 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?build=20260727-n1';
+} from './ui.js?build=20260728-q1';
 import {
     initializeRouter,
     navigateTo,
@@ -25,11 +25,12 @@ import {
     resolveAccessState,
     verifyOTP,
     observeAuthState,
-    signOut
-} from './auth.js?build=20260726-d2';
+    signOut,
+    recordAccessEvent
+} from './auth.js?build=20260728-q1';
 import { fetchAssets, fetchAssetReferences, insertAsset, updateAsset } from './database.js?build=20260726-d2';
 import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?build=20260726-d3';
-import { initI18n } from './i18n.js?build=20260727-n1';
+import { initI18n } from './i18n.js?build=20260728-p2';
 
 initTheme();
 initI18n();
@@ -41,6 +42,59 @@ let accessSyncSequence = 0;
 let routerReady = false;
 let pendingImportPreview = null;
 let importCompleted = false;
+let pendingAccessAuditKey = null;
+
+const ACCESS_AUDIT_STORAGE_PREFIX = 'nis2-audit-access-session:';
+
+/**
+ * Estrae il session_id dal JWT senza conservare il token.
+ */
+function getSessionIdentifier(session) {
+    try {
+        const token = String(session?.access_token || '');
+        const payloadPart = token.split('.')[1];
+        if (payloadPart) {
+            const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+            const payload = JSON.parse(window.atob(padded));
+            if (payload?.session_id) return String(payload.session_id);
+        }
+    } catch (error) {
+        console.warn('Identificativo sessione JWT non leggibile:', error);
+    }
+
+    return String(session?.expires_at || session?.user?.id || 'sessione');
+}
+
+/**
+ * Registra una sola volta per scheda del browser l'apertura di una sessione
+ * autorizzata. Copre sia il login esplicito sia una sessione gia valida
+ * ripristinata all'apertura del sito.
+ */
+async function registerAuthorizedSessionAccess(session, accessState) {
+    if (!session?.user || accessState?.status !== 'authorized') return;
+
+    const sessionIdentifier = getSessionIdentifier(session);
+    const storageKey = `${ACCESS_AUDIT_STORAGE_PREFIX}${session.user.id}:${sessionIdentifier}`;
+
+    if (window.sessionStorage.getItem(storageKey) === 'registrato') return;
+    if (pendingAccessAuditKey === storageKey) return;
+
+    pendingAccessAuditKey = storageKey;
+
+    try {
+        const detail = accessState.accessType === 'evaluation'
+            ? 'Apertura sessione autorizzata dell utenza di valutazione docente.'
+            : `Apertura sessione applicativa autorizzata con livello ${String(accessState.currentLevel || 'aal1').toUpperCase()}.`;
+
+        const auditId = await recordAccessEvent('LOGIN', detail);
+        if (auditId !== null && auditId !== undefined) {
+            window.sessionStorage.setItem(storageKey, 'registrato');
+        }
+    } finally {
+        if (pendingAccessAuditKey === storageKey) pendingAccessAuditKey = null;
+    }
+}
 
 /**
  * Conclude la fase di avvio soltanto dopo che la sessione iniziale è stata verificata.
@@ -124,6 +178,10 @@ async function synchronizeApplicationAccess(session, options = {}) {
         showAuthenticatedInterface(session, accessState);
         setAuthError('');
 
+        // La registrazione avviene quando la sessione e realmente autorizzata.
+        // In questo modo sono tracciati anche gli accessi con sessione gia valida.
+        await registerAuthorizedSessionAccess(session, accessState);
+
         if (routerReady && shouldRefreshRoute) {
             await refreshCurrentRoute();
         }
@@ -142,6 +200,7 @@ async function synchronizeApplicationAccess(session, options = {}) {
  */
 async function closeCurrentSession() {
     try {
+        await recordAccessEvent('LOGOUT', 'Disconnessione volontaria dall’applicazione.');
         await signOut();
     } catch (error) {
         console.error('Errore durante il logout:', error);
@@ -402,6 +461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 await verifyOTP(code);
+                await recordAccessEvent('MFA_VERIFICATA', 'Verifica del secondo fattore TOTP completata con successo.');
                 const session = await getCurrentSession();
                 await synchronizeApplicationAccess(session, { forceDataReload: true });
             } catch (error) {

@@ -1,11 +1,52 @@
 // ===========================================================================================
 // FILE: src/auth.js
-// DESCRIZIONE: Gestione centralizzata di autenticazione, sessione e verifica MFA.
+// DESCRIZIONE: Gestione centralizzata di autenticazione, sessione, verifica MFA e registrazione accessi.
 // ===========================================================================================
 
 import { supabase } from './supabase.js?build=20260726-d2';
 
 const DOCENTE_EMAIL = 'docentepegaso@gmail.com';
+const ACCESS_EVENTS = new Set([
+    'LOGIN',
+    'LOGOUT',
+    'MFA_VERIFICATA'
+]);
+
+/**
+ * Registra nel database un evento di accesso applicativo autenticato.
+ *
+ * La registrazione è volutamente non bloccante: un eventuale problema del
+ * sottosistema di Audit non deve impedire login, verifica MFA o logout.
+ */
+export async function recordAccessEvent(eventType, detail = '') {
+    const normalizedEvent = String(eventType ?? '').trim().toUpperCase();
+
+    if (!ACCESS_EVENTS.has(normalizedEvent)) {
+        console.warn(`Evento di accesso non riconosciuto: ${normalizedEvent || 'VUOTO'}`);
+        return null;
+    }
+
+    try {
+        const normalizedDetail = String(detail ?? '').trim();
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+        if (!sessionData?.session?.user) {
+            throw new Error('Sessione autenticata non disponibile per la registrazione Audit.');
+        }
+
+        const { data, error } = await supabase.rpc('fn_registra_accesso_applicativo', {
+            p_evento: normalizedEvent,
+            p_dettaglio: normalizedDetail || null
+        });
+
+        if (error) throw error;
+        return data ?? null;
+    } catch (error) {
+        console.warn('Registrazione evento di accesso non disponibile:', error);
+        return null;
+    }
+}
 
 /**
  * Autentica l'utente con e-mail e password.

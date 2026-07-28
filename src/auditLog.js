@@ -5,6 +5,7 @@
 
 import { fetchAuditLogs } from './database.js?build=20260726-d2';
 import { formatRomeDateTime, parseDatabaseTimestamp, formatRomeFileDate } from './dateTime.js?build=20260726-d3';
+import { t } from './i18n.js?build=20260728-p2';
 
 const state = {
     rows: [],
@@ -12,6 +13,22 @@ const state = {
     page: 1,
     pageSize: 10,
     initialized: false
+};
+
+const ENTITY_LABELS = {
+    ENTITA: 'Entità applicativa',
+    RELAZIONE: 'Relazione',
+    GERARCHIA: 'Gerarchia',
+    ACCESSO: 'Accesso al database'
+};
+
+const OPERATION_LABELS = {
+    INSERT: 'Inserimento',
+    UPDATE: 'Modifica',
+    DELETE: 'Cancellazione',
+    LOGIN: 'Accesso',
+    LOGOUT: 'Disconnessione',
+    MFA_VERIFICATA: 'MFA verificata'
 };
 
 function escapeHtml(value) {
@@ -52,7 +69,44 @@ function getTable(row) {
 }
 
 function getEntity(row) {
-    return String(readFirst(row, ['tipo_entita', 'tabella'], 'Record applicativo'));
+    const explicit = String(readFirst(row, ['tipo_entita'], '')).trim().toUpperCase();
+    if (Object.prototype.hasOwnProperty.call(ENTITY_LABELS, explicit)) return explicit;
+
+    const operation = getOperation(row);
+    const table = String(readFirst(row, ['tabella'], '')).trim().toLowerCase();
+
+    if (['LOGIN', 'LOGOUT', 'MFA_VERIFICATA'].includes(operation) || table === 'accesso_database') {
+        return 'ACCESSO';
+    }
+
+    if (['servizio_componente', 'asset_componente', 'fornitore_relazione'].includes(table)) {
+        return 'GERARCHIA';
+    }
+
+    if ([
+        'servizio_dipendenza_asset',
+        'servizio_dipendenza_fornitore',
+        'asset_fornitore',
+        'responsabile_ruolo'
+    ].includes(table)) {
+        return 'RELAZIONE';
+    }
+
+    return 'ENTITA';
+}
+
+function getOperation(row) {
+    return String(readFirst(row, ['operazione'], 'OPERAZIONE')).toUpperCase();
+}
+
+function formatEntity(value) {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    return t(ENTITY_LABELS[normalized] || String(value || 'Record applicativo'));
+}
+
+function formatOperation(value) {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    return t(OPERATION_LABELS[normalized] || String(value || 'Operazione'));
 }
 
 function getRecord(row) {
@@ -66,9 +120,11 @@ function getUser(row) {
 function getSearchText(row) {
     return normalize([
         row.testo_ricerca,
-        row.operazione,
+        getOperation(row),
+        formatOperation(getOperation(row)),
         getTable(row),
         getEntity(row),
+        formatEntity(getEntity(row)),
         getRecord(row),
         getUser(row),
         row.asset_collegati,
@@ -81,6 +137,7 @@ function readFilters() {
     return {
         text: document.getElementById('audit-search')?.value.trim() ?? '',
         table: document.getElementById('audit-filter-table')?.value ?? '',
+        entity: document.getElementById('audit-filter-entity')?.value ?? '',
         operation: document.getElementById('audit-filter-operation')?.value ?? '',
         user: document.getElementById('audit-filter-user')?.value ?? '',
         from: document.getElementById('audit-filter-from')?.value ?? '',
@@ -98,7 +155,8 @@ function filterRows() {
         const rowDate = row.data_modifica ? parseDatabaseTimestamp(row.data_modifica) : null;
         if (text && !getSearchText(row).includes(text)) return false;
         if (filters.table && getTable(row) !== filters.table) return false;
-        if (filters.operation && String(row.operazione ?? '') !== filters.operation) return false;
+        if (filters.entity && getEntity(row) !== filters.entity) return false;
+        if (filters.operation && getOperation(row) !== filters.operation) return false;
         if (filters.user && getUser(row) !== filters.user) return false;
         if (start && (!rowDate || Number.isNaN(rowDate.getTime()) || rowDate < start)) return false;
         if (end && (!rowDate || Number.isNaN(rowDate.getTime()) || rowDate > end)) return false;
@@ -106,22 +164,33 @@ function filterRows() {
     });
 }
 
-function populateSelect(id, values, placeholder) {
+function populateSelect(id, values, placeholder, labelFormatter = (value) => value) {
     const select = document.getElementById(id);
     if (!select) return;
     const current = select.value;
     const options = [...new Set(values.filter(Boolean))]
         .sort((a, b) => String(a).localeCompare(String(b), 'it'));
 
-    select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${options
-        .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+    select.innerHTML = `<option value="">${escapeHtml(t(placeholder))}</option>${options
+        .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(labelFormatter(value))}</option>`)
         .join('')}`;
     if (options.includes(current)) select.value = current;
 }
 
 function populateFilters() {
     populateSelect('audit-filter-table', state.rows.map(getTable), 'Tutte le tabelle');
-    populateSelect('audit-filter-operation', state.rows.map((row) => String(row.operazione ?? '')), 'Tutte le operazioni');
+    populateSelect(
+        'audit-filter-entity',
+        ['ENTITA', 'RELAZIONE', 'GERARCHIA', 'ACCESSO'],
+        'Tutte le entità',
+        formatEntity
+    );
+    populateSelect(
+        'audit-filter-operation',
+        [...state.rows.map(getOperation), 'LOGIN', 'LOGOUT', 'MFA_VERIFICATA'],
+        'Tutte le operazioni',
+        formatOperation
+    );
     populateSelect('audit-filter-user', state.rows.map(getUser), 'Tutti gli utenti');
 }
 
@@ -159,8 +228,8 @@ function renderRows() {
         tbody.innerHTML = rows.map((row) => `
             <tr>
                 <td class="cell-small">${escapeHtml(formatTimestamp(row.data_modifica))}</td>
-                <td class="cell-primary">${escapeHtml(row.operazione || 'OPERAZIONE')}</td>
-                <td class="cell-small">${escapeHtml(getEntity(row))}</td>
+                <td class="cell-primary">${escapeHtml(formatOperation(getOperation(row)))}</td>
+                <td class="cell-small">${escapeHtml(formatEntity(getEntity(row)))}</td>
                 <td class="cell-primary">${escapeHtml(getRecord(row))}</td>
                 <td class="cell-small">${escapeHtml(getUser(row))}</td>
                 <td class="cell-actions">
@@ -205,12 +274,12 @@ function openDetail(row) {
     const next = document.getElementById('audit-detail-after');
     if (!dialog || !overview || !previous || !next) return;
 
-    if (subtitle) subtitle.textContent = `${row.operazione || 'Operazione'} · ${getRecord(row)}`;
+    if (subtitle) subtitle.textContent = `${formatOperation(getOperation(row))} · ${getRecord(row)}`;
     overview.innerHTML = `
         <dl class="asset-detail-grid">
             ${detailField('Data e ora', formatTimestamp(row.data_modifica))}
             ${detailField('Tabella', getTable(row))}
-            ${detailField('Entità', getEntity(row))}
+            ${detailField(t('Entità'), formatEntity(getEntity(row)))}
             ${detailField('Record', getRecord(row))}
             ${detailField('Utente', getUser(row))}
             ${detailField('AAL', readFirst(row, ['livello_autenticazione'], 'N/D'))}
@@ -226,7 +295,7 @@ function openDetail(row) {
 }
 
 function resetFilters() {
-    ['audit-search', 'audit-filter-table', 'audit-filter-operation', 'audit-filter-user', 'audit-filter-from', 'audit-filter-to']
+    ['audit-search', 'audit-filter-table', 'audit-filter-entity', 'audit-filter-operation', 'audit-filter-user', 'audit-filter-from', 'audit-filter-to']
         .forEach((id) => {
             const element = document.getElementById(id);
             if (element) element.value = '';
@@ -263,9 +332,9 @@ async function exportAudit() {
 
         const records = state.filtered.map((row) => ({
             'Data e ora': formatTimestamp(row.data_modifica),
-            Operazione: row.operazione || '',
+            Operazione: formatOperation(getOperation(row)),
             Tabella: getTable(row),
-            Entita: getEntity(row),
+            Entita: formatEntity(getEntity(row)),
             Record: getRecord(row),
             Utente: getUser(row),
             AAL: readFirst(row, ['livello_autenticazione'], ''),
@@ -295,7 +364,8 @@ async function exportAudit() {
                 ['Eventi esportati', state.filtered.length],
                 ['Ricerca', filters.text || 'Nessuna'],
                 ['Tabella', filters.table || 'Tutte'],
-                ['Operazione', filters.operation || 'Tutte'],
+                ['Entità', filters.entity ? formatEntity(filters.entity) : 'Tutte'],
+                ['Operazione', filters.operation ? formatOperation(filters.operation) : 'Tutte'],
                 ['Utente', filters.user || 'Tutti'],
                 ['Dal', filters.from || 'Non impostato'],
                 ['Al', filters.to || 'Non impostato']
@@ -326,7 +396,7 @@ function bindControls() {
     if (state.initialized) return;
     state.initialized = true;
 
-    ['audit-search', 'audit-filter-table', 'audit-filter-operation', 'audit-filter-user', 'audit-filter-from', 'audit-filter-to']
+    ['audit-search', 'audit-filter-table', 'audit-filter-entity', 'audit-filter-operation', 'audit-filter-user', 'audit-filter-from', 'audit-filter-to']
         .forEach((id) => {
             const element = document.getElementById(id);
             element?.addEventListener(element.tagName === 'INPUT' && element.type === 'search' ? 'input' : 'change', () => {
