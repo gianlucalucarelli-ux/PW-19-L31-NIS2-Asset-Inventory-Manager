@@ -32,30 +32,6 @@ import { fetchAssets, fetchAssetReferences, insertAsset, updateAsset } from './d
 import { exportFilteredAssetsToExcel, downloadAssetImportTemplate, parseAssetImportFile } from './importExport.js?build=20260726-d3';
 import { initI18n } from './i18n.js?build=20260728-p2';
 
-const APPLICATION_BUILD_FALLBACK = '20260729-r1';
-
-/**
- * Espone la build applicativa nei punti globali della pagina.
- * Il valore ufficiale e dichiarato nel meta tag application-build di index.html.
- */
-function renderApplicationBuild() {
-    const configuredBuild = document
-        .querySelector('meta[name="application-build"]')
-        ?.getAttribute('content')
-        ?.trim();
-    const build = configuredBuild || APPLICATION_BUILD_FALLBACK;
-    const label = `Build ${build}`;
-
-    document.documentElement.dataset.appBuild = build;
-
-    document.querySelectorAll('[data-app-build]').forEach((element) => {
-        element.textContent = label;
-        element.setAttribute('aria-label', `Versione applicazione ${build}`);
-        element.title = `Versione applicazione: ${build}`;
-    });
-}
-
-renderApplicationBuild();
 initTheme();
 initI18n();
 
