@@ -21,7 +21,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260729-v1"></script>
+    <script type="module" src="src/main.js?build=20260729-w1"></script>
     <script type="module" src="src/wizard.js?build=20260727-m1"></script>
 </head>
 <body>
@@ -816,7 +816,6 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <button id="supplier-template-btn" type="button" class="btn-secondary">Modello import</button>
                                     <button id="supplier-import-btn" type="button" class="btn-secondary">Importa XLS</button>
                                     <input id="supplier-import-input" type="file" accept=".xlsx,.xls" class="visually-hidden">
-                                    <button type="button" class="btn-primary" data-route="add-supplier">Nuovo fornitore</button>
                                 </div>
                             </div>
                             <div class="inventory-tools" role="search" aria-label="Ricerca e filtri fornitori">
@@ -824,7 +823,25 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <div class="inventory-filter-field inventory-search-field"><label for="supplier-search">Ricerca fornitore</label><input id="supplier-search" type="search" class="form-input" placeholder="Codice, nome, indirizzo o e-mail"></div>
                                     <div class="inventory-filter-field"><label for="supplier-type-filter">Tipo fornitore</label><select id="supplier-type-filter" class="form-input"><option value="">Tutti i tipi</option></select></div>
                                 </div>
-                                <div class="inventory-tools__footer"><button id="supplier-filter-reset" type="button" class="btn-link">Azzera filtri</button><p id="supplier-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento fornitori…</p></div>
+                                <div class="inventory-filter-footer">
+                                    <p id="supplier-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento fornitori…</p>
+                                    <div class="inventory-filter-actions" aria-label="Azioni sui risultati filtrati">
+                                        <button
+                                            id="supplier-filter-reset"
+                                            type="button"
+                                            class="btn-secondary inventory-search-clear"
+                                            aria-controls="supplier-table-body"
+                                            disabled
+                                        >Azzera tutto</button>
+                                        <button
+                                            id="supplier-filter-export"
+                                            type="button"
+                                            class="btn-success inventory-export-filtered"
+                                            aria-controls="supplier-table-body"
+                                            disabled
+                                        >Esporta risultati filtrati</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="table-wrapper"><table>
                                 <thead><tr><th scope="col">Codice</th><th scope="col">Fornitore</th><th scope="col">Tipo</th><th scope="col">Indirizzo</th><th scope="col">E-mail</th><th scope="col">Azioni</th></tr></thead>
