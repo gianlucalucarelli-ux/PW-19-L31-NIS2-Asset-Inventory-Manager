@@ -4276,3 +4276,24 @@ html {
         min-height: auto;
     }
 }
+
+/* ===============================================================================================================
+   BUILD APPLICATIVA VISIBILE - PATCH U
+   NOTE:
+   - La build e mostrata esclusivamente tramite CSS sugli elementi globali gia esistenti.
+   - Nessuna modifica al bootstrap JavaScript, all'autenticazione o alla struttura applicativa.
+   =============================================================================================================== */
+.brand__descriptor::after {
+    content: " · Build 20260729-u1";
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.site-footer p::after {
+    content: " · Build 20260729-u1";
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
