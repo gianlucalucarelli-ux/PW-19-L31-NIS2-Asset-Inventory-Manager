@@ -21,7 +21,7 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-    <script type="module" src="src/main.js?build=20260728-q1"></script>
+    <script type="module" src="src/main.js?build=20260729-v1"></script>
     <script type="module" src="src/wizard.js?build=20260727-m1"></script>
 </head>
 <body>
@@ -730,9 +730,24 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                         <select id="service-state-filter" class="form-input"><option value="">Tutti gli stati</option></select>
                                     </div>
                                 </div>
-                                <div class="inventory-tools__footer">
-                                    <button id="service-filter-reset" type="button" class="btn-link">Azzera filtri</button>
+                                <div class="inventory-filter-footer">
                                     <p id="service-list-status" class="inventory-search-status" role="status" aria-live="polite">Caricamento servizi…</p>
+                                    <div class="inventory-filter-actions" aria-label="Azioni sui risultati filtrati">
+                                        <button
+                                            id="service-filter-reset"
+                                            type="button"
+                                            class="btn-secondary inventory-search-clear"
+                                            aria-controls="service-table-body"
+                                            disabled
+                                        >Azzera tutto</button>
+                                        <button
+                                            id="service-filter-export"
+                                            type="button"
+                                            class="btn-success inventory-export-filtered"
+                                            aria-controls="service-table-body"
+                                            disabled
+                                        >Esporta risultati filtrati</button>
+                                    </div>
                                 </div>
                             </div>
 
