@@ -348,6 +348,21 @@ html.app-booting .app-boot-screen {
     font-size: 0.72rem;
 }
 
+.brand__build {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 2px 7px;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
 .top-navigation {
     display: flex;
     justify-content: center;
@@ -1900,7 +1915,27 @@ tbody tr:last-child td {
 }
 
 .site-footer p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     margin: 0;
+    flex-wrap: wrap;
+}
+
+.site-footer__build {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px 9px;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
