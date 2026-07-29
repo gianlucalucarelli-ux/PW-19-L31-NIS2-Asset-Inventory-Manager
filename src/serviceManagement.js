@@ -166,6 +166,18 @@ function renderServices() {
             && (!filters.state || Number(service.stato_servizio_id) === Number(filters.state));
     });
 
+    const hasActiveFilters = Object.values(filters).some(Boolean);
+    const resetButton = document.getElementById('service-filter-reset');
+    const filteredExportButton = document.getElementById('service-filter-export');
+
+    if (resetButton) resetButton.disabled = !hasActiveFilters;
+    if (filteredExportButton) filteredExportButton.disabled = filteredServicesCache.length === 0;
+
+    setStatus(
+        'service-list-status',
+        `${filteredServicesCache.length} ${t('di')} ${servicesCache.length} ${t('servizi attivi')}`
+    );
+
     updatePagination(filteredServicesCache.length);
     if (filteredServicesCache.length === 0) {
         body.innerHTML = `<tr><td colspan="7" class="table-state">${escapeHtml(t('Nessun servizio disponibile.'))}</td></tr>`;
@@ -216,7 +228,6 @@ async function loadServices() {
         fillFilterOptions();
         currentPage = 1;
         renderServices();
-        setStatus('service-list-status', `${servicesCache.length} ${t('servizi attivi')}`);
     } catch (error) {
         console.error('Errore caricamento servizi:', error);
         servicesCache = [];
@@ -712,6 +723,9 @@ function bindEvents() {
         if (service) await showServiceDetail(service);
     });
     document.getElementById('service-export-btn')?.addEventListener('click', async () => {
+        try { await exportServices(servicesCache); } catch (error) { window.alert(formatError(error)); }
+    });
+    document.getElementById('service-filter-export')?.addEventListener('click', async () => {
         try { await exportServices(filteredServicesCache); } catch (error) { window.alert(formatError(error)); }
     });
     document.getElementById('archived-services-export-btn')?.addEventListener('click', async () => {
