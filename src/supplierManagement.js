@@ -135,6 +135,20 @@ function renderSuppliers() {
         return (!filters.query || searchable.includes(filters.query))
             && (!filters.type || Number(supplier.tipo_fornitore_id) === Number(filters.type));
     });
+
+    // Mantiene coerenti stato, azzeramento ed esportazione con le altre anagrafiche.
+    const hasActiveFilters = Object.values(filters).some(Boolean);
+    const resetButton = document.getElementById('supplier-filter-reset');
+    const filteredExportButton = document.getElementById('supplier-filter-export');
+
+    if (resetButton) resetButton.disabled = !hasActiveFilters;
+    if (filteredExportButton) filteredExportButton.disabled = filteredSuppliersCache.length === 0;
+
+    setStatus(
+        'supplier-list-status',
+        `${filteredSuppliersCache.length} ${t('di')} ${suppliersCache.length} ${t('fornitori attivi')}`
+    );
+
     updatePagination(filteredSuppliersCache.length);
     if (filteredSuppliersCache.length === 0) {
         body.innerHTML = `<tr><td colspan="6" class="table-state">${escapeHtml(t('Nessun fornitore disponibile.'))}</td></tr>`;
@@ -173,12 +187,12 @@ function fillFilterOptions() {
 async function loadSuppliers() {
     const body = document.getElementById('supplier-table-body');
     if (body) body.innerHTML = `<tr><td colspan="6" class="table-state">${escapeHtml(t('Caricamento fornitori…'))}</td></tr>`;
+    setStatus('supplier-list-status', t('Caricamento fornitori…'));
     try {
         [suppliersCache] = await Promise.all([fetchSuppliers({ active: true }), ensureReferences()]);
         fillFilterOptions();
         currentPage = 1;
         renderSuppliers();
-        setStatus('supplier-list-status', `${suppliersCache.length} ${t('fornitori attivi')}`);
     } catch (error) {
         console.error('Errore caricamento fornitori:', error);
         suppliersCache = [];
@@ -593,6 +607,9 @@ function bindEvents() {
         if (supplier) await showSupplierDetail(supplier);
     });
     document.getElementById('supplier-export-btn')?.addEventListener('click', async () => {
+        try { await exportSuppliers(suppliersCache); } catch (error) { window.alert(formatError(error)); }
+    });
+    document.getElementById('supplier-filter-export')?.addEventListener('click', async () => {
         try { await exportSuppliers(filteredSuppliersCache); } catch (error) { window.alert(formatError(error)); }
     });
     document.getElementById('archived-suppliers-export-btn')?.addEventListener('click', async () => {
