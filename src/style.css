@@ -4756,8 +4756,8 @@ html {
 }
 
 /* Build applicativa */
-.brand__descriptor::after { content: " · Build 20260730-f10"; }
-.site-footer p::after { content: " · Build 20260730-f10"; }
+.brand__descriptor::after { content: " · Build 20260730-f11"; }
+.site-footer p::after { content: " · Build 20260730-f11"; }
 
 /* ===============================================================================================================
    PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f10
@@ -5318,5 +5318,40 @@ html {
     .brand__mark {
         width: 44px;
         height: 44px;
+    }
+}
+
+
+/* ===============================================================================================================
+   REGOLAZIONE LOGO PAGINA LOGIN - BUILD 20260730-f11
+   Aumenta esclusivamente il logo della pagina pubblica, lasciando invariati header, favicon e ringraziamenti.
+   =============================================================================================================== */
+
+.public-hero__identity {
+    grid-template-columns: minmax(175px, 220px) minmax(0, 1fr);
+    gap: clamp(24px, 3vw, 36px);
+}
+
+.public-hero__logo {
+    max-width: 220px;
+    max-height: 220px;
+}
+
+@media (max-width: 980px) {
+    .public-hero__identity {
+        grid-template-columns: minmax(145px, 185px) minmax(0, 1fr);
+        gap: 24px;
+    }
+
+    .public-hero__logo {
+        max-width: 185px;
+        max-height: 185px;
+    }
+}
+
+@media (max-width: 680px) {
+    .public-hero__logo {
+        max-width: 170px;
+        max-height: 170px;
     }
 }
