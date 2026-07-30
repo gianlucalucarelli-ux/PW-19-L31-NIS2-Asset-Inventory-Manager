@@ -15,11 +15,11 @@ import {
     fetchAssessmentEvaluation,
     updateAssessmentMeasure,
     completeAssessment
-} from './assessmentService.js?build=20260730-f4';
-import { exportWorkbookToExcel } from './entitySpreadsheet.js?build=20260730-f4';
+} from './assessmentService.js?build=20260730-f5';
+import { exportWorkbookToExcel } from './entitySpreadsheet.js?build=20260730-f5';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 
-let initialized = false;
+let initializedRoot = null;
 let references = { organizzazioni: [], responsabili: [] };
 let targets = [];
 let controls = [];
@@ -687,7 +687,7 @@ function renderTargets() {
                 <td><strong>${escapeHtml(target.organizzazione_nome)}</strong><small>${escapeHtml(target.codice_organizzazione)} · ${escapeHtml(nis2ClassificationLabel(organizationReference(target.organizzazione_id)?.classificazione_nis2))}</small></td>
                 <td><span class="badge ${target.stato === 'APPROVATO' ? 'status-success' : 'status-warning'}">${escapeHtml(target.stato)}</span></td>
                 <td>${Number(target.numero_controlli || 0)}</td>
-                <td><button type="button" class="btn-table" data-assessment-target-open="${target.profilo_target_id}">Apri</button></td>
+                <td><button type="button" class="btn-table" data-assessment-target-open="${target.profilo_target_id}" title="Apri il dettaglio del Profilo Target">Apri</button></td>
             </tr>
         `;
     }).join('');
@@ -780,7 +780,7 @@ function renderAssessments() {
                 <td><span class="badge ${assessment.stato === 'COMPLETATO' ? 'status-success' : 'status-warning'}">${escapeHtml(assessment.stato)}</span></td>
                 <td>${percentage(assessment.avanzamento, '0%')}</td>
                 <td>${percentage(assessment.score)}</td>
-                <td><button type="button" class="btn-table" data-assessment-run-open="${assessment.assessment_id}">Apri</button></td>
+                <td><button type="button" class="btn-table" data-assessment-run-open="${assessment.assessment_id}" title="Apri e raggiungi il dettaglio del Profilo Attuale">${active ? 'Vai al dettaglio' : 'Apri'}</button></td>
             </tr>
         `;
     }).join('');
@@ -1020,8 +1020,9 @@ async function handleAssessmentSubmit(event) {
     const button = document.getElementById('assessment-run-submit');
     setBusy(button, true, 'Creazione…');
     try {
+        const targetId = Number(selectedTargetId);
         const assessmentId = await createAssessment({
-            profilo_target_id: selectedTargetId,
+            profilo_target_id: targetId,
             codice: document.getElementById('assessment-run-code')?.value,
             nome: document.getElementById('assessment-run-name')?.value,
             data_assessment: document.getElementById('assessment-run-date')?.value,
@@ -1029,12 +1030,15 @@ async function handleAssessmentSubmit(event) {
             note: document.getElementById('assessment-run-notes')?.value
         });
         document.getElementById('assessment-run-dialog')?.close();
-        assessments = await fetchAssessments(selectedTargetId);
-        renderAssessments();
+
+        // Ricarica anche la testata del Target: il contatore Assessment deve aggiornarsi subito.
+        await loadTargets(targetId);
+        await loadTargetContext(targetId);
         await loadAssessmentContext(assessmentId);
+
         renderWorkflow();
         scrollToPanel('assessment-current-detail');
-        setStatus('Profilo Attuale creato. Compila i sei controlli; il sistema passa automaticamente al successivo.');
+        setStatus('Profilo Attuale creato e aperto. Compila i sei controlli; il sistema passa automaticamente al successivo.');
         const firstMeasure = nextIncompleteMeasure();
         if (firstMeasure) openMeasureDialog(firstMeasure.misura_id);
     } catch (error) {
@@ -1336,8 +1340,14 @@ async function exportCurrentAssessment(button) {
 }
 
 function initializeEvents() {
-    if (initialized) return;
-    initialized = true;
+    const root = document.getElementById('view-assessment-fncsdp');
+    if (!root) return;
+
+    // Il router può ricreare il contenuto della vista. Il binding viene quindi
+    // associato al nodo DOM reale e non a un flag globale permanente.
+    if (initializedRoot === root && root.dataset.assessmentEventsBound === 'true') return;
+    initializedRoot = root;
+    root.dataset.assessmentEventsBound = 'true';
 
     document.getElementById('assessment-new-target')?.addEventListener('click', openTargetDialog);
     document.getElementById('assessment-new-assessment')?.addEventListener('click', openAssessmentDialog);
@@ -1365,25 +1375,44 @@ function initializeEvents() {
         if (action === 'export') await exportCurrentAssessment(button);
     });
 
-    document.getElementById('view-assessment-fncsdp')?.addEventListener('click', async (event) => {
-        const targetOpen = event.target.closest('[data-assessment-target-open]');
+    root.addEventListener('click', async (event) => {
+        const clickedElement = event.target instanceof Element ? event.target : null;
+        if (!clickedElement) return;
+
+        const targetOpen = clickedElement.closest('[data-assessment-target-open]');
         if (targetOpen) {
+            event.preventDefault();
+            const targetId = Number(targetOpen.dataset.assessmentTargetOpen);
+            setBusy(targetOpen, true, 'Apertura…');
             try {
-                await loadTargetContext(targetOpen.dataset.assessmentTargetOpen);
+                await loadTargetContext(targetId);
+                scrollToPanel('assessment-target-detail');
+                const target = selectedTarget();
+                setStatus(`Profilo Target ${target?.codice || targetId} aperto.`);
             } catch (error) {
                 console.error('Errore apertura Target:', error);
                 setStatus(formatError(error), true);
+            } finally {
+                setBusy(targetOpen, false);
             }
             return;
         }
 
-        const runOpen = event.target.closest('[data-assessment-run-open]');
+        const runOpen = clickedElement.closest('[data-assessment-run-open]');
         if (runOpen) {
+            event.preventDefault();
+            const assessmentId = Number(runOpen.dataset.assessmentRunOpen);
+            setBusy(runOpen, true, 'Apertura…');
             try {
-                await loadAssessmentContext(runOpen.dataset.assessmentRunOpen);
+                await loadAssessmentContext(assessmentId);
+                scrollToPanel('assessment-current-detail');
+                const assessment = selectedAssessment();
+                setStatus(`Profilo Attuale ${assessment?.codice || assessmentId} aperto. Prosegui con la compilazione dei controlli.`);
             } catch (error) {
                 console.error('Errore apertura assessment:', error);
                 setStatus(formatError(error), true);
+            } finally {
+                setBusy(runOpen, false);
             }
             return;
         }

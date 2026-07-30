@@ -13,12 +13,12 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?build=20260730-f4';
+} from './ui.js?build=20260730-f5';
 import {
     initializeRouter,
     navigateTo,
     refreshCurrentRoute
-} from './router.js?build=20260730-f4';
+} from './router.js?build=20260730-f5';
 import {
     signIn,
     getCurrentSession,
