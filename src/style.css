@@ -4304,7 +4304,7 @@ html {
 
 
 /* ===============================================================================================================
-   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f9
+   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f10
    =============================================================================================================== */
 
 .assessment-header {
@@ -4756,11 +4756,11 @@ html {
 }
 
 /* Build applicativa */
-.brand__descriptor::after { content: " · Build 20260730-f9"; }
-.site-footer p::after { content: " · Build 20260730-f9"; }
+.brand__descriptor::after { content: " · Build 20260730-f10"; }
+.site-footer p::after { content: " · Build 20260730-f10"; }
 
 /* ===============================================================================================================
-   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f9
+   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f10
    =============================================================================================================== */
 
 .assessment-workflow {
@@ -4931,7 +4931,7 @@ html {
 }
 
 
-/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f9 */
+/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f10 */
 .form-help {
     display: block;
     margin-top: 0.35rem;
@@ -4945,7 +4945,7 @@ html {
 }
 
 /* ===============================================================================================================
-   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f9
+   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f10
    Migliora leggibilita senza modificare dati o flussi applicativi.
    =============================================================================================================== */
 
@@ -5129,5 +5129,194 @@ html {
     .assessment-measure-table td {
         grid-template-columns: 1fr;
         gap: 0.4rem;
+    }
+}
+
+
+/* ===============================================================================================================
+   IDENTITA VISIVA E RINGRAZIAMENTI - BUILD 20260730-f10
+   Integra il logo derivato dal percorso fortificato e aggiunge la sezione dedicata ai ringraziamenti.
+   =============================================================================================================== */
+
+.app-boot-screen__logo {
+    width: 84px;
+    height: 64px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 24px rgba(14, 165, 233, 0.22));
+}
+
+.brand__mark {
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    padding: 2px;
+}
+
+.brand__logo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(1.12);
+    filter: drop-shadow(0 5px 10px rgba(14, 165, 233, 0.2));
+}
+
+.public-hero__identity {
+    display: grid;
+    grid-template-columns: minmax(130px, 175px) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(18px, 2.5vw, 30px);
+    margin-bottom: 28px;
+}
+
+.public-hero__logo {
+    display: block;
+    width: 100%;
+    max-width: 175px;
+    max-height: 175px;
+    margin-inline: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 18px 32px rgba(14, 165, 233, 0.18));
+}
+
+.public-hero__copy {
+    min-width: 0;
+}
+
+.public-hero__identity .public-hero__lead {
+    margin-bottom: 0;
+}
+
+.navigation-group--acknowledgements {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 2px solid color-mix(in srgb, var(--primary) 38%, var(--border)) !important;
+}
+
+.navigation-group--acknowledgements .navigation-group__toggle {
+    color: color-mix(in srgb, var(--primary) 78%, var(--text-high));
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.acknowledgements-view {
+    overflow: hidden;
+}
+
+.acknowledgements-intro {
+    display: grid;
+    grid-template-columns: minmax(110px, 155px) minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 22px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background:
+        radial-gradient(circle at 12% 50%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 19rem),
+        var(--bg-soft);
+}
+
+.acknowledgements-logo {
+    display: block;
+    width: 100%;
+    max-width: 150px;
+    max-height: 130px;
+    margin-inline: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 26px rgba(14, 165, 233, 0.18));
+}
+
+.acknowledgements-intro p {
+    margin: 0;
+    color: var(--text-low);
+    font-size: 1.02rem;
+    line-height: 1.7;
+}
+
+.acknowledgements-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.acknowledgement-card {
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-soft);
+    box-shadow: var(--shadow-soft);
+}
+
+.acknowledgement-card__icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 16px;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    font-size: 1.2rem;
+}
+
+.acknowledgement-card h3 {
+    margin-bottom: 10px;
+}
+
+.acknowledgement-card p {
+    margin: 0;
+    color: var(--text-low);
+    line-height: 1.65;
+}
+
+.acknowledgements-signature {
+    margin: 22px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--text-low);
+    text-align: right;
+}
+
+.acknowledgements-signature strong {
+    color: var(--text-high);
+}
+
+@media (max-width: 980px) {
+    .public-hero__identity {
+        grid-template-columns: minmax(110px, 145px) minmax(0, 1fr);
+    }
+
+    .acknowledgements-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .public-hero__identity,
+    .acknowledgements-intro {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .public-hero__logo {
+        max-width: 145px;
+        max-height: 145px;
+    }
+
+    .acknowledgements-logo {
+        max-width: 125px;
+        max-height: 110px;
+    }
+
+    .acknowledgements-signature {
+        text-align: left;
+    }
+}
+
+@media (max-width: 520px) {
+    .brand__mark {
+        width: 44px;
+        height: 44px;
     }
 }

@@ -6,14 +6,14 @@
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260727-n1';
 import { loadAndRenderAuditLog } from './auditLog.js?build=20260730-f7';
-import { navigateTo, getCurrentRoute } from './router.js?build=20260727-m1';
+import { navigateTo, getCurrentRoute } from './router.js?build=20260730-f10';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260727-m1';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 import { loadOrganizationView } from './organizationManagement.js?build=20260727-m1';
 import { loadServiceView } from './serviceManagement.js?build=20260729-v1';
 import { loadSupplierView } from './supplierManagement.js?build=20260729-w1';
-import { t } from './i18n.js?build=20260730-f9';
+import { t } from './i18n.js?build=20260730-f10';
 import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-n1';
 import { fetchRelationshipCoverage } from './relationshipService.js?build=20260727-m1';
 import { loadAssessmentView } from './assessmentManagement.js?build=20260730-f6';
@@ -233,7 +233,8 @@ const ROUTE_TO_VIEW = {
     'incidenti-chiusi': 'incidenti',
     'nuova-segnalazione': 'incidenti',
     riepilogo: 'riepilogo',
-    info: 'info'
+    info: 'info',
+    acknowledgements: 'acknowledgements'
 };
 
 const ROUTE_METADATA = {
@@ -351,6 +352,11 @@ const ROUTE_METADATA = {
         section: 'Supporto',
         label: 'SUPPORTO',
         title: 'Informazioni e guida'
+    },
+    acknowledgements: {
+        section: 'Ringraziamenti',
+        label: 'RINGRAZIAMENTI',
+        title: 'Ringraziamenti'
     }
 };
 

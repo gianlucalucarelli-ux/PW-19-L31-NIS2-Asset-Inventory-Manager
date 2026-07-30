@@ -26,7 +26,8 @@ const ROTTE_VALIDE = new Set([
     'incidenti-chiusi',
     'nuova-segnalazione',
     'riepilogo',
-    'info'
+    'info',
+    'acknowledgements'
 ]);
 
 const ALIAS_ROTTE = {
@@ -66,7 +67,10 @@ const ALIAS_ROTTE = {
     'closed-incidents': 'incidenti-chiusi',
     'new-incident': 'nuova-segnalazione',
     report: 'riepilogo',
-    'info-section': 'info'
+    'info-section': 'info',
+    thanks: 'acknowledgements',
+    acknowledgements: 'acknowledgements',
+    ringraziamenti: 'acknowledgements'
 };
 
 let gestoreRotta = null;
