@@ -15,8 +15,8 @@ import {
     fetchAssessmentEvaluation,
     updateAssessmentMeasure,
     completeAssessment
-} from './assessmentService.js?build=20260730-f5';
-import { exportWorkbookToExcel } from './entitySpreadsheet.js?build=20260730-f5';
+} from './assessmentService.js?build=20260730-f6';
+import { exportWorkbookToExcel } from './entitySpreadsheet.js?build=20260730-f6';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 
 let initializedRoot = null;
@@ -371,7 +371,7 @@ function ensureMarkup() {
                 </div>
             </section>
 
-            <section id="assessment-target-detail" class="assessment-panel is-hidden" aria-labelledby="assessment-target-detail-title">
+            <section id="assessment-target-detail" class="assessment-panel assessment-panel--target-detail is-hidden" aria-labelledby="assessment-target-detail-title">
                 <div class="view-header compact-header">
                     <div>
                         <p class="eyebrow">PROFILO TARGET</p>
@@ -388,7 +388,7 @@ function ensureMarkup() {
                 <dl id="assessment-target-metadata" class="assessment-metadata"></dl>
 
                 <div class="table-wrapper">
-                    <table class="data-table assessment-table assessment-control-table">
+                    <table class="data-table assessment-table assessment-control-table assessment-responsive-table">
                         <thead>
                             <tr>
                                 <th>Controllo</th>
@@ -403,7 +403,7 @@ function ensureMarkup() {
                 </div>
             </section>
 
-            <section id="assessment-runs-panel" class="assessment-panel is-hidden" aria-labelledby="assessment-runs-title">
+            <section id="assessment-runs-panel" class="assessment-panel assessment-panel--runs is-hidden" aria-labelledby="assessment-runs-title">
                 <div class="view-header compact-header">
                     <div>
                         <p class="eyebrow">PROFILO ATTUALE</p>
@@ -449,7 +449,7 @@ function ensureMarkup() {
                 </div>
 
                 <div class="table-wrapper">
-                    <table class="data-table assessment-table">
+                    <table class="data-table assessment-table assessment-measure-table assessment-responsive-table">
                         <thead>
                             <tr>
                                 <th>Controllo</th>
@@ -747,19 +747,27 @@ function renderTargetDetail() {
     }
 
     const readOnly = target.stato === 'APPROVATO';
-    body.innerHTML = grouped.map((control) => `
-        <tr data-control-row="${control.controllo_target_id}">
-            <td class="cell-primary"><strong>${escapeHtml(control.codice)}</strong><small>${escapeHtml(FNCSDP_CONTROLS.find((item) => item.code === control.subcategories[0]?.codice)?.label || control.nome)}</small></td>
-            <td>${control.subcategories.map((item) => `<span class="assessment-subcategory" title="${escapeHtml(item.descrizione)}">${escapeHtml(item.codice)} · peso ${String(item.peso).replace('.', ',')}</span>`).join('')}</td>
-            <td><textarea class="form-input assessment-inline-text" data-control-description="${control.controllo_target_id}" rows="3" ${readOnly ? 'disabled' : ''}>${escapeHtml(control.descrizione)}</textarea></td>
-            <td>
-                <select class="form-input compact-select" data-control-coverage="${control.controllo_target_id}" ${readOnly ? 'disabled' : ''}>
+    body.innerHTML = grouped.map((control) => {
+        const label = FNCSDP_CONTROLS.find((item) => item.code === control.subcategories[0]?.codice)?.label || control.nome;
+        const descriptionCell = readOnly
+            ? `<div class="assessment-readonly-text">${escapeHtml(control.descrizione)}</div>`
+            : `<textarea class="form-input assessment-inline-text" data-control-description="${control.controllo_target_id}" rows="3">${escapeHtml(control.descrizione)}</textarea>`;
+        const coverageCell = readOnly
+            ? `<span class="assessment-coverage-chip">${coverageLabel(control.copertura_target)}</span>`
+            : `<select class="form-input compact-select" data-control-coverage="${control.controllo_target_id}">
                     ${[0, 0.2, 0.4, 0.6, 0.8, 1].map((value) => `<option value="${value}" ${Number(control.copertura_target) === value ? 'selected' : ''}>${coverageLabel(value)}</option>`).join('')}
-                </select>
-            </td>
-            <td>${readOnly ? '<span class="muted-text">Sola lettura</span>' : `<button type="button" class="btn-table" data-control-save="${control.controllo_target_id}">Salva</button>`}</td>
-        </tr>
-    `).join('');
+               </select>`;
+
+        return `
+            <tr data-control-row="${control.controllo_target_id}">
+                <td class="cell-primary" data-label="Controllo"><strong>${escapeHtml(control.codice)}</strong><small>${escapeHtml(label)}</small></td>
+                <td data-label="Subcategory">${control.subcategories.map((item) => `<span class="assessment-subcategory" title="${escapeHtml(item.descrizione)}">${escapeHtml(item.codice)} · peso ${String(item.peso).replace('.', ',')}</span>`).join('')}</td>
+                <td data-label="Descrizione">${descriptionCell}</td>
+                <td data-label="Copertura Target">${coverageCell}</td>
+                <td data-label="Azioni">${readOnly ? '<span class="badge status-success">Approvato</span>' : `<button type="button" class="btn-table" data-control-save="${control.controllo_target_id}">Salva</button>`}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function renderAssessments() {
@@ -837,13 +845,13 @@ function renderCurrentProfile() {
         const complete = isMeasureComplete(measure);
         return `
             <tr>
-                <td class="cell-primary"><strong>${escapeHtml(measure.controllo_codice)}</strong><small>${escapeHtml(measure.controllo_nome)}</small></td>
-                <td>${measure.subcategories.map((item) => `<span class="assessment-subcategory">${escapeHtml(item.codice)}</span>`).join('')}</td>
-                <td>${coverageLabel(measure.copertura_target)}</td>
-                <td>${coverageLabel(measure.copertura_attuale)}</td>
-                <td>${maturityLabel(measure.livello_maturita)}</td>
-                <td><span class="badge ${complete ? 'status-success' : 'status-warning'}">${complete ? 'Completa' : 'Da compilare'}</span></td>
-                <td><button type="button" class="btn-table" data-measure-open="${measure.misura_id}">${assessment.stato === 'COMPLETATO' ? 'Visualizza' : 'Compila'}</button></td>
+                <td class="cell-primary" data-label="Controllo"><strong>${escapeHtml(measure.controllo_codice)}</strong><small>${escapeHtml(measure.controllo_nome)}</small></td>
+                <td data-label="Subcategory">${measure.subcategories.map((item) => `<span class="assessment-subcategory">${escapeHtml(item.codice)}</span>`).join('')}</td>
+                <td data-label="Target">${coverageLabel(measure.copertura_target)}</td>
+                <td data-label="Copertura attuale">${coverageLabel(measure.copertura_attuale)}</td>
+                <td data-label="Maturita">${maturityLabel(measure.livello_maturita)}</td>
+                <td data-label="Stato misura"><span class="badge ${complete ? 'status-success' : 'status-warning'}">${complete ? 'Completa' : 'Da compilare'}</span></td>
+                <td data-label="Azioni"><button type="button" class="btn-table" data-measure-open="${measure.misura_id}">${assessment.stato === 'COMPLETATO' ? 'Visualizza' : 'Compila'}</button></td>
             </tr>
         `;
     }).join('');

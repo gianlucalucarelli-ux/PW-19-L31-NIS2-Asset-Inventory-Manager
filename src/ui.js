@@ -16,7 +16,7 @@ import { loadSupplierView } from './supplierManagement.js?build=20260729-w1';
 import { t } from './i18n.js?build=20260728-p2';
 import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-n1';
 import { fetchRelationshipCoverage } from './relationshipService.js?build=20260727-m1';
-import { loadAssessmentView } from './assessmentManagement.js?build=20260730-f5';
+import { loadAssessmentView } from './assessmentManagement.js?build=20260730-f6';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.

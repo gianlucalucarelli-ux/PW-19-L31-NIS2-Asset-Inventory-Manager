@@ -4300,7 +4300,7 @@ html {
 
 
 /* ===============================================================================================================
-   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f5
+   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f6
    =============================================================================================================== */
 
 .assessment-header {
@@ -4752,11 +4752,11 @@ html {
 }
 
 /* Build applicativa */
-.brand__descriptor::after { content: " · Build 20260730-f5"; }
-.site-footer p::after { content: " · Build 20260730-f5"; }
+.brand__descriptor::after { content: " · Build 20260730-f6"; }
+.site-footer p::after { content: " · Build 20260730-f6"; }
 
 /* ===============================================================================================================
-   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f5
+   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f6
    =============================================================================================================== */
 
 .assessment-workflow {
@@ -4927,7 +4927,7 @@ html {
 }
 
 
-/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f5 */
+/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f6 */
 .form-help {
     display: block;
     margin-top: 0.35rem;
@@ -4938,4 +4938,192 @@ html {
 
 .assessment-workflow li strong {
     overflow-wrap: anywhere;
+}
+
+/* ===============================================================================================================
+   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f6
+   Migliora leggibilita senza modificare dati o flussi applicativi.
+   =============================================================================================================== */
+
+.assessment-panel--target-detail,
+.assessment-panel--runs {
+    grid-column: 1 / -1;
+}
+
+.assessment-control-table,
+.assessment-measure-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.assessment-control-table th:nth-child(1),
+.assessment-control-table td:nth-child(1) { width: 20%; }
+.assessment-control-table th:nth-child(2),
+.assessment-control-table td:nth-child(2) { width: 15%; }
+.assessment-control-table th:nth-child(3),
+.assessment-control-table td:nth-child(3) { width: 40%; }
+.assessment-control-table th:nth-child(4),
+.assessment-control-table td:nth-child(4) { width: 15%; }
+.assessment-control-table th:nth-child(5),
+.assessment-control-table td:nth-child(5) { width: 10%; }
+
+.assessment-measure-table th:nth-child(1),
+.assessment-measure-table td:nth-child(1) { width: 27%; }
+.assessment-measure-table th:nth-child(2),
+.assessment-measure-table td:nth-child(2) { width: 12%; }
+.assessment-measure-table th:nth-child(3),
+.assessment-measure-table td:nth-child(3) { width: 11%; }
+.assessment-measure-table th:nth-child(4),
+.assessment-measure-table td:nth-child(4) { width: 14%; }
+.assessment-measure-table th:nth-child(5),
+.assessment-measure-table td:nth-child(5) { width: 11%; }
+.assessment-measure-table th:nth-child(6),
+.assessment-measure-table td:nth-child(6) { width: 13%; }
+.assessment-measure-table th:nth-child(7),
+.assessment-measure-table td:nth-child(7) { width: 12%; }
+
+.assessment-responsive-table th,
+.assessment-responsive-table td {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.assessment-responsive-table .cell-primary {
+    min-width: 0;
+}
+
+.assessment-responsive-table .cell-primary strong,
+.assessment-responsive-table .cell-primary small {
+    display: block;
+}
+
+.assessment-responsive-table .cell-primary small {
+    margin-top: 0.25rem;
+    color: var(--text-low);
+    line-height: 1.35;
+}
+
+.assessment-responsive-table .assessment-subcategory {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--primary);
+    background: var(--bg-soft);
+    font-size: 0.78rem;
+    line-height: 1.25;
+}
+
+.assessment-control-table .assessment-inline-text {
+    min-width: 0;
+    min-height: 6.25rem;
+    line-height: 1.4;
+}
+
+.assessment-readonly-text {
+    min-height: 3rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-high);
+    background: var(--bg-soft);
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.assessment-coverage-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+    border-radius: var(--radius-md);
+    color: var(--text-high);
+    background: color-mix(in srgb, var(--primary) 10%, var(--bg-soft));
+    font-weight: 750;
+    line-height: 1.25;
+}
+
+#assessment-target-detail .table-wrapper,
+#assessment-current-detail .table-wrapper {
+    overflow-x: visible;
+}
+
+@media (max-width: 960px) {
+    .assessment-responsive-table,
+    .assessment-responsive-table tbody,
+    .assessment-responsive-table tr,
+    .assessment-responsive-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .assessment-responsive-table {
+        table-layout: auto;
+    }
+
+    .assessment-responsive-table thead {
+        display: none;
+    }
+
+    .assessment-responsive-table tbody {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .assessment-responsive-table tr {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--bg-soft);
+    }
+
+    .assessment-responsive-table td,
+    .assessment-control-table td,
+    .assessment-measure-table td {
+        display: grid;
+        grid-template-columns: minmax(8.5rem, 30%) minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: start;
+        width: 100% !important;
+        padding: 0.75rem;
+        border: 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .assessment-responsive-table td:last-child {
+        border-bottom: 0;
+    }
+
+    .assessment-responsive-table td::before {
+        content: attr(data-label);
+        color: var(--text-low);
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+    }
+
+    .assessment-responsive-table td > .btn-table,
+    .assessment-responsive-table td > .form-input,
+    .assessment-responsive-table td > .assessment-readonly-text {
+        width: 100%;
+    }
+
+    #assessment-target-detail .table-wrapper,
+    #assessment-current-detail .table-wrapper {
+        overflow-x: visible;
+    }
+}
+
+@media (max-width: 560px) {
+    .assessment-responsive-table td,
+    .assessment-control-table td,
+    .assessment-measure-table td {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+    }
 }
