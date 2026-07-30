@@ -9,18 +9,18 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Applicazione dimostrativa per l'inventario degli asset, la Supply Chain, l'audit e la gestione degli incidenti in ambito NIS2.">
+    <meta name="description" content="Applicazione web per soggetti NIS2, inventario, Supply Chain, incidenti, Audit Log e Assessment FNCSDP dei Profili Target e Attuale.">
     <title>NIS2 Asset Inventory Manager</title>
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1b31'/%3E%3Cpath d='M32 8 50 15v14c0 12-7.8 22.7-18 27-10.2-4.3-18-15-18-27V15z' fill='%2338bdf8'/%3E%3Cpath d='M32 17v29c6.4-3.7 10-10.3 10-17V21z' fill='%23e0f2fe'/%3E%3C/svg%3E">
 
-    <link rel="stylesheet" href="src/style.css?build=20260730-f8">
+    <link rel="stylesheet" href="src/style.css?build=20260730-f9">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script type="module" src="src/main.js?build=20260730-f8"></script>
+    <script type="module" src="src/main.js?build=20260730-f9"></script>
     <script type="module" src="src/wizard.js?build=20260727-m1"></script>
 </head>
 <body>
@@ -78,8 +78,8 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                     <p class="eyebrow">UNIVERSITÀ TELEMATICA PEGASO · PROJECT WORK L-31</p>
                     <h1 id="public-title">NIS2 Asset Inventory Manager</h1>
                     <p class="public-hero__lead">
-                        Applicazione web per censire asset e dipendenze, rappresentare la Supply Chain,
-                        tracciare le operazioni e supportare la gestione guidata degli incidenti.
+                        Applicazione web per censire soggetti NIS2, asset, servizi, fornitori e dipendenze,
+                        rappresentare la Supply Chain, gestire gli incidenti e valutare i Profili Target e Attuale secondo il FNCSDP.
                     </p>
 
                     <dl class="project-metadata" aria-label="Informazioni sul Project Work">
@@ -146,17 +146,17 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                     <article class="feature-card">
                         <span class="feature-card__icon" aria-hidden="true">📦</span>
                         <h3>Inventario centralizzato</h3>
-                        <p>Consultazione e gestione controllata degli asset con criticità, versioni e tracciamento delle modifiche.</p>
+                        <p>Consultazione e gestione controllata di soggetti NIS2, asset, servizi, persone e responsabilità, con criticità, versioni e tracciamento delle modifiche.</p>
                     </article>
                     <article class="feature-card">
                         <span class="feature-card__icon" aria-hidden="true">🔗</span>
                         <h3>Dipendenze e Supply Chain</h3>
-                        <p>Rappresentazione delle relazioni tra servizi, asset e fornitori, predisposta per percorsi multilivello.</p>
+                        <p>Rappresentazione delle relazioni tra servizi, asset, fornitori e subfornitori, predisposta per percorsi multilivello e analisi delle dipendenze.</p>
                     </article>
                     <article class="feature-card">
                         <span class="feature-card__icon" aria-hidden="true">🛡️</span>
                         <h3>Sicurezza e tracciabilità</h3>
-                        <p>Autenticazione Supabase, MFA, policy RLS, Audit Log e wizard guidato per la classificazione degli incidenti.</p>
+                        <p>Autenticazione Supabase, MFA, policy RLS, Audit Log, gestione guidata degli incidenti e Assessment dei Profili Target e Attuale secondo il FNCSDP.</p>
                     </article>
                 </div>
             </section>
@@ -2075,19 +2075,23 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             <div class="info-grid">
                                 <article class="info-panel">
                                     <h3>Finalità</h3>
-                                    <p>L'applicazione supporta il censimento degli asset, la lettura delle dipendenze, la tracciabilità delle modifiche e la classificazione guidata degli incidenti.</p>
+                                    <p>L'applicazione supporta il censimento dei soggetti NIS2, delle persone e degli incarichi, degli asset, dei servizi, dei fornitori e delle relative dipendenze. Consente inoltre la gestione degli incidenti e degli Assessment FNCSDP.</p>
                                 </article>
                                 <article class="info-panel">
                                     <h3>Architettura</h3>
-                                    <p>Frontend HTML5, CSS e JavaScript modulare pubblicato su GitHub Pages, integrato con Supabase per autenticazione, MFA, API dati e policy RLS.</p>
+                                    <p>Frontend modulare HTML5, CSS e JavaScript pubblicato su GitHub Pages e integrato con PostgreSQL/Supabase. Il backend comprende 36 tabelle in 3FN, 11 viste principali, API dati, autenticazione e policy RLS.</p>
                                 </article>
                                 <article class="info-panel">
                                     <h3>Sicurezza</h3>
-                                    <p>L'accesso ai dati è controllato tramite sessione autenticata, livello AAL, privilegi PostgreSQL e Row Level Security.</p>
+                                    <p>L'accesso ai dati è controllato tramite sessione autenticata, livelli AAL/MFA, privilegi PostgreSQL e Row Level Security. Le operazioni sono registrate nell'Audit Log; le cancellazioni fisiche sono bloccate e sostituite dall'archiviazione logica.</p>
                                 </article>
                                 <article class="info-panel">
                                     <h3>Project Work</h3>
-                                    <p>Progetto sviluppato per il corso di Informatica per le aziende digitali <span class="no-wrap">(L-31)</span>, con impostazione generale e non vincolata a uno specifico settore produttivo.</p>
+                                    <p>Progetto sviluppato per il corso di Informatica per le aziende digitali L-31. Integra inventario NIS2, Supply Chain, gestione degli incidenti e valutazione dei Profili Target e Attuale secondo la metodologia FNCSDP.</p>
+                                </article>
+                                <article class="info-panel info-panel--wide">
+                                    <h3>Percorso operativo</h3>
+                                    <p>Soggetti NIS2 → Inventario → Servizi e fornitori → Relazioni e Supply Chain → Incidenti → Assessment FNCSDP → Audit Log ed esportazioni.</p>
                                 </article>
                             </div>
                         </section>
