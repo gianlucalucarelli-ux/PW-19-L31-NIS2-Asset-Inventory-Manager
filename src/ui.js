@@ -5,7 +5,7 @@
 
 import { fetchAssets, fetchArchivedAssets, fetchAssetReferences, fetchAssetDetailRelations, archiveAsset, fetchDashboardData } from './database.js?build=20260726-d2';
 import { loadAndRenderSupplyChain } from './supplyChain.js?build=20260727-n1';
-import { loadAndRenderAuditLog } from './auditLog.js?build=20260728-q1';
+import { loadAndRenderAuditLog } from './auditLog.js?build=20260730-f7';
 import { navigateTo, getCurrentRoute } from './router.js?build=20260727-m1';
 import { exportArchivedAssetsToExcel } from './importExport.js?build=20260726-d3';
 import { loadIncidentManagementView, openNewIncidentWizard } from './incidentManagement.js?build=20260727-m1';

@@ -4300,7 +4300,7 @@ html {
 
 
 /* ===============================================================================================================
-   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f6
+   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f7
    =============================================================================================================== */
 
 .assessment-header {
@@ -4752,11 +4752,11 @@ html {
 }
 
 /* Build applicativa */
-.brand__descriptor::after { content: " · Build 20260730-f6"; }
-.site-footer p::after { content: " · Build 20260730-f6"; }
+.brand__descriptor::after { content: " · Build 20260730-f7"; }
+.site-footer p::after { content: " · Build 20260730-f7"; }
 
 /* ===============================================================================================================
-   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f6
+   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f7
    =============================================================================================================== */
 
 .assessment-workflow {
@@ -4927,7 +4927,7 @@ html {
 }
 
 
-/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f6 */
+/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f7 */
 .form-help {
     display: block;
     margin-top: 0.35rem;
@@ -4941,7 +4941,7 @@ html {
 }
 
 /* ===============================================================================================================
-   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f6
+   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f7
    Migliora leggibilita senza modificare dati o flussi applicativi.
    =============================================================================================================== */
 

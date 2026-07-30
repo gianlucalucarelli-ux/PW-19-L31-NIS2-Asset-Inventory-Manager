@@ -12,13 +12,24 @@ const state = {
     filtered: [],
     page: 1,
     pageSize: 10,
-    initialized: false
+    initialized: false,
+    fncsdp: null
 };
+
+const FNCSDP_TABLES = new Set([
+    'fncsdp_subcategory',
+    'profilo_target_fncsdp',
+    'controllo_target_fncsdp',
+    'controllo_target_subcategory_fncsdp',
+    'assessment_fncsdp',
+    'misura_controllo_fncsdp'
+]);
 
 const ENTITY_LABELS = {
     ENTITA: 'Entità applicativa',
     RELAZIONE: 'Relazione',
     GERARCHIA: 'Gerarchia',
+    FNCSDP: 'Assessment FNCSDP',
     ACCESSO: 'Accesso al database'
 };
 
@@ -56,6 +67,177 @@ function readFirst(row, keys, fallback = '') {
     return fallback;
 }
 
+
+function parseJsonObject(value) {
+    if (!value) return null;
+    if (typeof value === 'object' && !Array.isArray(value)) return value;
+    if (typeof value !== 'string') return null;
+
+    try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function getAuditSnapshot(row) {
+    return parseJsonObject(row?.valore_nuovo_jsonb)
+        || parseJsonObject(row?.payload_nuovo)
+        || parseJsonObject(row?.valore_nuovo)
+        || parseJsonObject(row?.valore_precedente_jsonb)
+        || parseJsonObject(row?.payload_precedente)
+        || parseJsonObject(row?.valore_precedente)
+        || {};
+}
+
+function getAuditKey(row) {
+    return parseJsonObject(row?.chiave_record) || {};
+}
+
+function cleanId(value) {
+    if (value === null || value === undefined || value === '') return '';
+    return String(value);
+}
+
+function rememberLatest(map, id, value) {
+    const key = cleanId(id);
+    if (!key || map.has(key)) return;
+    map.set(key, value);
+}
+
+function buildFncsdpContext(rows) {
+    const context = {
+        targets: new Map(),
+        controls: new Map(),
+        assessments: new Map(),
+        subcategories: new Map()
+    };
+
+    // fetchAuditLogs restituisce gli eventi dal piu recente al meno recente:
+    // il primo record incontrato per ogni ID rappresenta quindi lo stato piu aggiornato disponibile.
+    rows.forEach((row) => {
+        const table = String(row?.tabella || '').trim().toLowerCase();
+        if (!FNCSDP_TABLES.has(table)) return;
+
+        const snapshot = getAuditSnapshot(row);
+        const recordId = cleanId(snapshot.id ?? row.record_id);
+        const code = String(snapshot.codice ?? row.codice_record ?? '').trim();
+        const name = String(snapshot.nome ?? row.nome_record ?? snapshot.descrizione ?? '').trim();
+
+        if (table === 'profilo_target_fncsdp') {
+            rememberLatest(context.targets, recordId, {
+                id: recordId,
+                code,
+                name,
+                organizationId: cleanId(snapshot.organizzazione_id)
+            });
+        }
+
+        if (table === 'controllo_target_fncsdp') {
+            rememberLatest(context.controls, recordId, {
+                id: recordId,
+                code,
+                name,
+                targetId: cleanId(snapshot.profilo_target_id)
+            });
+        }
+
+        if (table === 'assessment_fncsdp') {
+            rememberLatest(context.assessments, recordId, {
+                id: recordId,
+                code,
+                name,
+                targetId: cleanId(snapshot.profilo_target_id)
+            });
+        }
+
+        if (table === 'fncsdp_subcategory') {
+            rememberLatest(context.subcategories, recordId, {
+                id: recordId,
+                code,
+                name
+            });
+        }
+    });
+
+    state.fncsdp = context;
+}
+
+function getFncsdpReferences(row) {
+    const table = String(row?.tabella || '').trim().toLowerCase();
+    if (!FNCSDP_TABLES.has(table)) return null;
+
+    const snapshot = getAuditSnapshot(row);
+    const key = getAuditKey(row);
+    const rowId = cleanId(snapshot.id ?? row.record_id);
+    const context = state.fncsdp || {
+        targets: new Map(),
+        controls: new Map(),
+        assessments: new Map(),
+        subcategories: new Map()
+    };
+
+    let targetId = cleanId(snapshot.profilo_target_id ?? key.profilo_target_id);
+    let assessmentId = cleanId(snapshot.assessment_id ?? key.assessment_id);
+    let controlId = cleanId(snapshot.controllo_target_id ?? key.controllo_target_id);
+    let subcategoryId = cleanId(snapshot.subcategory_id ?? key.subcategory_id);
+
+    if (table === 'profilo_target_fncsdp') targetId = rowId;
+    if (table === 'assessment_fncsdp') assessmentId = rowId;
+    if (table === 'controllo_target_fncsdp') controlId = rowId;
+    if (table === 'fncsdp_subcategory') subcategoryId = rowId;
+
+    const assessment = context.assessments.get(assessmentId);
+    const control = context.controls.get(controlId);
+    const subcategory = context.subcategories.get(subcategoryId);
+
+    if (!targetId) targetId = assessment?.targetId || control?.targetId || '';
+    const target = context.targets.get(targetId);
+
+    const rawCode = String(snapshot.codice ?? row.codice_record ?? '').trim();
+    const rawName = String(snapshot.nome ?? row.nome_record ?? snapshot.descrizione ?? '').trim();
+
+    let displayRecord = String(readFirst(row, ['record_visualizzato', 'nome_record', 'codice_record', 'record_id'], 'N/D'));
+
+    if (table === 'profilo_target_fncsdp') {
+        displayRecord = [target?.code || rawCode, target?.name || rawName].filter(Boolean).join(' · ') || displayRecord;
+    } else if (table === 'assessment_fncsdp') {
+        displayRecord = [assessment?.code || rawCode, assessment?.name || rawName].filter(Boolean).join(' · ') || displayRecord;
+    } else if (table === 'controllo_target_fncsdp') {
+        displayRecord = [control?.code || rawCode, control?.name || rawName, target?.code].filter(Boolean).join(' · ') || displayRecord;
+    } else if (table === 'misura_controllo_fncsdp') {
+        displayRecord = ['Misura', control?.code, assessment?.code].filter(Boolean).join(' · ') || displayRecord;
+    } else if (table === 'controllo_target_subcategory_fncsdp') {
+        displayRecord = ['Mapping', control?.code, subcategory?.code].filter(Boolean).join(' · ') || displayRecord;
+    } else if (table === 'fncsdp_subcategory') {
+        displayRecord = [subcategory?.code || rawCode, subcategory?.name || rawName].filter(Boolean).join(' · ') || displayRecord;
+    }
+
+    return {
+        table,
+        displayRecord,
+        targetCode: target?.code || '',
+        targetName: target?.name || '',
+        assessmentCode: assessment?.code || '',
+        assessmentName: assessment?.name || '',
+        controlCode: control?.code || '',
+        controlName: control?.name || '',
+        subcategoryCode: subcategory?.code || '',
+        subcategoryName: subcategory?.name || ''
+    };
+}
+
+function serializeForSearch(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+}
+
 function formatTimestamp(value) {
     return formatRomeDateTime(value, 'N/D');
 }
@@ -69,11 +251,13 @@ function getTable(row) {
 }
 
 function getEntity(row) {
+    const table = String(readFirst(row, ['tabella'], '')).trim().toLowerCase();
+    if (FNCSDP_TABLES.has(table)) return 'FNCSDP';
+
     const explicit = String(readFirst(row, ['tipo_entita'], '')).trim().toUpperCase();
     if (Object.prototype.hasOwnProperty.call(ENTITY_LABELS, explicit)) return explicit;
 
     const operation = getOperation(row);
-    const table = String(readFirst(row, ['tabella'], '')).trim().toLowerCase();
 
     if (['LOGIN', 'LOGOUT', 'MFA_VERIFICATA'].includes(operation) || table === 'accesso_database') {
         return 'ACCESSO';
@@ -110,6 +294,8 @@ function formatOperation(value) {
 }
 
 function getRecord(row) {
+    const fncsdp = getFncsdpReferences(row);
+    if (fncsdp?.displayRecord) return fncsdp.displayRecord;
     return String(readFirst(row, ['record_visualizzato', 'nome_record', 'codice_record', 'record_id'], 'N/D'));
 }
 
@@ -118,6 +304,7 @@ function getUser(row) {
 }
 
 function getSearchText(row) {
+    const fncsdp = getFncsdpReferences(row);
     return normalize([
         row.testo_ricerca,
         getOperation(row),
@@ -127,6 +314,22 @@ function getSearchText(row) {
         formatEntity(getEntity(row)),
         getRecord(row),
         getUser(row),
+        row.record_id,
+        row.codice_record,
+        row.nome_record,
+        serializeForSearch(row.chiave_record),
+        serializeForSearch(row.valore_precedente_jsonb),
+        serializeForSearch(row.valore_nuovo_jsonb),
+        serializeForSearch(row.payload_precedente),
+        serializeForSearch(row.payload_nuovo),
+        fncsdp?.targetCode,
+        fncsdp?.targetName,
+        fncsdp?.assessmentCode,
+        fncsdp?.assessmentName,
+        fncsdp?.controlCode,
+        fncsdp?.controlName,
+        fncsdp?.subcategoryCode,
+        fncsdp?.subcategoryName,
         row.asset_collegati,
         row.servizi_collegati,
         row.fornitori_collegati
@@ -181,7 +384,7 @@ function populateFilters() {
     populateSelect('audit-filter-table', state.rows.map(getTable), 'Tutte le tabelle');
     populateSelect(
         'audit-filter-entity',
-        ['ENTITA', 'RELAZIONE', 'GERARCHIA', 'ACCESSO'],
+        ['ENTITA', 'RELAZIONE', 'GERARCHIA', 'FNCSDP', 'ACCESSO'],
         'Tutte le entità',
         formatEntity
     );
@@ -274,6 +477,7 @@ function openDetail(row) {
     const next = document.getElementById('audit-detail-after');
     if (!dialog || !overview || !previous || !next) return;
 
+    const fncsdp = getFncsdpReferences(row);
     if (subtitle) subtitle.textContent = `${formatOperation(getOperation(row))} · ${getRecord(row)}`;
     overview.innerHTML = `
         <dl class="asset-detail-grid">
@@ -281,6 +485,10 @@ function openDetail(row) {
             ${detailField('Tabella', getTable(row))}
             ${detailField(t('Entità'), formatEntity(getEntity(row)))}
             ${detailField('Record', getRecord(row))}
+            ${fncsdp?.targetCode ? detailField('Profilo Target', `${fncsdp.targetCode}${fncsdp.targetName ? ` · ${fncsdp.targetName}` : ''}`) : ''}
+            ${fncsdp?.assessmentCode ? detailField('Assessment', `${fncsdp.assessmentCode}${fncsdp.assessmentName ? ` · ${fncsdp.assessmentName}` : ''}`) : ''}
+            ${fncsdp?.controlCode ? detailField('Controllo', `${fncsdp.controlCode}${fncsdp.controlName ? ` · ${fncsdp.controlName}` : ''}`) : ''}
+            ${fncsdp?.subcategoryCode ? detailField('Subcategory', `${fncsdp.subcategoryCode}${fncsdp.subcategoryName ? ` · ${fncsdp.subcategoryName}` : ''}`) : ''}
             ${detailField('Utente', getUser(row))}
             ${detailField('AAL', readFirst(row, ['livello_autenticazione'], 'N/D'))}
             ${detailField('Ruolo JWT', readFirst(row, ['ruolo_jwt'], 'N/D'))}
@@ -435,6 +643,7 @@ export async function loadAndRenderAuditLog() {
 
     try {
         state.rows = await fetchAuditLogs(1000);
+        buildFncsdpContext(state.rows);
         state.page = 1;
         populateFilters();
         renderRows();

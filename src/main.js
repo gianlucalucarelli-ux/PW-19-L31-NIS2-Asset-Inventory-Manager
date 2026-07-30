@@ -13,7 +13,7 @@ import {
     setAuthBusy,
     setAuthError,
     getFilteredInventoryExportSnapshot
-} from './ui.js?build=20260730-f6';
+} from './ui.js?build=20260730-f7';
 import {
     initializeRouter,
     navigateTo,
