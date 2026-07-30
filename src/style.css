@@ -4300,7 +4300,7 @@ html {
 
 
 /* ===============================================================================================================
-   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f1
+   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f4
    =============================================================================================================== */
 
 .assessment-header {
@@ -4319,39 +4319,50 @@ html {
 }
 
 .assessment-method-badge {
-    display: inline-flex;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, auto));
     align-items: center;
     width: fit-content;
-    margin-bottom: 0.45rem;
-    padding: 0.3rem 0.65rem;
+    max-width: 100%;
+    overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
     border-radius: 999px;
     color: var(--primary);
     background: color-mix(in srgb, var(--primary) 9%, transparent);
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 850;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.035em;
     text-transform: uppercase;
+}
+
+.assessment-method-badge span {
+    padding: 0.55rem 0.75rem;
+    white-space: nowrap;
+}
+
+.assessment-method-badge span + span {
+    border-left: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
 }
 
 .assessment-grid {
     display: grid;
-    grid-template-columns: minmax(17rem, 0.85fr) minmax(0, 2.15fr);
+    grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr);
     gap: 1rem;
     align-items: start;
 }
 
 .assessment-panel {
     min-width: 0;
-    padding: 1rem;
+    padding: 1.15rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--bg-card);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 
 .assessment-panel--profiles {
-    position: sticky;
-    top: 1rem;
+    grid-column: 1 / -1;
+    position: static;
 }
 
 .assessment-panel--wide {
@@ -4363,7 +4374,7 @@ html {
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.95rem;
 }
 
 .assessment-panel .compact-header h3,
@@ -4374,6 +4385,11 @@ html {
 .assessment-panel .compact-header p {
     margin-top: 0.25rem;
     color: var(--text-low);
+}
+
+.assessment-panel--profiles .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
 }
 
 .assessment-metadata {
@@ -4472,17 +4488,79 @@ html {
 }
 
 .assessment-dialog {
-    width: min(46rem, calc(100vw - 2rem));
+    width: min(48rem, calc(100vw - 2rem));
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    color: var(--text-high);
+    background: var(--bg-card);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
 }
 
 .assessment-dialog--wide {
-    width: min(66rem, calc(100vw - 2rem));
+    width: min(70rem, calc(100vw - 2rem));
+}
+
+.assessment-dialog::backdrop {
+    background: rgba(3, 10, 22, 0.78);
+    backdrop-filter: blur(4px);
+}
+
+.assessment-dialog .dialog-form {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    max-height: calc(100dvh - 2rem);
+    min-height: 0;
+    margin: 0;
+}
+
+.assessment-dialog .dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.assessment-dialog .dialog-header h3,
+.assessment-dialog .dialog-header p {
+    margin: 0;
+}
+
+.assessment-dialog .dialog-close {
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text-high);
+    background: var(--bg-soft);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.assessment-dialog > .dialog-form > .section-intro {
+    margin: 0;
+    padding: 0.85rem 1.25rem 0;
+    color: var(--text-low);
 }
 
 .assessment-dialog .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem;
+    min-height: 0;
+    padding: 1rem 1.25rem 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .assessment-dialog .form-field--wide {
@@ -4492,6 +4570,73 @@ html {
 .assessment-dialog textarea {
     width: 100%;
     resize: vertical;
+}
+
+.assessment-dialog .dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.7rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.assessment-confirmation {
+    min-height: 0;
+    padding: 1rem 1.25rem 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.assessment-confirmation__heading h4,
+.assessment-confirmation__heading p {
+    margin: 0;
+}
+
+.assessment-confirmation__heading h4 {
+    margin-top: 0.2rem;
+    font-size: 1.1rem;
+}
+
+.assessment-confirmation__heading > p:last-child {
+    margin-top: 0.35rem;
+    color: var(--text-low);
+}
+
+.assessment-confirmation-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+}
+
+.assessment-confirmation-grid > div {
+    min-width: 0;
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.assessment-confirmation-grid__wide {
+    grid-column: 1 / -1;
+}
+
+.assessment-confirmation-grid dt {
+    color: var(--text-low);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.assessment-confirmation-grid dd {
+    margin: 0.3rem 0 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    font-weight: 700;
+    line-height: 1.45;
 }
 
 #assessment-status {
@@ -4504,8 +4649,9 @@ html {
         grid-template-columns: 1fr;
     }
 
-    .assessment-panel--profiles {
-        position: static;
+    .assessment-panel--profiles,
+    .assessment-panel--wide {
+        grid-column: auto;
     }
 
     .assessment-kpi-grid {
@@ -4520,17 +4666,276 @@ html {
     }
 
     .assessment-header .button-row,
-    .assessment-header .button-row > button {
+    .assessment-header .button-row > button,
+    .assessment-panel .compact-header .button-row,
+    .assessment-panel .compact-header .button-row > button {
         width: 100%;
+    }
+
+    .assessment-method-badge {
+        width: 100%;
+        grid-template-columns: 1fr;
+        border-radius: var(--radius-md);
+    }
+
+    .assessment-method-badge span {
+        white-space: normal;
+    }
+
+    .assessment-method-badge span + span {
+        border-top: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+        border-left: 0;
     }
 
     .assessment-metadata,
     .assessment-kpi-grid,
-    .assessment-dialog .form-grid {
+    .assessment-dialog .form-grid,
+    .assessment-confirmation-grid {
         grid-template-columns: 1fr;
+    }
+
+    .assessment-confirmation-grid__wide {
+        grid-column: auto;
+    }
+
+    .assessment-dialog,
+    .assessment-dialog--wide {
+        width: calc(100vw - 0.75rem);
+        max-height: calc(100dvh - 0.75rem);
+        border-radius: var(--radius-md);
+    }
+
+    .assessment-dialog .dialog-form {
+        max-height: calc(100dvh - 0.75rem);
+    }
+
+    .assessment-dialog .dialog-header,
+    .assessment-dialog .form-grid,
+    .assessment-confirmation,
+    .assessment-dialog .dialog-actions {
+        padding-right: 0.9rem;
+        padding-left: 0.9rem;
+    }
+
+    .assessment-dialog .dialog-actions > button {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}
+
+@media (max-height: 720px) {
+    .assessment-dialog,
+    .assessment-dialog--wide,
+    .assessment-dialog .dialog-form {
+        max-height: calc(100dvh - 0.5rem);
+    }
+
+    .assessment-dialog .dialog-header {
+        padding-top: 0.8rem;
+        padding-bottom: 0.8rem;
+    }
+
+    .assessment-dialog > .dialog-form > .section-intro {
+        padding-top: 0.55rem;
+    }
+
+    .assessment-dialog .form-grid,
+    .assessment-confirmation {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+    }
+
+    .assessment-dialog .dialog-actions {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
     }
 }
 
 /* Build applicativa */
-.brand__descriptor::after { content: " · Build 20260730-f1"; }
-.site-footer p::after { content: " · Build 20260730-f1"; }
+.brand__descriptor::after { content: " · Build 20260730-f4"; }
+.site-footer p::after { content: " · Build 20260730-f4"; }
+
+/* ===============================================================================================================
+   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f4
+   =============================================================================================================== */
+
+.assessment-workflow {
+    display: grid;
+    gap: 0.8rem;
+    margin: 0 0 1rem;
+}
+
+.assessment-workflow ol {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.assessment-workflow li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.6rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-low);
+    background: var(--bg-soft);
+}
+
+.assessment-workflow li > span {
+    display: grid;
+    place-items: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+.assessment-workflow li > strong {
+    min-width: 0;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.assessment-workflow li.is-active {
+    border-color: var(--primary);
+    color: var(--text-high);
+    background: color-mix(in srgb, var(--primary) 13%, var(--bg-card));
+}
+
+.assessment-workflow li.is-active > span {
+    border-color: var(--primary);
+    color: var(--primary-contrast);
+    background: var(--primary);
+}
+
+.assessment-workflow li.is-done {
+    border-color: color-mix(in srgb, var(--success) 52%, var(--border));
+    color: var(--text-high);
+}
+
+.assessment-workflow li.is-done > span {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.assessment-next-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 50%, var(--border));
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--primary) 8%, var(--bg-card));
+}
+
+.assessment-next-action > div {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.assessment-next-action span {
+    color: var(--primary);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.assessment-next-action strong {
+    line-height: 1.35;
+}
+
+.assessment-next-action button {
+    flex: 0 0 auto;
+}
+
+.assessment-control-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.assessment-control-summary li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: start;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.assessment-control-summary strong {
+    color: var(--primary);
+    font-size: 0.78rem;
+}
+
+.assessment-control-summary span {
+    color: var(--text-low);
+    font-size: 0.78rem;
+    line-height: 1.25;
+}
+
+.assessment-dialog-progress {
+    margin: 0.35rem 0 0;
+    color: var(--primary);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.assessment-panel .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.55rem;
+}
+
+@media (max-width: 1280px) {
+    .assessment-workflow ol {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .assessment-workflow ol,
+    .assessment-control-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .assessment-next-action {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .assessment-next-action button {
+        width: 100%;
+    }
+}
+
+
+/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f4 */
+.form-help {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--text-low);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.assessment-workflow li strong {
+    overflow-wrap: anywhere;
+}

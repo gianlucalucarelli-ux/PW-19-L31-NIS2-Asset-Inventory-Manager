@@ -15,8 +15,8 @@ import {
     fetchAssessmentEvaluation,
     updateAssessmentMeasure,
     completeAssessment
-} from './assessmentService.js?build=20260730-f1';
-import { exportWorkbookToExcel } from './entitySpreadsheet.js?build=20260730-f1';
+} from './assessmentService.js?build=20260730-f4';
+import { exportWorkbookToExcel } from './entitySpreadsheet.js?build=20260730-f4';
 import { formatRomeDateTime } from './dateTime.js?build=20260726-d3';
 
 let initialized = false;
@@ -27,6 +27,16 @@ let assessments = [];
 let evaluation = [];
 let selectedTargetId = null;
 let selectedAssessmentId = null;
+let lastExportedAssessmentId = null;
+
+const FNCSDP_CONTROLS = [
+    { code: 'ID.AM-1', label: 'Sistemi e apparati fisici' },
+    { code: 'ID.AM-2', label: 'Piattaforme e applicazioni software' },
+    { code: 'ID.AM-3', label: 'Flussi di dati e comunicazioni' },
+    { code: 'ID.AM-4', label: 'Sistemi informativi esterni' },
+    { code: 'ID.AM-5', label: 'Classificazione e prioritizzazione delle risorse' },
+    { code: 'ID.AM-6', label: 'Ruoli e responsabilità cybersecurity' }
+];
 
 function escapeHtml(value) {
     const element = document.createElement('div');
@@ -98,12 +108,159 @@ function percentage(value, fallback = '—') {
     return `${Math.round(normalized * 100)}%`;
 }
 
+function nis2ClassificationLabel(value) {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    const labels = {
+        ESSENZIALE: 'Soggetto essenziale',
+        IMPORTANTE: 'Soggetto importante',
+        DA_CLASSIFICARE: 'Classificazione da completare'
+    };
+    return labels[normalized] || 'Classificazione NIS2 non indicata';
+}
+
+function organizationReference(organizationId) {
+    return references.organizzazioni.find((item) => Number(item.id) === Number(organizationId)) || null;
+}
+
 function selectedTarget() {
     return targets.find((item) => Number(item.profilo_target_id) === Number(selectedTargetId)) || null;
 }
 
 function selectedAssessment() {
     return assessments.find((item) => Number(item.assessment_id) === Number(selectedAssessmentId)) || null;
+}
+
+function assessmentProgress(assessment = selectedAssessment()) {
+    const value = Number(assessment?.avanzamento ?? 0);
+    return Number.isFinite(value) ? value : 0;
+}
+
+function groupedMeasures() {
+    return groupMeasures(evaluation);
+}
+
+function isMeasureComplete(measure) {
+    const measured = measure?.copertura_attuale !== null && measure?.copertura_attuale !== undefined;
+    return measured && (Number(measure.copertura_attuale) === 0 || measure.livello_maturita !== null);
+}
+
+function nextIncompleteMeasure(afterMeasureId = null) {
+    const measures = groupedMeasures();
+    if (measures.length === 0) return null;
+
+    const incomplete = measures.filter((measure) => !isMeasureComplete(measure));
+    if (incomplete.length === 0) return null;
+    if (!afterMeasureId) return incomplete[0];
+
+    const currentIndex = measures.findIndex((measure) => Number(measure.misura_id) === Number(afterMeasureId));
+    const following = measures.slice(currentIndex + 1).find((measure) => !isMeasureComplete(measure));
+    return following || incomplete[0];
+}
+
+function scrollToPanel(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function workflowState() {
+    const target = selectedTarget();
+    const assessment = selectedAssessment();
+    const approved = target?.stato === 'APPROVATO';
+    const completed = assessment?.stato === 'COMPLETATO';
+    const progress = assessmentProgress(assessment);
+
+    if (!target) {
+        return { step: 1, action: 'new-target', label: 'Crea Profilo Target', text: 'Inizia scegliendo il soggetto NIS2 e confermando il perimetro.' };
+    }
+    if (!approved) {
+        return { step: 2, action: 'save-approve', label: 'Salva e approva il Target', text: 'Controlla i sei requisiti ID.AM. La copertura Target è già impostata al 100%.' };
+    }
+    if (!assessment) {
+        return { step: 4, action: 'new-assessment', label: 'Crea il Profilo Attuale', text: 'Il Target è approvato. Avvia ora la misura della situazione reale.' };
+    }
+    if (!completed && progress < 1) {
+        const remaining = groupedMeasures().filter((measure) => !isMeasureComplete(measure)).length;
+        return { step: 5, action: 'next-measure', label: 'Compila il prossimo controllo', text: `Restano ${remaining} controlli da misurare. Il sistema apre automaticamente il primo incompleto.` };
+    }
+    if (!completed) {
+        return { step: 6, action: 'complete-assessment', label: 'Completa e calcola i risultati', text: 'Tutti i controlli sono compilati. Consolida il Profilo Attuale e rendi definitive le metriche.' };
+    }
+    if (Number(lastExportedAssessmentId) === Number(assessment.assessment_id)) {
+        return { step: 8, action: 'export', label: 'Esporta di nuovo XLSX', text: 'Percorso completato: Target, Profilo Attuale, risultati ed esportazione sono disponibili.' };
+    }
+    return { step: 7, action: 'export', label: 'Visualizza risultati ed esporta XLSX', text: 'Assessment completato: controlla score e gap, quindi genera il report definitivo.' };
+}
+
+function renderWorkflow() {
+    const state = workflowState();
+    document.querySelectorAll('[data-assessment-workflow-step]').forEach((element) => {
+        const step = Number(element.dataset.assessmentWorkflowStep);
+        element.classList.toggle('is-active', step === state.step);
+        element.classList.toggle('is-done', step < state.step || (state.step === 8 && step <= 7));
+        element.setAttribute('aria-current', step === state.step ? 'step' : 'false');
+    });
+
+    const text = document.getElementById('assessment-next-action-text');
+    const button = document.getElementById('assessment-next-action');
+    if (text) text.textContent = state.text;
+    if (button) {
+        button.dataset.action = state.action;
+        button.textContent = state.label;
+    }
+}
+
+function readTargetFormPayload() {
+    const organizationSelect = document.getElementById('assessment-target-organization');
+    const selectedOption = organizationSelect?.options?.[organizationSelect.selectedIndex] || null;
+    return {
+        organizzazione_id: organizationSelect?.value,
+        organizzazione_nome: selectedOption?.dataset?.organizationName || selectedOption?.textContent?.trim() || 'N/D',
+        organizzazione_classificazione: selectedOption?.dataset?.classification || '',
+        codice: document.getElementById('assessment-target-code')?.value?.trim(),
+        nome: document.getElementById('assessment-target-name')?.value?.trim(),
+        perimetro: document.getElementById('assessment-target-perimeter')?.value?.trim(),
+        descrizione: document.getElementById('assessment-target-notes')?.value?.trim()
+    };
+}
+
+function resetTargetConfirmation() {
+    const fields = document.getElementById('assessment-target-fields');
+    const confirmation = document.getElementById('assessment-target-confirmation');
+    const backButton = document.getElementById('assessment-target-back');
+    const submitButton = document.getElementById('assessment-target-submit');
+
+    fields?.classList.remove('is-hidden');
+    confirmation?.classList.add('is-hidden');
+    backButton?.classList.add('is-hidden');
+    if (submitButton) {
+        submitButton.dataset.confirmation = 'false';
+        submitButton.textContent = 'Verifica dati';
+    }
+}
+
+function showTargetConfirmation(payload) {
+    const values = {
+        'assessment-confirm-organization': payload.organizzazione_nome,
+        'assessment-confirm-classification': nis2ClassificationLabel(payload.organizzazione_classificazione),
+        'assessment-confirm-code': payload.codice,
+        'assessment-confirm-name': payload.nome,
+        'assessment-confirm-perimeter': payload.perimetro,
+        'assessment-confirm-description': payload.descrizione || 'Nessuna descrizione aggiuntiva'
+    };
+
+    Object.entries(values).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = nullableDisplay(value);
+    });
+
+    document.getElementById('assessment-target-fields')?.classList.add('is-hidden');
+    document.getElementById('assessment-target-confirmation')?.classList.remove('is-hidden');
+    document.getElementById('assessment-target-back')?.classList.remove('is-hidden');
+
+    const submitButton = document.getElementById('assessment-target-submit');
+    if (submitButton) {
+        submitButton.dataset.confirmation = 'true';
+        submitButton.textContent = 'Conferma e crea';
+    }
 }
 
 function groupControls(rows = []) {
@@ -155,16 +312,35 @@ function ensureMarkup() {
                 <p class="eyebrow">CYBERSECURITY ASSESSMENT</p>
                 <h2>Profili Target e Attuale FNCSDP</h2>
                 <p class="section-intro">
-                    Definisci la postura desiderata, misura copertura e maturità dei controlli e valuta il gap.
-                    Il modulo utilizza le Subcategory Asset Management ID.AM-1–ID.AM-6 coerenti con il perimetro del Project Work.
+                    Procedura guidata: definisci il Target, misura i sei controlli Asset Management e ottieni score, gap ed esportazione XLSX.
                 </p>
             </div>
             <div class="assessment-method-badge" aria-label="Fasi della metodologia">
-                <span>1 · Contestualizzazione</span>
-                <span>2 · Misura</span>
-                <span>3 · Valutazione</span>
+                <span>Contestualizzazione</span>
+                <span>Misura</span>
+                <span>Valutazione</span>
             </div>
         </div>
+
+        <nav class="assessment-workflow" aria-label="Percorso guidato Assessment FNCSDP">
+            <ol>
+                <li data-assessment-workflow-step="1"><span>1</span><strong>Crea Profilo Target</strong></li>
+                <li data-assessment-workflow-step="2"><span>2</span><strong>Controlla/modifica i 6 controlli</strong></li>
+                <li data-assessment-workflow-step="3"><span>3</span><strong>Approva il Target</strong></li>
+                <li data-assessment-workflow-step="4"><span>4</span><strong>Crea assessment</strong></li>
+                <li data-assessment-workflow-step="5"><span>5</span><strong>Compila il Profilo Attuale</strong></li>
+                <li data-assessment-workflow-step="6"><span>6</span><strong>Completa assessment</strong></li>
+                <li data-assessment-workflow-step="7"><span>7</span><strong>Visualizza score e gap</strong></li>
+                <li data-assessment-workflow-step="8"><span>8</span><strong>Esporta XLSX</strong></li>
+            </ol>
+            <div class="assessment-next-action">
+                <div>
+                    <span>Prossima azione consigliata</span>
+                    <strong id="assessment-next-action-text">Crea il primo Profilo Target.</strong>
+                </div>
+                <button id="assessment-next-action" type="button" class="btn-primary" data-action="new-target">Crea Profilo Target</button>
+            </div>
+        </nav>
 
         <div id="assessment-status" class="view-status" role="status" aria-live="polite"></div>
 
@@ -203,8 +379,9 @@ function ensureMarkup() {
                         <p id="assessment-target-description" class="section-intro"></p>
                     </div>
                     <div class="button-row">
-                        <button id="assessment-approve-target" type="button" class="btn-secondary">Approva Target</button>
-                        <button id="assessment-new-assessment" type="button" class="btn-primary">Avvia assessment</button>
+                        <button id="assessment-save-controls" type="button" class="btn-secondary">Salva modifiche</button>
+                        <button id="assessment-approve-target" type="button" class="btn-primary">Approva Target</button>
+                        <button id="assessment-new-assessment" type="button" class="btn-primary">Crea Profilo Attuale</button>
                     </div>
                 </div>
 
@@ -299,11 +476,15 @@ function ensureMarkup() {
                     </div>
                     <button type="button" class="dialog-close" data-assessment-dialog-close="assessment-target-dialog" aria-label="Chiudi">×</button>
                 </div>
-                <p class="section-intro">Il sistema genera sei controlli iniziali collegati alle Subcategory ID.AM-1–ID.AM-6.</p>
-                <div class="form-grid two-columns">
+                <p class="section-intro">Scegli un soggetto NIS2 già censito. Il sistema genera automaticamente i sei controlli iniziali, che potrai verificare prima dell’approvazione.</p>
+                <div id="assessment-target-fields" class="form-grid two-columns assessment-dialog-scroll">
+                    <ul class="assessment-control-summary form-field--wide">
+                        ${FNCSDP_CONTROLS.map((item) => `<li><strong>${item.code}</strong><span>${item.label}</span></li>`).join('')}
+                    </ul>
                     <div class="form-field">
                         <label for="assessment-target-organization">Soggetto NIS2</label>
                         <select id="assessment-target-organization" class="form-input" required></select>
+                        <small class="form-help">Elenco collegato all’anagrafica Azienda → Soggetti NIS2: non vengono create organizzazioni duplicate.</small>
                     </div>
                     <div class="form-field">
                         <label for="assessment-target-code">Codice</label>
@@ -322,9 +503,25 @@ function ensureMarkup() {
                         <textarea id="assessment-target-notes" class="form-input" rows="3" placeholder="Obiettivi e criteri del Profilo Target"></textarea>
                     </div>
                 </div>
+                <section id="assessment-target-confirmation" class="assessment-confirmation is-hidden" aria-live="polite">
+                    <div class="assessment-confirmation__heading">
+                        <p class="eyebrow">CONFERMA DATI</p>
+                        <h4>Verifica prima della registrazione</h4>
+                        <p>I sei controlli ID.AM saranno creati automaticamente dopo la conferma.</p>
+                    </div>
+                    <dl class="assessment-confirmation-grid">
+                        <div><dt>Soggetto NIS2</dt><dd id="assessment-confirm-organization"></dd></div>
+                        <div><dt>Classificazione NIS2</dt><dd id="assessment-confirm-classification"></dd></div>
+                        <div><dt>Codice</dt><dd id="assessment-confirm-code"></dd></div>
+                        <div class="assessment-confirmation-grid__wide"><dt>Nome</dt><dd id="assessment-confirm-name"></dd></div>
+                        <div class="assessment-confirmation-grid__wide"><dt>Perimetro</dt><dd id="assessment-confirm-perimeter"></dd></div>
+                        <div class="assessment-confirmation-grid__wide"><dt>Descrizione</dt><dd id="assessment-confirm-description"></dd></div>
+                    </dl>
+                </section>
                 <div class="dialog-actions">
                     <button type="button" class="btn-secondary" data-assessment-dialog-close="assessment-target-dialog">Annulla</button>
-                    <button id="assessment-target-submit" type="submit" class="btn-primary">Crea Profilo Target</button>
+                    <button id="assessment-target-back" type="button" class="btn-secondary is-hidden">Modifica dati</button>
+                    <button id="assessment-target-submit" type="submit" class="btn-primary" data-confirmation="false">Verifica dati</button>
                 </div>
             </form>
         </dialog>
@@ -334,7 +531,7 @@ function ensureMarkup() {
                 <div class="dialog-header">
                     <div>
                         <p class="eyebrow">MISURA</p>
-                        <h3>Nuovo assessment</h3>
+                        <h3>Nuovo assessment / Profilo Attuale</h3>
                     </div>
                     <button type="button" class="dialog-close" data-assessment-dialog-close="assessment-run-dialog" aria-label="Chiudi">×</button>
                 </div>
@@ -362,7 +559,7 @@ function ensureMarkup() {
                 </div>
                 <div class="dialog-actions">
                     <button type="button" class="btn-secondary" data-assessment-dialog-close="assessment-run-dialog">Annulla</button>
-                    <button id="assessment-run-submit" type="submit" class="btn-primary">Crea assessment</button>
+                    <button id="assessment-run-submit" type="submit" class="btn-primary">Crea e inizia compilazione</button>
                 </div>
             </form>
         </dialog>
@@ -375,6 +572,7 @@ function ensureMarkup() {
                         <p class="eyebrow">MISURA DEL CONTROLLO</p>
                         <h3 id="assessment-measure-title">Compila misura</h3>
                         <p id="assessment-measure-subcategory" class="section-intro"></p>
+                        <p id="assessment-measure-progress" class="assessment-dialog-progress"></p>
                     </div>
                     <button type="button" class="dialog-close" data-assessment-dialog-close="assessment-measure-dialog" aria-label="Chiudi">×</button>
                 </div>
@@ -425,7 +623,8 @@ function ensureMarkup() {
                 </div>
                 <div class="dialog-actions">
                     <button type="button" class="btn-secondary" data-assessment-dialog-close="assessment-measure-dialog">Annulla</button>
-                    <button id="assessment-measure-submit" type="submit" class="btn-primary">Salva misura</button>
+                    <button id="assessment-measure-submit" type="submit" class="btn-secondary" data-next="false">Salva</button>
+                    <button id="assessment-measure-submit-next" type="submit" class="btn-primary" data-next="true">Salva e prossimo</button>
                 </div>
             </form>
         </dialog>
@@ -435,12 +634,25 @@ function ensureMarkup() {
 function fillReferenceControls() {
     const organizationSelect = document.getElementById('assessment-target-organization');
     if (organizationSelect) {
-        organizationSelect.innerHTML = [
-            '<option value="">Seleziona il soggetto NIS2</option>',
-            ...references.organizzazioni.map((organization) => (
-                `<option value="${organization.id}">${escapeHtml(organization.codice_organizzazione)} · ${escapeHtml(organization.nome)}</option>`
-            ))
-        ].join('');
+        const previousValue = organizationSelect.value;
+        if (references.organizzazioni.length === 0) {
+            organizationSelect.innerHTML = '<option value="">Nessun soggetto NIS2 attivo disponibile</option>';
+            organizationSelect.disabled = true;
+        } else {
+            organizationSelect.disabled = false;
+            organizationSelect.innerHTML = [
+                '<option value="">Seleziona il soggetto NIS2</option>',
+                ...references.organizzazioni.map((organization) => (
+                    `<option value="${organization.id}" data-organization-name="${escapeHtml(`${organization.codice_organizzazione} · ${organization.nome}`)}" data-classification="${escapeHtml(organization.classificazione_nis2 || '')}">${escapeHtml(organization.codice_organizzazione)} · ${escapeHtml(organization.nome)} · ${escapeHtml(nis2ClassificationLabel(organization.classificazione_nis2))}</option>`
+                ))
+            ].join('');
+
+            if (previousValue && references.organizzazioni.some((item) => String(item.id) === String(previousValue))) {
+                organizationSelect.value = previousValue;
+            } else if (references.organizzazioni.length === 1) {
+                organizationSelect.value = String(references.organizzazioni[0].id);
+            }
+        }
     }
 
     const assessorSelect = document.getElementById('assessment-run-assessor');
@@ -472,7 +684,7 @@ function renderTargets() {
         return `
             <tr class="${active.trim()}">
                 <td class="cell-primary"><strong>${escapeHtml(target.codice)}</strong><small>v${escapeHtml(target.versione)}</small></td>
-                <td><strong>${escapeHtml(target.organizzazione_nome)}</strong><small>${escapeHtml(target.codice_organizzazione)}</small></td>
+                <td><strong>${escapeHtml(target.organizzazione_nome)}</strong><small>${escapeHtml(target.codice_organizzazione)} · ${escapeHtml(nis2ClassificationLabel(organizationReference(target.organizzazione_id)?.classificazione_nis2))}</small></td>
                 <td><span class="badge ${target.stato === 'APPROVATO' ? 'status-success' : 'status-warning'}">${escapeHtml(target.stato)}</span></td>
                 <td>${Number(target.numero_controlli || 0)}</td>
                 <td><button type="button" class="btn-table" data-assessment-target-open="${target.profilo_target_id}">Apri</button></td>
@@ -493,6 +705,7 @@ function renderTargetDetail() {
     const title = document.getElementById('assessment-target-detail-title');
     const description = document.getElementById('assessment-target-description');
     const metadata = document.getElementById('assessment-target-metadata');
+    const saveControlsButton = document.getElementById('assessment-save-controls');
     const approveButton = document.getElementById('assessment-approve-target');
     const newAssessmentButton = document.getElementById('assessment-new-assessment');
 
@@ -500,7 +713,8 @@ function renderTargetDetail() {
     if (description) description.textContent = target.descrizione || 'Profilo Target FNCSDP per il perimetro selezionato.';
     if (metadata) {
         metadata.innerHTML = `
-            <div><dt>Soggetto NIS2</dt><dd>${escapeHtml(target.organizzazione_nome)}</dd></div>
+            <div><dt>Soggetto NIS2</dt><dd>${escapeHtml(target.codice_organizzazione)} · ${escapeHtml(target.organizzazione_nome)}</dd></div>
+            <div><dt>Classificazione NIS2</dt><dd>${escapeHtml(nis2ClassificationLabel(organizationReference(target.organizzazione_id)?.classificazione_nis2))}</dd></div>
             <div><dt>Stato</dt><dd>${escapeHtml(target.stato)}</dd></div>
             <div><dt>Perimetro</dt><dd>${escapeHtml(target.perimetro)}</dd></div>
             <div><dt>Subcategory</dt><dd>${Number(target.numero_subcategory || 0)}</dd></div>
@@ -509,11 +723,19 @@ function renderTargetDetail() {
         `;
     }
 
+    if (saveControlsButton) {
+        saveControlsButton.disabled = target.stato === 'APPROVATO';
+        saveControlsButton.classList.toggle('is-hidden', target.stato === 'APPROVATO');
+        saveControlsButton.textContent = 'Salva modifiche ai controlli';
+    }
     if (approveButton) {
         approveButton.disabled = target.stato === 'APPROVATO';
-        approveButton.textContent = target.stato === 'APPROVATO' ? 'Target approvato' : 'Approva Target';
+        approveButton.textContent = target.stato === 'APPROVATO' ? 'Target approvato' : 'Salva e approva Target';
     }
-    if (newAssessmentButton) newAssessmentButton.disabled = target.stato !== 'APPROVATO';
+    if (newAssessmentButton) {
+        newAssessmentButton.disabled = target.stato !== 'APPROVATO';
+        newAssessmentButton.textContent = target.stato === 'APPROVATO' ? 'Crea assessment / Profilo Attuale' : 'Disponibile dopo approvazione';
+    }
 
     const body = document.getElementById('assessment-control-list');
     if (!body) return;
@@ -527,7 +749,7 @@ function renderTargetDetail() {
     const readOnly = target.stato === 'APPROVATO';
     body.innerHTML = grouped.map((control) => `
         <tr data-control-row="${control.controllo_target_id}">
-            <td class="cell-primary"><strong>${escapeHtml(control.codice)}</strong><small>${escapeHtml(control.nome)}</small></td>
+            <td class="cell-primary"><strong>${escapeHtml(control.codice)}</strong><small>${escapeHtml(FNCSDP_CONTROLS.find((item) => item.code === control.subcategories[0]?.codice)?.label || control.nome)}</small></td>
             <td>${control.subcategories.map((item) => `<span class="assessment-subcategory" title="${escapeHtml(item.descrizione)}">${escapeHtml(item.codice)} · peso ${String(item.peso).replace('.', ',')}</span>`).join('')}</td>
             <td><textarea class="form-input assessment-inline-text" data-control-description="${control.controllo_target_id}" rows="3" ${readOnly ? 'disabled' : ''}>${escapeHtml(control.descrizione)}</textarea></td>
             <td>
@@ -576,11 +798,19 @@ function renderCurrentProfile() {
     if (description) {
         description.textContent = `${assessment.codice} · ${assessment.nome} · ${assessment.data_assessment}`;
     }
+    const progress = assessmentProgress(assessment);
     if (completeButton) {
-        completeButton.disabled = assessment.stato === 'COMPLETATO';
-        completeButton.textContent = assessment.stato === 'COMPLETATO' ? 'Assessment completato' : 'Completa assessment';
+        completeButton.disabled = assessment.stato === 'COMPLETATO' || progress < 1;
+        completeButton.textContent = assessment.stato === 'COMPLETATO'
+            ? 'Assessment completato'
+            : progress < 1
+                ? `Completa dopo il 100% (${percentage(progress, '0%')})`
+                : 'Completa e calcola risultati';
     }
-    if (exportButton) exportButton.disabled = evaluation.length === 0;
+    if (exportButton) {
+        exportButton.disabled = assessment.stato !== 'COMPLETATO' || evaluation.length === 0;
+        exportButton.textContent = assessment.stato === 'COMPLETATO' ? 'Esporta XLSX' : 'Esporta dopo completamento';
+    }
 
     const values = {
         'assessment-kpi-progress': percentage(assessment.avanzamento, '0%'),
@@ -604,8 +834,7 @@ function renderCurrentProfile() {
     }
 
     body.innerHTML = measures.map((measure) => {
-        const measured = measure.copertura_attuale !== null && measure.copertura_attuale !== undefined;
-        const complete = measured && (Number(measure.copertura_attuale) === 0 || measure.livello_maturita !== null);
+        const complete = isMeasureComplete(measure);
         return `
             <tr>
                 <td class="cell-primary"><strong>${escapeHtml(measure.controllo_codice)}</strong><small>${escapeHtml(measure.controllo_nome)}</small></td>
@@ -628,6 +857,7 @@ async function loadTargets(preferredTargetId = null) {
         selectedTargetId = null;
     }
     renderTargets();
+    renderWorkflow();
 }
 
 async function loadTargetContext(targetId) {
@@ -639,12 +869,17 @@ async function loadTargetContext(targetId) {
         fetchTargetControls(selectedTargetId),
         fetchAssessments(selectedTargetId)
     ]);
+    if (assessments.length > 0) {
+        selectedAssessmentId = Number(assessments[0].assessment_id);
+        evaluation = await fetchAssessmentEvaluation(selectedAssessmentId);
+    }
     renderTargets();
     renderTargetDetail();
     renderAssessments();
     renderCurrentProfile();
     fillReferenceControls();
-    setStatus('Profilo Target caricato.');
+    renderWorkflow();
+    setStatus('Profilo Target caricato. Segui la prossima azione consigliata.');
 }
 
 async function loadAssessmentContext(assessmentId) {
@@ -654,18 +889,24 @@ async function loadAssessmentContext(assessmentId) {
     assessments = await fetchAssessments(selectedTargetId);
     renderAssessments();
     renderCurrentProfile();
-    setStatus('Profilo Attuale caricato.');
+    renderWorkflow();
+    setStatus('Profilo Attuale caricato. Segui la prossima azione consigliata.');
 }
 
 function openTargetDialog() {
     const form = document.getElementById('assessment-target-form');
     form?.reset();
+    resetTargetConfirmation();
     const code = document.getElementById('assessment-target-code');
     if (code) {
         const next = targets.length + 1;
         code.value = `PT-${new Date().getFullYear()}-${String(next).padStart(2, '0')}`;
     }
     fillReferenceControls();
+    if (references.organizzazioni.length === 0) {
+        setStatus('Non è presente alcun soggetto NIS2 attivo. Crealo prima nel menu Azienda → Soggetti NIS2.', true);
+        return;
+    }
     document.getElementById('assessment-target-dialog')?.showModal();
 }
 
@@ -699,6 +940,10 @@ function openMeasureDialog(measureId) {
     document.getElementById('assessment-measure-subcategory').textContent = measure.subcategories
         .map((item) => `${item.codice} · ${item.descrizione}`)
         .join(' | ');
+    const measures = groupedMeasures();
+    const measureIndex = measures.findIndex((item) => Number(item.misura_id) === Number(measure.misura_id));
+    const progressElement = document.getElementById('assessment-measure-progress');
+    if (progressElement) progressElement.textContent = `Controllo ${measureIndex + 1} di ${measures.length} · ${measures.filter(isMeasureComplete).length} già completati`;
     document.getElementById('assessment-measure-answer').value = measure.risposta ?? '';
     document.getElementById('assessment-measure-coverage-notes').value = measure.note_copertura ?? '';
     document.getElementById('assessment-measure-coverage').value = measure.copertura_attuale ?? '';
@@ -722,7 +967,9 @@ function openMeasureDialog(measureId) {
     });
 
     const submitButton = document.getElementById('assessment-measure-submit');
+    const submitNextButton = document.getElementById('assessment-measure-submit-next');
     if (submitButton) submitButton.classList.toggle('is-hidden', readOnly);
+    if (submitNextButton) submitNextButton.classList.toggle('is-hidden', readOnly);
     const closeButton = document.querySelector('[data-assessment-dialog-close="assessment-measure-dialog"].btn-secondary');
     if (closeButton) closeButton.textContent = readOnly ? 'Chiudi' : 'Annulla';
 
@@ -742,24 +989,29 @@ function synchronizeMaturityControl() {
 async function handleTargetSubmit(event) {
     event.preventDefault();
     const button = document.getElementById('assessment-target-submit');
+    const payload = readTargetFormPayload();
+
+    if (button?.dataset.confirmation !== 'true') {
+        showTargetConfirmation(payload);
+        return;
+    }
+
     setBusy(button, true, 'Creazione…');
     try {
-        const targetId = await createTargetProfile({
-            organizzazione_id: document.getElementById('assessment-target-organization')?.value,
-            codice: document.getElementById('assessment-target-code')?.value,
-            nome: document.getElementById('assessment-target-name')?.value,
-            perimetro: document.getElementById('assessment-target-perimeter')?.value,
-            descrizione: document.getElementById('assessment-target-notes')?.value
-        });
+        const targetId = await createTargetProfile(payload);
         document.getElementById('assessment-target-dialog')?.close();
+        resetTargetConfirmation();
         await loadTargets(targetId);
         await loadTargetContext(targetId);
-        setStatus('Profilo Target creato con i sei controlli ID.AM.');
+        renderWorkflow();
+        scrollToPanel('assessment-target-detail');
+        setStatus(`Profilo Target ${payload.codice} creato e collegato a ${payload.organizzazione_nome}. I sei controlli ID.AM sono pronti: verificali e approva il Target.`);
     } catch (error) {
         console.error('Errore creazione Profilo Target:', error);
         setStatus(formatError(error), true);
     } finally {
         setBusy(button, false);
+        if (button?.dataset.confirmation === 'true') button.textContent = 'Conferma e crea';
     }
 }
 
@@ -780,7 +1032,11 @@ async function handleAssessmentSubmit(event) {
         assessments = await fetchAssessments(selectedTargetId);
         renderAssessments();
         await loadAssessmentContext(assessmentId);
-        setStatus('Assessment creato. Sono state predisposte le misure dei controlli del Target.');
+        renderWorkflow();
+        scrollToPanel('assessment-current-detail');
+        setStatus('Profilo Attuale creato. Compila i sei controlli; il sistema passa automaticamente al successivo.');
+        const firstMeasure = nextIncompleteMeasure();
+        if (firstMeasure) openMeasureDialog(firstMeasure.misura_id);
     } catch (error) {
         console.error('Errore creazione assessment:', error);
         setStatus(formatError(error), true);
@@ -791,21 +1047,48 @@ async function handleAssessmentSubmit(event) {
 
 async function handleMeasureSubmit(event) {
     event.preventDefault();
-    const button = document.getElementById('assessment-measure-submit');
+    const button = event.submitter || document.getElementById('assessment-measure-submit-next');
+    const moveNext = button?.dataset.next === 'true';
+    const measureId = document.getElementById('assessment-measure-id')?.value;
+    const coverage = document.getElementById('assessment-measure-coverage')?.value ?? '';
+    const maturity = document.getElementById('assessment-measure-maturity')?.value ?? '';
+
+    if (coverage === '') {
+        setStatus('Seleziona il grado di copertura prima di salvare la misura.', true);
+        document.getElementById('assessment-measure-coverage')?.focus();
+        return;
+    }
+    if (coverage !== '0' && maturity === '') {
+        setStatus('Se la copertura è superiore a zero, indica anche il livello di maturità CMMI.', true);
+        document.getElementById('assessment-measure-maturity')?.focus();
+        return;
+    }
+
     setBusy(button, true, 'Salvataggio…');
     try {
-        await updateAssessmentMeasure(document.getElementById('assessment-measure-id')?.value, {
+        await updateAssessmentMeasure(measureId, {
             risposta: document.getElementById('assessment-measure-answer')?.value,
             note_copertura: document.getElementById('assessment-measure-coverage-notes')?.value,
-            copertura_attuale: document.getElementById('assessment-measure-coverage')?.value,
+            copertura_attuale: coverage,
             note_maturita: document.getElementById('assessment-measure-maturity-notes')?.value,
-            livello_maturita: document.getElementById('assessment-measure-maturity')?.value,
+            livello_maturita: maturity,
             evidenze: document.getElementById('assessment-measure-evidence')?.value,
             note: document.getElementById('assessment-measure-notes')?.value
         });
         document.getElementById('assessment-measure-dialog')?.close();
         await loadAssessmentContext(selectedAssessmentId);
-        setStatus('Misura salvata e metriche aggiornate.');
+
+        const nextMeasure = nextIncompleteMeasure(measureId);
+        if (moveNext && nextMeasure) {
+            setStatus('Misura salvata. Passaggio al prossimo controllo incompleto.');
+            openMeasureDialog(nextMeasure.misura_id);
+        } else if (!nextMeasure) {
+            setStatus('Tutti i sei controlli sono compilati. Ora completa l’assessment per consolidare score e gap.');
+            scrollToPanel('assessment-current-detail');
+        } else {
+            setStatus('Misura salvata e metriche aggiornate.');
+        }
+        renderWorkflow();
     } catch (error) {
         console.error('Errore salvataggio misura:', error);
         setStatus(formatError(error), true);
@@ -835,6 +1118,51 @@ async function saveControl(controlId, button) {
     }
 }
 
+async function saveAllControls(button = null, { silent = false } = {}) {
+    const target = selectedTarget();
+    if (!target || target.stato === 'APPROVATO') return 0;
+
+    const grouped = groupControls(controls);
+    const changed = grouped.filter((control) => {
+        const description = document.querySelector(`[data-control-description="${control.controllo_target_id}"]`)?.value?.trim() ?? '';
+        const coverage = Number(document.querySelector(`[data-control-coverage="${control.controllo_target_id}"]`)?.value);
+        return description !== String(control.descrizione ?? '').trim() || coverage !== Number(control.copertura_target);
+    });
+
+    if (changed.length === 0) {
+        if (!silent) setStatus('Nessuna modifica ai controlli da salvare.');
+        return 0;
+    }
+
+    setBusy(button, true, `Salvataggio ${changed.length} controlli…`);
+    try {
+        for (const control of changed) {
+            await updateTargetControl(control.controllo_target_id, {
+                nome: control.nome,
+                descrizione: document.querySelector(`[data-control-description="${control.controllo_target_id}"]`)?.value,
+                copertura_target: document.querySelector(`[data-control-coverage="${control.controllo_target_id}"]`)?.value
+            });
+        }
+        controls = await fetchTargetControls(selectedTargetId);
+        renderTargetDetail();
+        renderWorkflow();
+        if (!silent) setStatus(`${changed.length} controlli aggiornati correttamente.`);
+        return changed.length;
+    } finally {
+        setBusy(button, false);
+    }
+}
+
+async function saveAllControlsAndApprove(button) {
+    try {
+        await saveAllControls(button, { silent: true });
+        await approveCurrentTarget(button);
+    } catch (error) {
+        console.error('Errore salvataggio/approvazione Target:', error);
+        setStatus(formatError(error), true);
+    }
+}
+
 async function approveCurrentTarget(button) {
     const target = selectedTarget();
     if (!target || target.stato === 'APPROVATO') return;
@@ -845,7 +1173,9 @@ async function approveCurrentTarget(button) {
         await approveTargetProfile(selectedTargetId);
         await loadTargets(selectedTargetId);
         await loadTargetContext(selectedTargetId);
-        setStatus('Profilo Target approvato e reso immutabile.');
+        renderWorkflow();
+        setStatus('Profilo Target approvato e reso immutabile. Ora crea il Profilo Attuale.');
+        openAssessmentDialog();
     } catch (error) {
         console.error('Errore approvazione Target:', error);
         setStatus(formatError(error), true);
@@ -857,13 +1187,21 @@ async function approveCurrentTarget(button) {
 async function completeCurrentAssessment(button) {
     const assessment = selectedAssessment();
     if (!assessment || assessment.stato === 'COMPLETATO') return;
-    const confirmed = window.confirm('Completare l’assessment? Le misure diventeranno in sola lettura.');
+    if (assessmentProgress(assessment) < 1) {
+        setStatus('Completa prima tutti i sei controlli del Profilo Attuale.', true);
+        const nextMeasure = nextIncompleteMeasure();
+        if (nextMeasure) openMeasureDialog(nextMeasure.misura_id);
+        return;
+    }
+    const confirmed = window.confirm('Completare l’assessment? Le misure diventeranno in sola lettura e score/gap saranno consolidati.');
     if (!confirmed) return;
     setBusy(button, true, 'Completamento…');
     try {
         await completeAssessment(selectedAssessmentId);
         await loadAssessmentContext(selectedAssessmentId);
-        setStatus('Assessment completato e Profilo Attuale consolidato.');
+        renderWorkflow();
+        setStatus('Assessment completato. Score e gap sono consolidati; controlla i risultati e poi esporta il report XLSX.');
+        scrollToPanel('assessment-current-detail');
     } catch (error) {
         console.error('Errore completamento assessment:', error);
         setStatus(formatError(error), true);
@@ -876,6 +1214,10 @@ async function exportCurrentAssessment(button) {
     const assessment = selectedAssessment();
     const target = selectedTarget();
     if (!assessment || !target || evaluation.length === 0) return;
+    if (assessment.stato !== 'COMPLETATO') {
+        setStatus('Completa l’assessment prima di esportare il report definitivo.', true);
+        return;
+    }
     setBusy(button, true, 'Esportazione…');
 
     try {
@@ -885,6 +1227,7 @@ async function exportCurrentAssessment(button) {
             metadata: [
                 { label: 'Metodologia', value: 'Cybersecurity assessment FNCSDP - Profili Target e Attuale' },
                 { label: 'Soggetto NIS2', value: `${target.codice_organizzazione} · ${target.organizzazione_nome}` },
+                { label: 'Classificazione NIS2', value: nis2ClassificationLabel(organizationReference(target.organizzazione_id)?.classificazione_nis2) },
                 { label: 'Profilo Target', value: `${target.codice} · ${target.nome}` },
                 { label: 'Assessment', value: `${assessment.codice} · ${assessment.nome}` },
                 { label: 'Stato assessment', value: assessment.stato }
@@ -981,7 +1324,9 @@ async function exportCurrentAssessment(button) {
                 }
             ]
         });
-        setStatus('Assessment esportato in formato XLSX.');
+        lastExportedAssessmentId = assessment.assessment_id;
+        renderWorkflow();
+        setStatus('Assessment esportato in formato XLSX con Riepilogo, Profilo Target, Profilo Attuale, Mapping FNCSDP e Metadati.');
     } catch (error) {
         console.error('Errore esportazione assessment:', error);
         setStatus(formatError(error), true);
@@ -997,13 +1342,28 @@ function initializeEvents() {
     document.getElementById('assessment-new-target')?.addEventListener('click', openTargetDialog);
     document.getElementById('assessment-new-assessment')?.addEventListener('click', openAssessmentDialog);
     document.getElementById('assessment-target-form')?.addEventListener('submit', handleTargetSubmit);
+    document.getElementById('assessment-target-back')?.addEventListener('click', resetTargetConfirmation);
     document.getElementById('assessment-run-form')?.addEventListener('submit', handleAssessmentSubmit);
     document.getElementById('assessment-measure-form')?.addEventListener('submit', handleMeasureSubmit);
     document.getElementById('assessment-measure-coverage')?.addEventListener('change', synchronizeMaturityControl);
 
-    document.getElementById('assessment-approve-target')?.addEventListener('click', (event) => approveCurrentTarget(event.currentTarget));
+    document.getElementById('assessment-save-controls')?.addEventListener('click', (event) => saveAllControls(event.currentTarget));
+    document.getElementById('assessment-approve-target')?.addEventListener('click', (event) => saveAllControlsAndApprove(event.currentTarget));
     document.getElementById('assessment-complete')?.addEventListener('click', (event) => completeCurrentAssessment(event.currentTarget));
     document.getElementById('assessment-export')?.addEventListener('click', (event) => exportCurrentAssessment(event.currentTarget));
+    document.getElementById('assessment-next-action')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const action = button.dataset.action;
+        if (action === 'new-target') openTargetDialog();
+        if (action === 'save-approve') await saveAllControlsAndApprove(button);
+        if (action === 'new-assessment') openAssessmentDialog();
+        if (action === 'next-measure') {
+            const measure = nextIncompleteMeasure();
+            if (measure) openMeasureDialog(measure.misura_id);
+        }
+        if (action === 'complete-assessment') await completeCurrentAssessment(button);
+        if (action === 'export') await exportCurrentAssessment(button);
+    });
 
     document.getElementById('view-assessment-fncsdp')?.addEventListener('click', async (event) => {
         const targetOpen = event.target.closest('[data-assessment-target-open]');
@@ -1042,7 +1402,9 @@ function initializeEvents() {
 
         const closeControl = event.target.closest('[data-assessment-dialog-close]');
         if (closeControl) {
-            document.getElementById(closeControl.dataset.assessmentDialogClose)?.close();
+            const dialogId = closeControl.dataset.assessmentDialogClose;
+            document.getElementById(dialogId)?.close();
+            if (dialogId === 'assessment-target-dialog') resetTargetConfirmation();
         }
     });
 }
@@ -1059,6 +1421,7 @@ export async function loadAssessmentView() {
         ]);
         renderTargets();
         fillReferenceControls();
+        renderWorkflow();
 
         if (selectedTargetId && targets.some((item) => Number(item.profilo_target_id) === Number(selectedTargetId))) {
             await loadTargetContext(selectedTargetId);
@@ -1072,7 +1435,8 @@ export async function loadAssessmentView() {
             renderTargetDetail();
             renderAssessments();
             renderCurrentProfile();
-            setStatus(`${targets.length} Profili Target disponibili.`);
+            renderWorkflow();
+            setStatus(`${targets.length} Profili Target disponibili. Segui la prossima azione consigliata.`);
         }
     } catch (error) {
         console.error('Errore caricamento Assessment FNCSDP:', error);

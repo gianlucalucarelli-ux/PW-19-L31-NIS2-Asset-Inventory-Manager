@@ -57,7 +57,7 @@ export async function fetchAssessmentReferences() {
     const [organizationsResult, peopleResult] = await Promise.all([
         supabase
             .from('organizzazione')
-            .select('id,codice_organizzazione,nome')
+            .select('id,codice_organizzazione,nome,classificazione_nis2')
             .eq('attiva', true)
             .order('nome', { ascending: true }),
         supabase
