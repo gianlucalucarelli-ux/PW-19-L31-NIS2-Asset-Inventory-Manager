@@ -16,6 +16,7 @@ import { loadSupplierView } from './supplierManagement.js?build=20260729-w1';
 import { t } from './i18n.js?build=20260728-p2';
 import { loadRelationshipBuilder } from './relationshipBuilder.js?build=20260727-n1';
 import { fetchRelationshipCoverage } from './relationshipService.js?build=20260727-m1';
+import { loadAssessmentView } from './assessmentManagement.js?build=20260730-f1';
 
 /**
  * Aggiorna il controllo del tema in modo coerente con il tema attualmente attivo.
@@ -226,6 +227,7 @@ const ROUTE_TO_VIEW = {
     'add-asset': 'add-asset',
     'supply-chain': 'supply-chain',
     'relationship-builder': 'relationship-builder',
+    'assessment-fncsdp': 'assessment-fncsdp',
     'audit-log': 'audit-log',
     'incidenti-aperti': 'incidenti',
     'incidenti-chiusi': 'incidenti',
@@ -314,6 +316,11 @@ const ROUTE_METADATA = {
         section: 'Relazioni',
         label: 'RELAZIONI',
         title: 'Costruzione dipendenze'
+    },
+    'assessment-fncsdp': {
+        section: 'Sicurezza e conformità',
+        label: 'SICUREZZA E CONFORMITÀ',
+        title: 'Assessment FNCSDP'
     },
     'audit-log': {
         section: 'Sicurezza e conformità',
@@ -535,6 +542,8 @@ export async function activateApplicationRoute(route) {
         await loadAndRenderSupplyChain();
     } else if (route === 'relationship-builder') {
         await loadRelationshipBuilder();
+    } else if (route === 'assessment-fncsdp') {
+        await loadAssessmentView();
     } else if (route === 'audit-log') {
         await loadAndRenderAuditLog();
     } else if (route === 'incidenti-aperti') {

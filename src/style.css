@@ -4284,16 +4284,253 @@ html {
    - Nessuna modifica al bootstrap JavaScript, all'autenticazione o alla struttura applicativa.
    =============================================================================================================== */
 .brand__descriptor::after {
-    content: " · Build 20260729-u1";
+    content: "";
     color: var(--text-muted);
     font-weight: 600;
     white-space: nowrap;
 }
 
 .site-footer p::after {
-    content: " · Build 20260729-u1";
+    content: "";
     color: var(--text-muted);
     font-weight: 600;
     white-space: nowrap;
 }
 
+
+
+/* ===============================================================================================================
+   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f1
+   =============================================================================================================== */
+
+.assessment-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.assessment-header .button-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.65rem;
+}
+
+.assessment-method-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-bottom: 0.45rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+    border-radius: 999px;
+    color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 9%, transparent);
+    font-size: 0.76rem;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.assessment-grid {
+    display: grid;
+    grid-template-columns: minmax(17rem, 0.85fr) minmax(0, 2.15fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.assessment-panel {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+}
+
+.assessment-panel--profiles {
+    position: sticky;
+    top: 1rem;
+}
+
+.assessment-panel--wide {
+    grid-column: 1 / -1;
+}
+
+.assessment-panel .compact-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.assessment-panel .compact-header h3,
+.assessment-panel .compact-header p {
+    margin: 0;
+}
+
+.assessment-panel .compact-header p {
+    margin-top: 0.25rem;
+    color: var(--text-low);
+}
+
+.assessment-metadata {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin: 0.85rem 0 1rem;
+}
+
+.assessment-metadata > div {
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.assessment-metadata dt {
+    color: var(--text-low);
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.assessment-metadata dd {
+    margin: 0.25rem 0 0;
+    overflow-wrap: anywhere;
+    font-weight: 750;
+}
+
+.assessment-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.assessment-kpi {
+    min-width: 0;
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-soft);
+}
+
+.assessment-kpi span {
+    display: block;
+    min-height: 2.1rem;
+    color: var(--text-low);
+    font-size: 0.74rem;
+    font-weight: 800;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+
+.assessment-kpi strong {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--primary);
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.assessment-table td,
+.assessment-control-table td {
+    vertical-align: top;
+}
+
+.assessment-table .cell-primary,
+.assessment-control-table .cell-primary {
+    min-width: 12rem;
+}
+
+.assessment-inline-text {
+    width: 100%;
+    min-width: 15rem;
+    min-height: 5.4rem;
+    resize: vertical;
+}
+
+.assessment-subcategory {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 13rem;
+}
+
+.assessment-subcategory span {
+    display: block;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 0.45rem;
+    color: var(--text-low);
+    background: var(--bg-soft);
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
+
+.assessment-dialog {
+    width: min(46rem, calc(100vw - 2rem));
+}
+
+.assessment-dialog--wide {
+    width: min(66rem, calc(100vw - 2rem));
+}
+
+.assessment-dialog .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.assessment-dialog .form-field--wide {
+    grid-column: 1 / -1;
+}
+
+.assessment-dialog textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+#assessment-status {
+    min-height: 1.35rem;
+    margin: 0 0 0.85rem;
+}
+
+@media (max-width: 1050px) {
+    .assessment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .assessment-panel--profiles {
+        position: static;
+    }
+
+    .assessment-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .assessment-header,
+    .assessment-panel .compact-header {
+        flex-direction: column;
+    }
+
+    .assessment-header .button-row,
+    .assessment-header .button-row > button {
+        width: 100%;
+    }
+
+    .assessment-metadata,
+    .assessment-kpi-grid,
+    .assessment-dialog .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Build applicativa */
+.brand__descriptor::after { content: " · Build 20260730-f1"; }
+.site-footer p::after { content: " · Build 20260730-f1"; }

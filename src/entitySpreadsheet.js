@@ -202,3 +202,105 @@ export async function readFirstSheetRows(file, options = {}) {
     if (rows.length > maxRows) throw new Error(`Il file contiene ${rows.length} righe: il limite massimo è ${maxRows}.`);
     return rows;
 }
+
+/**
+ * Genera un unico file XLSX composto da più fogli coerenti.
+ * Utilizzato dal modulo Assessment FNCSDP per esportare riepilogo,
+ * Profilo Target, Profilo Attuale e mapping delle Subcategory.
+ */
+export async function exportWorkbookToExcel({
+    filename,
+    sheets,
+    metadata = []
+}) {
+    if (!Array.isArray(sheets) || sheets.length === 0) {
+        throw new Error('Nessun foglio disponibile per l’esportazione.');
+    }
+    assertExcelJs();
+
+    const workbook = new window.ExcelJS.Workbook();
+    workbook.creator = 'NIS2 Asset Inventory Manager';
+    workbook.lastModifiedBy = 'NIS2 Asset Inventory Manager';
+    workbook.created = new Date();
+
+    sheets.forEach((definition, sheetIndex) => {
+        const columns = Array.isArray(definition.columns) ? definition.columns : [];
+        const rows = Array.isArray(definition.rows) ? definition.rows : [];
+        if (columns.length === 0) {
+            throw new Error(`Il foglio ${definition.name || sheetIndex + 1} non contiene colonne.`);
+        }
+
+        const rawName = String(definition.name || `Foglio ${sheetIndex + 1}`)
+            .replace(/[\\/?*\[\]:]/g, ' ')
+            .trim();
+        const sheetName = (rawName || `Foglio ${sheetIndex + 1}`).slice(0, 31);
+        const worksheet = workbook.addWorksheet(sheetName, {
+            views: definition.freezeHeader === false
+                ? []
+                : [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }],
+            properties: { defaultRowHeight: 21 }
+        });
+
+        worksheet.columns = columns;
+        rows.forEach((row) => worksheet.addRow(row));
+
+        const header = worksheet.getRow(1);
+        header.height = 30;
+        header.eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = { bottom: { style: 'medium', color: { argb: 'FF0B5F59' } } };
+        });
+
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return;
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFD8E2E5' } } };
+                if (rowNumber % 2 === 0) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F8F8' } };
+                }
+            });
+        });
+
+        if (definition.autoFilter !== false && rows.length > 0) {
+            const endColumn = worksheet.getColumn(columns.length).letter;
+            worksheet.autoFilter = { from: 'A1', to: `${endColumn}${worksheet.rowCount}` };
+        }
+    });
+
+    if (metadata.length > 0) {
+        const metadataSheet = workbook.addWorksheet('Metadati');
+        metadataSheet.columns = [
+            { header: 'Voce', key: 'label', width: 34 },
+            { header: 'Valore', key: 'value', width: 80 }
+        ];
+        metadataSheet.addRows([
+            {
+                label: 'Data esportazione',
+                value: new Intl.DateTimeFormat('it-IT', {
+                    dateStyle: 'medium',
+                    timeStyle: 'medium',
+                    timeZone: 'Europe/Rome'
+                }).format(new Date())
+            },
+            ...metadata
+        ]);
+        metadataSheet.getRow(1).eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        metadataSheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return;
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: 'top', wrapText: true };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+            });
+        });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    downloadBuffer(buffer, `${safeFileSegment(filename, 'assessment_fncsdp')}_${dateStamp()}.xlsx`);
+}
