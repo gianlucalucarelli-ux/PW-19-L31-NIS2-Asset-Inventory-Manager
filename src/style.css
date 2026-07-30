@@ -1512,6 +1512,10 @@ tbody tr:last-child td {
     color: var(--text-low);
 }
 
+.info-panel--wide {
+    grid-column: 1 / -1;
+}
+
 /* ---------------------------------------------------------------------------------------------------------------
    DASHBOARD OPERATIVA
    --------------------------------------------------------------------------------------------------------------- */
@@ -4300,7 +4304,7 @@ html {
 
 
 /* ===============================================================================================================
-   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f7
+   MODULO ASSESSMENT FNCSDP - BUILD 20260730-f9
    =============================================================================================================== */
 
 .assessment-header {
@@ -4752,11 +4756,11 @@ html {
 }
 
 /* Build applicativa */
-.brand__descriptor::after { content: " · Build 20260730-f7"; }
-.site-footer p::after { content: " · Build 20260730-f7"; }
+.brand__descriptor::after { content: " · Build 20260730-f9"; }
+.site-footer p::after { content: " · Build 20260730-f9"; }
 
 /* ===============================================================================================================
-   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f7
+   PROCEDURA GUIDATA ASSESSMENT FNCSDP - BUILD 20260730-f9
    =============================================================================================================== */
 
 .assessment-workflow {
@@ -4927,7 +4931,7 @@ html {
 }
 
 
-/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f7 */
+/* Collegamento anagrafica Soggetti NIS2 - build 20260730-f9 */
 .form-help {
     display: block;
     margin-top: 0.35rem;
@@ -4941,7 +4945,7 @@ html {
 }
 
 /* ===============================================================================================================
-   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f7
+   LAYOUT FINALE TABELLE ASSESSMENT FNCSDP - BUILD 20260730-f9
    Migliora leggibilita senza modificare dati o flussi applicativi.
    =============================================================================================================== */
 
