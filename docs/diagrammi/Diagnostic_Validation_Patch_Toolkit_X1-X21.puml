@@ -1,0 +1,35 @@
+@startuml
+' =========================================================================
+' FILE: docs/diagrammi/Diagnostic_Validation_Patch_Toolkit_X1-X21.puml
+' TARGET ARCHITETTURALE: DIAGNOSTIC, VALIDATION & PATCH TOOLKIT X1-X21
+' DESCRIZIONE: Classificazione consolidata degli script diagnostici
+' =========================================================================
+scale 1500 width
+title <size:21>DIAGNOSTIC, VALIDATION & PATCH TOOLKIT (X1-X21)</size>\n<size:13><color:#607D8B>Controlli progressivi sul database live, readiness, sicurezza, accessi e Assessment FNCSDP</color></size>
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundcorner 18
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam ArrowColor #78909C
+skinparam ArrowThickness 1.4
+skinparam linetype ortho
+skinparam rectangle { BorderColor #607D8B FontColor #263E52 FontSize 13 }
+top to bottom direction
+rectangle "<size:15>ISPEZIONE STRUTTURALE E SICUREZZA</size>\n\nX1 schema e colonne\nX2 colonne delle viste\nX6 trigger e funzioni\nX7 vincoli\nX9 viste e privilegi\nX10 policy RLS e grant" as A #EAF2FB
+rectangle "<size:15>BONIFICA E PROTOTIPAZIONE CONTROLLATA</size>\n\nX3 allineamento servizi\nX4 dataset Supply Chain\nX5 prototipo audit JSON" as B #F7F1E5
+rectangle "<size:15>READINESS DEL MODELLO</size>\n\nX8 duplicati e organizzazioni\nX11-X12 readiness fornitori\nX13 Supply Chain multilivello\nX14 reporting\nX15 audit\nX16 archiviazione" as C #EEF6EE
+rectangle "<size:15>CHIUSURA STRUTTURALE</size>\n\nX17 verifica finale\nbackend superata" as D #F4ECF7
+rectangle "<size:15>ACCESSI E QUALITA</size>\n\nX18 AAL/MFA\nX19 dati e anomalie" as E #E8F5E9
+rectangle "<size:15>AUDIT DEGLI ACCESSI APPLICATIVI</size>\n\nX20 LOGIN, LOGOUT e MFA_VERIFICATA\nPrivilegi e coerenza Audit Log" as F #F8ECEC
+rectangle "<size:15>VALIDAZIONE ASSESSMENT FNCSDP</size>\n\nX21 36 tabelle e 11 viste\n3FN, RLS, trigger, mapping, misure, score e gap" as G #FFF0E3
+A -right-> B
+A -down-> C
+B -down-> D
+C -right-> D
+D -right-> E
+D -down-> F
+E -down-> G
+F -right-> G
+caption <size:11><color:#263E52>Esiti consolidati: X17 chiude il backend storico; X20 valida gli accessi applicativi; X21 certifica il modulo FNCSDP.</color></size>
+@enduml
