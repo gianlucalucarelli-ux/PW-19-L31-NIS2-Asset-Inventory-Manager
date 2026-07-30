@@ -12,22 +12,24 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <meta name="description" content="Applicazione web per soggetti NIS2, inventario, Supply Chain, incidenti, Audit Log e Assessment FNCSDP dei Profili Target e Attuale.">
     <title>NIS2 Asset Inventory Manager</title>
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1b31'/%3E%3Cpath d='M32 8 50 15v14c0 12-7.8 22.7-18 27-10.2-4.3-18-15-18-27V15z' fill='%2338bdf8'/%3E%3Cpath d='M32 17v29c6.4-3.7 10-10.3 10-17V21z' fill='%23e0f2fe'/%3E%3C/svg%3E">
+    <link rel="icon" href="assets/branding/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/branding/favicon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/branding/apple-touch-icon.png">
 
-    <link rel="stylesheet" href="src/style.css?build=20260730-f9">
+    <link rel="stylesheet" href="src/style.css?build=20260730-f10">
     <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script type="module" src="src/main.js?build=20260730-f9"></script>
+    <script type="module" src="src/main.js?build=20260730-f10"></script>
     <script type="module" src="src/wizard.js?build=20260727-m1"></script>
 </head>
 <body>
     <div id="app-boot-screen" class="app-boot-screen" role="status" aria-live="polite" aria-label="Verifica della sessione in corso">
         <div class="app-boot-screen__content">
-            <span class="app-boot-screen__mark" aria-hidden="true">🛡️</span>
-            <strong>NIS2 Asset Manager</strong>
+            <img class="app-boot-screen__logo" src="assets/branding/nis2-brand-symbol.png" alt="">
+            <strong>NIS2 Asset Inventory Manager</strong>
             <span>Verifica della sessione in corso…</span>
         </div>
     </div>
@@ -37,7 +39,9 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <header class="site-header">
         <div class="site-header__inner">
             <a class="brand" href="#dashboard" aria-label="NIS2 Asset Inventory Manager">
-                <span class="brand__mark" aria-hidden="true">🛡️</span>
+                <span class="brand__mark" aria-hidden="true">
+                    <img class="brand__logo" src="assets/branding/nis2-brand-symbol.png" alt="">
+                </span>
                 <span class="brand__text">
                     <span class="brand__name">NIS2 Asset Manager</span>
                     <span class="brand__descriptor">Asset Inventory &amp; Compliance</span>
@@ -75,12 +79,17 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
         <section id="public-home" class="public-home" aria-labelledby="public-title">
             <div class="public-hero">
                 <div class="public-hero__content">
-                    <p class="eyebrow">UNIVERSITÀ TELEMATICA PEGASO · PROJECT WORK L-31</p>
-                    <h1 id="public-title">NIS2 Asset Inventory Manager</h1>
-                    <p class="public-hero__lead">
-                        Applicazione web per censire soggetti NIS2, asset, servizi, fornitori e dipendenze,
-                        rappresentare la Supply Chain, gestire gli incidenti e valutare i Profili Target e Attuale secondo il FNCSDP.
-                    </p>
+                    <div class="public-hero__identity">
+                        <img class="public-hero__logo" src="assets/branding/nis2-brand-symbol.png" alt="Logo NIS2 Asset Inventory Manager">
+                        <div class="public-hero__copy">
+                            <p class="eyebrow">UNIVERSITÀ TELEMATICA PEGASO · PROJECT WORK L-31</p>
+                            <h1 id="public-title">NIS2 Asset Inventory Manager</h1>
+                            <p class="public-hero__lead">
+                                Applicazione web per censire soggetti NIS2, asset, servizi, fornitori e dipendenze,
+                                rappresentare la Supply Chain, gestire gli incidenti e valutare i Profili Target e Attuale secondo il FNCSDP.
+                            </p>
+                        </div>
+                    </div>
 
                     <dl class="project-metadata" aria-label="Informazioni sul Project Work">
                         <div>
@@ -253,6 +262,15 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                             </button>
                             <div id="menu-group-supporto" class="navigation-group__items">
                                 <button type="button" class="menu-btn" data-route="info"><span aria-hidden="true">ℹ️</span><span>Informazioni e guida</span></button>
+                            </div>
+                        </div>
+
+                        <div class="navigation-group navigation-group--acknowledgements" data-menu-group="ringraziamenti">
+                            <button type="button" class="navigation-group__toggle" aria-expanded="false" aria-controls="menu-group-ringraziamenti">
+                                <span>Ringraziamenti</span><span class="navigation-group__chevron" aria-hidden="true">⌄</span>
+                            </button>
+                            <div id="menu-group-ringraziamenti" class="navigation-group__items">
+                                <button type="button" class="menu-btn" data-route="acknowledgements"><span aria-hidden="true">🙏</span><span>Ringraziamenti</span></button>
                             </div>
                         </div>
                     </nav>
@@ -2094,6 +2112,41 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                                     <p>Soggetti NIS2 → Inventario → Servizi e fornitori → Relazioni e Supply Chain → Incidenti → Assessment FNCSDP → Audit Log ed esportazioni.</p>
                                 </article>
                             </div>
+                        </section>
+
+                        <section id="view-acknowledgements" class="view-section card acknowledgements-view is-hidden">
+                            <div class="view-header">
+                                <div>
+                                    <p class="eyebrow">UN PERCORSO CONDIVISO</p>
+                                    <h2>Ringraziamenti</h2>
+                                    <p class="section-intro">Questo Project Work è il risultato di un percorso di studio, impegno e crescita personale.</p>
+                                </div>
+                            </div>
+
+                            <div class="acknowledgements-intro">
+                                <img class="acknowledgements-logo" src="assets/branding/nis2-brand-symbol.png" alt="Logo NIS2 Asset Inventory Manager">
+                                <p>Desidero esprimere la mia gratitudine alle persone e alle realtà che hanno accompagnato e sostenuto questo percorso.</p>
+                            </div>
+
+                            <div class="acknowledgements-grid">
+                                <article class="acknowledgement-card">
+                                    <span class="acknowledgement-card__icon" aria-hidden="true">🎓</span>
+                                    <h3>Università Telematica Pegaso</h3>
+                                    <p>Per gli insegnamenti, gli strumenti e le opportunità formative ricevute durante il corso di laurea.</p>
+                                </article>
+                                <article class="acknowledgement-card">
+                                    <span class="acknowledgement-card__icon" aria-hidden="true">❤️</span>
+                                    <h3>Cristina e Mattia</h3>
+                                    <p>Alla mia compagna Cristina, per il supporto, la pazienza e per aver creduto in me, insieme a mio figlio Mattia.</p>
+                                </article>
+                                <article class="acknowledgement-card">
+                                    <span class="acknowledgement-card__icon" aria-hidden="true">☯️</span>
+                                    <h3>Maestro Alessandro D’ORIA</h3>
+                                    <p>Al mio Maestro del Tempio del Tai Chi, per gli insegnamenti, la disciplina e l’ispirazione che hanno accompagnato anche questo percorso.</p>
+                                </article>
+                            </div>
+
+                            <p class="acknowledgements-signature">Con gratitudine, <strong>Gianluca Lucarelli</strong></p>
                         </section>
                     </section>
                 </div>
