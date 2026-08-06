@@ -388,6 +388,7 @@ function renderRiepilogoClassificazione(reportData, testoNarrativo) {
                         <span class="eyebrow">DESCRIZIONE NARRATIVA</span>
                         <h3 id="incident-narrative-title">Sintesi dell'incidente</h3>
                     </div>
+                    <button id="btn-copia-sintesi" class="btn-secondary" type="button">Copia sintesi</button>
                 </div>
                 <p class="incident-narrative">${escapeHtml(testoNarrativo)}</p>
             </section>
@@ -622,6 +623,50 @@ if (copyButton) {
         }
     });
 }
+
+
+document.addEventListener('click', async (event) => {
+    const summaryButton = event.target.closest('#btn-copia-sintesi');
+    if (!summaryButton) return;
+
+    const summaryText = document.querySelector('.incident-narrative');
+    const testo = String(summaryText?.textContent || '').trim();
+    if (!testo) {
+        window.alert('Non è presente alcuna sintesi da copiare.');
+        return;
+    }
+
+    const etichettaOriginale = summaryButton.textContent;
+    summaryButton.disabled = true;
+
+    try {
+        if (window.isSecureContext && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(testo);
+        } else {
+            const areaTemporanea = document.createElement('textarea');
+            areaTemporanea.value = testo;
+            areaTemporanea.setAttribute('readonly', '');
+            areaTemporanea.style.position = 'fixed';
+            areaTemporanea.style.opacity = '0';
+            document.body.append(areaTemporanea);
+            areaTemporanea.select();
+            const copied = document.execCommand('copy');
+            areaTemporanea.remove();
+            if (!copied) throw new Error('Copia non confermata dal browser.');
+        }
+
+        summaryButton.textContent = 'Sintesi copiata ✓';
+        window.setTimeout(() => {
+            summaryButton.textContent = etichettaOriginale;
+            summaryButton.disabled = false;
+        }, 1600);
+    } catch (error) {
+        console.error('Errore durante la copia della sintesi:', error);
+        summaryButton.textContent = etichettaOriginale;
+        summaryButton.disabled = false;
+        window.alert('Il browser ha bloccato la copia automatica della sintesi.');
+    }
+});
 
 
 document.addEventListener('click', async (event) => {
