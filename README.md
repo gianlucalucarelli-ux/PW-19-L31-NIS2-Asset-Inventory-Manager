@@ -212,7 +212,6 @@ Le credenziali e le procedure operative necessarie alla valutazione sono riporta
 │   ├── style.css
 │   └── wizard.css
 └── docs/
-    ├── README.md
     ├── ACN_Tassonomia_Cyber_CLEAR.pdf
     ├── Metodologia_Assessment_Framework_Nazionale_-_v1.0.pdf
     ├── Relazione_Tecnica_Backend_Database_v3.0.docx
@@ -222,7 +221,7 @@ Le credenziali e le procedure operative necessarie alla valutazione sono riporta
     ├── diagrammi/
     │   ├── Core_Migration_Pipeline_01-30.puml/.png
     │   ├── Diagnostic_Validation_Patch_Toolkit_X1-X21.puml/.png
-    │   ├── Diagramma_Architettura_Componenti_v2.puml/.png
+    │   ├── Architettura_Componenti_v2.puml/.png
     │   ├── Diagramma_Casi_Uso_NIS2_Ruoli_ACN_v2.puml/.png
     │   ├── Diagramma_Classi_Concettuale_NIS2_FNCSDP_v2.puml/.png
     │   ├── Diagramma_Stato_Assessment_FNCSDP_v2.puml/.png
@@ -275,8 +274,6 @@ Le diagnostiche `X1–X21` accompagnano la pipeline e documentano struttura, sic
 
 ## 9. Documentazione tecnica
 
-- [Indice della documentazione tecnica](docs/README.md)
-
 ### Relazione tecnica backend
 
 - [Relazione tecnica backend database v3.0 — PDF](docs/Relazione_Tecnica_Backend_Database_v3.0.pdf)
@@ -299,8 +296,8 @@ Le diagnostiche `X1–X21` accompagnano la pipeline e documentano struttura, sic
 
 ### Diagrammi del Project Work
 
-- [Architettura dei componenti — PlantUML](docs/diagrammi/Diagramma_Architettura_Componenti_v2.puml)
-- [Architettura dei componenti — PNG](docs/diagrammi/Diagramma_Architettura_Componenti_v2.png)
+- [Architettura dei componenti — PlantUML](docs/diagrammi/Architettura_Componenti_v2.puml)
+- [Architettura dei componenti — PNG](docs/diagrammi/Architettura_Componenti_v2.png)
 - [Casi d’uso e ruoli NIS2/ACN — PlantUML](docs/diagrammi/Diagramma_Casi_Uso_NIS2_Ruoli_ACN_v2.puml)
 - [Casi d’uso e ruoli NIS2/ACN — PNG](docs/diagrammi/Diagramma_Casi_Uso_NIS2_Ruoli_ACN_v2.png)
 - [Classi concettuali NIS2/FNCSDP — PlantUML](docs/diagrammi/Diagramma_Classi_Concettuale_NIS2_FNCSDP_v2.puml)
