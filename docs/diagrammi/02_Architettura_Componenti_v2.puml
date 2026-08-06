@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontStyle plain
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam rectangle {
+  BorderColor #17324D
+  FontColor #17324D
+}
+
+rectangle "Repository GitHub\nramo main" as Git #FFF6DD
+rectangle "GitHub Pages\nfrontend statico" as Pages #EAF5EE
+rectangle "Browser dell'utente\nHTML5, CSS, JavaScript ES6" as Browser #EAF3F8
+rectangle "Supabase Auth\nsessione, JWT, AAL/MFA" as Auth #F8E8E8
+rectangle "API REST e funzioni RPC\nPostgREST / Supabase SDK" as API #EAF3F8
+rectangle "PostgreSQL - schema public\n36 tabelle, 11 viste, 3FN" as DB #EAF5EE
+rectangle "RLS, privilegi, trigger, audit\narchiviazione logica" as Sec #FFF6DD
+rectangle "File XLSX e riepiloghi\ngenerati nel browser" as Export #EAF3F8
+rectangle "Dashboard Supabase privata\nSQL Editor e ispezione tecnica" as Dash #F3F4F6
+
+Git --> Pages : deployment
+Pages --> Browser : risorse statiche HTTPS
+Browser --> Auth : login / logout / MFA
+Browser --> API : query e RPC con JWT
+Auth --> API : contesto della sessione
+API --> DB : operazioni autorizzate
+DB --> Sec : applicazione dei controlli
+Browser --> Export : generazione locale
+Dash --> DB : accesso amministrativo autorizzato
+@enduml
