@@ -1,0 +1,43 @@
+@startuml
+' =========================================================================
+' FILE: docs/diagrammi/Diagramma_Stato_Assessment_FNCSDP_v2.puml
+' DESCRIZIONE: Ciclo di vita del Profilo Target e dell'Assessment FNCSDP
+' =========================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Arial"
+skinparam stateBorderColor #1E6F8C
+skinparam stateBackgroundColor #EAF5FA
+skinparam stateFontColor #18324A
+skinparam ArrowColor #486A86
+
+[*] --> BOZZA : creazione Profilo Target
+state "Profilo Target\nBOZZA" as BOZZA
+state "Profilo Target\nAPPROVATO" as APPROVATO
+state "Assessment\nIN_CORSO" as IN_CORSO
+state "Assessment\nCOMPLETATO" as COMPLETATO
+state "Consultazione risultati\nscore, gap e maturità" as RISULTATI
+state "Export XLSX\ne consultazione Audit Log" as EXPORT
+state "ARCHIVIATO\n(logicamente)" as ARCHIVIATO
+
+BOZZA --> BOZZA : modifica controlli e livelli target
+BOZZA --> APPROVATO : approvazione
+APPROVATO --> IN_CORSO : creazione assessment
+IN_CORSO --> IN_CORSO : salvataggio misure ed evidenze
+IN_CORSO --> COMPLETATO : [6/6 misure compilate] completa
+COMPLETATO --> RISULTATI : calcolo indicatori
+RISULTATI --> EXPORT : produzione report
+EXPORT --> [*] : chiusura del ciclo di valutazione
+
+BOZZA ..> ARCHIVIATO : archiviazione autorizzata
+APPROVATO ..> ARCHIVIATO : archiviazione autorizzata
+COMPLETATO ..> ARCHIVIATO : archiviazione autorizzata
+ARCHIVIATO ..> [*] : conservazione storica
+
+note right of IN_CORSO
+Transizioni non ammesse:
+- assessment senza Target approvato
+- completamento con misure mancanti
+- modifica del Target approvato
+end note
+@enduml

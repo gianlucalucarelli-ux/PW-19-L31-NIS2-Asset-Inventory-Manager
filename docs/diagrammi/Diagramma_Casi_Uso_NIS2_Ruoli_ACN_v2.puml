@@ -1,0 +1,71 @@
+@startuml
+' =========================================================================
+' FILE: docs/diagrammi/Diagramma_Casi_Uso_NIS2_Ruoli_ACN_v2.puml
+' DESCRIZIONE: Casi d'uso del NIS2 Asset Inventory Manager con figure NIS2/ACN
+' =========================================================================
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Arial"
+skinparam defaultFontColor #18324A
+skinparam ArrowColor #486A86
+skinparam ActorBorderColor #17365D
+skinparam ActorFontColor #18324A
+skinparam UsecaseBorderColor #1E6F8C
+skinparam UsecaseBackgroundColor #EAF5FA
+skinparam UsecaseFontColor #18324A
+skinparam RectangleBorderColor #17365D
+skinparam RectangleFontColor #17365D
+
+actor "Amministratore\ndi sistema" as ADMIN
+actor "Operatore\nsicurezza" as OPS
+actor "Docente\nvalutatore" as DOC
+actor "Legale\nrappresentante" as LR
+actor "Punto di\ncontatto ACN" as PDC
+actor "Vice punto di\ncontatto ACN" as VPDC
+actor "Referente\nCSIRT" as CSIRT
+actor "Vice referente\nCSIRT" as VCSIRT
+
+rectangle "NIS2 Asset Inventory Manager\nCasi d'uso e figure organizzative NIS2/ACN" {
+  usecase "Gestione soggetti NIS2,\npersone e incarichi" as UC_ORG
+  usecase "Gestione inventario\ndegli asset" as UC_ASSET
+  usecase "Gestione servizi, fornitori\ne dipendenze" as UC_SERV
+  usecase "Consultazione\ndashboard" as UC_DASH
+  usecase "Gestione e classificazione\ndegli incidenti" as UC_INC
+  usecase "Assessment FNCSDP:\nProfilo Target e Attuale" as UC_FNCSDP
+  usecase "Audit Log, report\ned esportazioni" as UC_AUDIT
+  usecase "Autenticazione e\ncontrollo sessione" as UC_AUTH
+
+  UC_ORG ..> UC_AUTH : <<include>>
+  UC_ASSET ..> UC_AUTH : <<include>>
+  UC_SERV ..> UC_AUTH : <<include>>
+  UC_DASH ..> UC_AUTH : <<include>>
+  UC_INC ..> UC_AUTH : <<include>>
+  UC_FNCSDP ..> UC_AUTH : <<include>>
+  UC_AUDIT ..> UC_AUTH : <<include>>
+}
+
+ADMIN --> UC_ORG
+ADMIN --> UC_AUDIT
+OPS --> UC_ASSET
+OPS --> UC_SERV
+OPS --> UC_DASH
+DOC --> UC_DASH
+DOC --> UC_FNCSDP
+DOC --> UC_AUDIT
+LR --> UC_ORG
+LR --> UC_FNCSDP
+PDC --> UC_ORG
+PDC --> UC_AUDIT
+VPDC --> UC_ORG
+VPDC --> UC_AUDIT
+CSIRT --> UC_INC
+CSIRT --> UC_AUDIT
+VCSIRT --> UC_INC
+VCSIRT --> UC_AUDIT
+
+note bottom of UC_AUTH
+Tutte le operazioni riservate sono subordinate
+ad autenticazione, livello AAL e policy RLS.
+end note
+@enduml

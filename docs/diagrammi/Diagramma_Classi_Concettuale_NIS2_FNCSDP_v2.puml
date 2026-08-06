@@ -1,0 +1,142 @@
+@startuml
+' =========================================================================
+' FILE: docs/diagrammi/Diagramma_Classi_Concettuale_NIS2_FNCSDP_v2.puml
+' DESCRIZIONE: Vista concettuale sintetica dei domini principali del progetto
+' =========================================================================
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Arial"
+skinparam classBorderColor #1E6F8C
+skinparam classBackgroundColor #EAF5FA
+skinparam classFontColor #18324A
+skinparam packageBorderColor #B9D8E6
+skinparam ArrowColor #486A86
+
+package "Organizzazione e responsabilità" {
+  class SoggettoNIS2 {
+    + id
+    + denominazione
+    + settore
+    + stato
+  }
+  class Persona {
+    + id
+    + nome
+    + cognome
+    + email
+  }
+  class RuoloNIS2 {
+    + id
+    + codice
+    + descrizione
+  }
+  class IncaricoNIS2 {
+    + dataInizio
+    + dataFine
+    + principale
+  }
+}
+
+package "Inventario, servizi e Supply Chain" {
+  class Asset {
+    + codice
+    + nome
+    + categoria
+    + criticita
+    + attivo
+  }
+  class Servizio {
+    + codice
+    + nome
+    + criticita
+    + stato
+  }
+  class Fornitore {
+    + codice
+    + ragioneSociale
+    + livello
+    + attivo
+  }
+  class DipendenzaServizioAsset
+  class DipendenzaServizioFornitore
+  class RelazioneAssetFornitore
+}
+
+package "Incidenti e tassonomia ACN" {
+  class Incidente {
+    + codice
+    + stato
+    + rilevatoIl
+    + descrizione
+  }
+  class VoceTassonomiaACN {
+    + codice
+    + categoria
+    + descrizione
+  }
+}
+
+package "Assessment FNCSDP" {
+  class ProfiloTarget {
+    + codice
+    + versione
+    + stato
+    + approvatoIl
+  }
+  class ControlloFNCSDP {
+    + subcategoryId
+    + descrizione
+  }
+  class ControlloTarget {
+    + livelloTarget
+    + priorita
+  }
+  class Assessment {
+    + codice
+    + stato
+    + avviatoIl
+    + completatoIl
+  }
+  class MisuraControllo {
+    + livelloAttuale
+    + evidenza
+    + note
+  }
+}
+
+class AuditLog {
+  + tabella
+  + operazione
+  + utente
+  + primaJson
+  + dopoJson
+  + dataOra
+}
+
+SoggettoNIS2 "1" -- "0..*" IncaricoNIS2
+Persona "1" -- "0..*" IncaricoNIS2
+RuoloNIS2 "1" -- "0..*" IncaricoNIS2
+SoggettoNIS2 "1" -- "0..*" Asset
+SoggettoNIS2 "1" -- "0..*" Servizio
+SoggettoNIS2 "1" -- "0..*" Fornitore
+Servizio "1" -- "0..*" DipendenzaServizioAsset
+Asset "1" -- "0..*" DipendenzaServizioAsset
+Servizio "1" -- "0..*" DipendenzaServizioFornitore
+Fornitore "1" -- "0..*" DipendenzaServizioFornitore
+Asset "1" -- "0..*" RelazioneAssetFornitore
+Fornitore "1" -- "0..*" RelazioneAssetFornitore
+SoggettoNIS2 "1" -- "0..*" Incidente
+Incidente "0..*" -- "0..*" VoceTassonomiaACN
+SoggettoNIS2 "1" -- "0..*" ProfiloTarget
+ProfiloTarget "1" -- "1..*" ControlloTarget
+ControlloFNCSDP "1" -- "0..*" ControlloTarget
+ProfiloTarget "1" -- "0..*" Assessment
+Assessment "1" -- "1..*" MisuraControllo
+ControlloFNCSDP "1" -- "0..*" MisuraControllo
+AuditLog ..> SoggettoNIS2 : traccia
+AuditLog ..> Asset : traccia
+AuditLog ..> Servizio : traccia
+AuditLog ..> Incidente : traccia
+AuditLog ..> Assessment : traccia
+@enduml
