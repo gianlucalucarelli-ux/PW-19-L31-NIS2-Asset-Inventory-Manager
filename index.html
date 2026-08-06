@@ -17,13 +17,13 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
     <link rel="apple-touch-icon" sizes="180x180" href="assets/branding/apple-touch-icon.png">
 
     <link rel="stylesheet" href="src/style.css?build=20260730-f12">
-    <link rel="stylesheet" href="src/wizard.css?build=20260726-d2">
+    <link rel="stylesheet" href="src/wizard.css?build=20260806-i3">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="module" src="src/main.js?build=20260730-f12"></script>
-    <script type="module" src="src/wizard.js?build=20260727-m1"></script>
+    <script type="module" src="src/wizard.js?build=20260806-i3"></script>
 </head>
 <body>
     <div id="app-boot-screen" class="app-boot-screen" role="status" aria-live="polite" aria-label="Verifica della sessione in corso">
@@ -2070,14 +2070,27 @@ DESCRIZIONE: Struttura HTML5 dell'area pubblica e dell'area applicativa autentic
                         <section id="view-riepilogo" class="view-section card is-hidden">
                             <div class="view-header">
                                 <div>
-                                    <h2>Riepilogo Report ACN</h2>
-                                    <p class="section-intro">Sintesi narrativa generata dalle classificazioni selezionate nel wizard.</p>
+                                    <p class="eyebrow">GESTIONE INCIDENTI NIS2</p>
+                                    <h2>Riepilogo della classificazione</h2>
+                                    <p class="section-intro">Risultato strutturato generato al completamento dei sei passaggi del wizard.</p>
                                 </div>
                             </div>
-                            <label class="visually-hidden" for="report-output">Testo del report ACN</label>
-                            <textarea id="report-output" rows="10" class="report-output" readonly></textarea>
-                            <div class="form-actions">
-                                <button id="btn-copia" class="btn-primary" type="button">📋 Copia negli appunti</button>
+
+                            <div id="incident-classification-result" aria-live="polite"></div>
+
+                            <section class="incident-result-section incident-report-text" aria-labelledby="incident-report-text-title">
+                                <div class="incident-result-section__heading">
+                                    <div>
+                                        <span class="eyebrow">REPORT TESTUALE</span>
+                                        <h3 id="incident-report-text-title">Testo completo da copiare</h3>
+                                    </div>
+                                </div>
+                                <label class="visually-hidden" for="report-output">Testo del report ACN</label>
+                                <textarea id="report-output" rows="16" class="report-output" readonly></textarea>
+                            </section>
+
+                            <div class="form-actions incident-result-actions">
+                                <button id="btn-copia" class="btn-primary" type="button">📋 Copia report completo</button>
                                 <button id="btn-restart-incident" class="btn-secondary" type="button">Chiudi e nuovo incidente</button>
                             </div>
                         </section>
