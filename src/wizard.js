@@ -18,6 +18,7 @@ let passoCorrente = 1;
 let eventoId = null;
 let wizardAvviato = false;
 let operazioneInCorso = false;
+let tipologiaSoggetto = 'essenziale';
 
 const container = document.getElementById('step-content');
 const title = document.getElementById('step-title');
@@ -150,6 +151,7 @@ export function resetIncidentWizardState() {
     eventoId = null;
     wizardAvviato = false;
     operazioneInCorso = false;
+    tipologiaSoggetto = 'essenziale';
 
     if (container && title) {
         renderPaginaIniziale();
@@ -219,6 +221,8 @@ async function salvaPrimoPasso() {
         throw new Error('Seleziona una tipologia di soggetto.');
     }
 
+    tipologiaSoggetto = selectedRadio.value;
+
     if (!eventoId) {
         const nuovoIncidente = await startIncidente({
             inizio: nowDatabaseUtcTimestamp(),
@@ -253,28 +257,214 @@ async function salvaPassoTassonomico() {
 }
 
 /**
- * Genera il testo narrativo conclusivo del report.
+ * Protegge i valori dinamici prima di inserirli nel riepilogo HTML.
+ */
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+/**
+ * Restituisce le selezioni del passo richiesto in un formato uniforme.
+ */
+function getReportItemsByStep(reportData, passo) {
+    return reportData
+        .filter((item) => Number(item.passo_wizard) === Number(passo))
+        .map((item) => ({
+            nome: String(item.tassonomia_incidenti_acn?.nome_esteso || '[dato non inserito]'),
+            codice: String(item.tassonomia_incidenti_acn?.codice_acn || '')
+        }));
+}
+
+/**
+ * Converte le selezioni di un passo in testo leggibile.
+ */
+function formatReportItems(reportData, passo) {
+    const items = getReportItemsByStep(reportData, passo);
+    if (items.length === 0) return '[dato non inserito]';
+    return items.map((item) => `${item.nome}${item.codice ? ` (${item.codice})` : ''}`).join(', ');
+}
+
+/**
+ * Associa a ciascun passo la denominazione usata nella tabella conclusiva.
+ */
+function resolveStepArea(passo) {
+    const areas = {
+        2: 'Baseline Characterization - Impatto',
+        3: 'Baseline Characterization - Causa',
+        4: 'Baseline Characterization - Severità',
+        5: 'Threat Type',
+        6: 'Threat Actor'
+    };
+    return areas[passo] || `Passo ${passo}`;
+}
+
+/**
+ * Costruisce la vista conclusiva della classificazione, senza sostituire
+ * la valutazione normativa sulla significatività dell'incidente.
+ */
+function renderRiepilogoClassificazione(reportData, testoNarrativo) {
+    const summary = document.getElementById('incident-classification-result');
+    if (!summary) return;
+
+    const righe = [];
+    for (let passo = 2; passo <= 6; passo += 1) {
+        const items = getReportItemsByStep(reportData, passo);
+        items.forEach((item) => {
+            righe.push(`
+                <tr>
+                    <td>${escapeHtml(resolveStepArea(passo))}</td>
+                    <td><code>${escapeHtml(item.codice || '-')}</code></td>
+                    <td>${escapeHtml(item.nome)}</td>
+                </tr>
+            `);
+        });
+    }
+
+    const codici = righe.length > 0
+        ? reportData
+            .map((item) => String(item.tassonomia_incidenti_acn?.codice_acn || '').trim())
+            .filter(Boolean)
+            .join(', ')
+        : '[nessun codice disponibile]';
+
+    const soggettoLabel = tipologiaSoggetto === 'importante'
+        ? 'Soggetto importante'
+        : 'Soggetto essenziale';
+
+    summary.innerHTML = `
+        <section class="incident-result-panel" aria-labelledby="incident-result-title">
+            <div class="incident-result-complete">
+                <span class="incident-result-complete__icon" aria-hidden="true">✓</span>
+                <div>
+                    <h3 id="incident-result-title">Classificazione completata</h3>
+                    <p>Il percorso guidato ha registrato le selezioni tassonomiche associate all'incidente.</p>
+                </div>
+            </div>
+
+            <div class="incident-result-status-grid">
+                <article class="incident-result-status-card">
+                    <span class="incident-result-status-card__label">Tipologia soggetto</span>
+                    <strong>${escapeHtml(soggettoLabel)}</strong>
+                    <small>Valore selezionato nel primo passaggio</small>
+                </article>
+                <article class="incident-result-status-card incident-result-status-card--attention">
+                    <span class="incident-result-status-card__label">Esito del percorso</span>
+                    <strong>Classificazione tassonomica disponibile</strong>
+                    <small>La significatività deve essere verificata secondo i criteri normativi applicabili</small>
+                </article>
+            </div>
+
+            <aside class="incident-result-caution" role="note">
+                <strong>Approccio prudenziale</strong>
+                <p>In caso di dubbio sulla significatività dell'incidente, effettuare la valutazione con il Punto di contatto NIS2 e seguire i canali istituzionali previsti. Il presente riepilogo supporta la preparazione delle informazioni, ma non sostituisce la notifica ufficiale.</p>
+            </aside>
+
+            <div class="incident-deadline-grid" aria-label="Tempistiche di riferimento per la notifica NIS2">
+                <article class="incident-deadline-card">
+                    <span aria-hidden="true">1</span>
+                    <strong>Pre-notifica</strong>
+                    <small>Entro 24 ore dalla conoscenza dell'incidente significativo</small>
+                </article>
+                <article class="incident-deadline-card">
+                    <span aria-hidden="true">2</span>
+                    <strong>Notifica completa</strong>
+                    <small>Entro 72 ore dalla conoscenza dell'incidente significativo</small>
+                </article>
+                <article class="incident-deadline-card">
+                    <span aria-hidden="true">3</span>
+                    <strong>Relazione finale</strong>
+                    <small>Entro un mese dalla trasmissione della notifica completa</small>
+                </article>
+            </div>
+
+            <section class="incident-result-section" aria-labelledby="incident-narrative-title">
+                <div class="incident-result-section__heading">
+                    <div>
+                        <span class="eyebrow">DESCRIZIONE NARRATIVA</span>
+                        <h3 id="incident-narrative-title">Sintesi dell'incidente</h3>
+                    </div>
+                </div>
+                <p class="incident-narrative">${escapeHtml(testoNarrativo)}</p>
+            </section>
+
+            <section class="incident-result-section" aria-labelledby="incident-codes-title">
+                <div class="incident-result-section__heading">
+                    <div>
+                        <span class="eyebrow">TASSONOMIA ACN</span>
+                        <h3 id="incident-codes-title">Codici e valori selezionati</h3>
+                    </div>
+                    <button id="btn-copia-codici" class="btn-secondary" type="button">Copia codici</button>
+                </div>
+                <p id="incident-code-list" class="incident-code-list">${escapeHtml(codici)}</p>
+                <div class="incident-code-table-wrap">
+                    <table class="incident-code-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Area</th>
+                                <th scope="col">Codice</th>
+                                <th scope="col">Valore</th>
+                            </tr>
+                        </thead>
+                        <tbody>${righe.join('')}</tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    `;
+}
+
+/**
+ * Genera il testo narrativo conclusivo e la vista strutturata del report.
  */
 async function generaReportFinale() {
     const reportData = await fetchReportIncidente(eventoId);
 
-    const formatData = (passo) => {
-        const items = reportData.filter((item) => item.passo_wizard === passo);
-        if (items.length === 0) return '[dato non inserito]';
+    const testoNarrativo = `L'incidente ha comportato ${formatReportItems(reportData, 2)}, `
+        + `con causa classificata come ${formatReportItems(reportData, 3)}. `
+        + `La severità è stata valutata come ${formatReportItems(reportData, 4)}. `
+        + `La minaccia e stata ricondotta a ${formatReportItems(reportData, 5)} `
+        + `e agli attori o alle motivazioni classificati come ${formatReportItems(reportData, 6)}.`;
 
-        return items
-            .map((item) => `${item.tassonomia_incidenti_acn.nome_esteso} ${item.tassonomia_incidenti_acn.codice_acn}`)
-            .join(', ');
-    };
+    const testoReport = `CLASSIFICAZIONE TASSONOMICA INCIDENTE NIS2 / ACN
 
-    const testoReport = `L'incidente ha comportato ${formatData(2)}, causato da ${formatData(3)}. `
-        + `La severità è stata valutata come ${formatData(4)}. `
-        + `L'attacco è stato caratterizzato da minacce di tipo ${formatData(5)} `
-        + `ad opera di attori classificabili come ${formatData(6)}.`;
+`
+        + `Tipologia soggetto: ${tipologiaSoggetto === 'importante' ? 'Soggetto importante' : 'Soggetto essenziale'}
+
+`
+        + `TEMPISTICHE DI RIFERIMENTO
+`
+        + `- Pre-notifica: entro 24 ore dalla conoscenza dell'incidente significativo
+`
+        + `- Notifica completa: entro 72 ore dalla conoscenza dell'incidente significativo
+`
+        + `- Relazione finale: entro un mese dalla trasmissione della notifica completa
+
+`
+        + `DESCRIZIONE NARRATIVA
+${testoNarrativo}
+
+`
+        + `CODICI TASSONOMIA ACN
+`
+        + reportData
+            .map((item) => {
+                const value = item.tassonomia_incidenti_acn;
+                return `${value?.codice_acn || '-'} - ${value?.nome_esteso || '[dato non inserito]'}`;
+            })
+            .join('\n')
+        + `
+
+Nota: il riepilogo supporta la preparazione delle informazioni e non sostituisce la valutazione di significatività o la notifica attraverso i canali istituzionali.`;
 
     const reportOutput = document.getElementById('report-output');
     if (reportOutput) reportOutput.value = testoReport;
 
+    renderRiepilogoClassificazione(reportData, testoNarrativo);
     await navigateTo('riepilogo', { force: true });
 }
 
@@ -432,6 +622,50 @@ if (copyButton) {
         }
     });
 }
+
+
+document.addEventListener('click', async (event) => {
+    const codesButton = event.target.closest('#btn-copia-codici');
+    if (!codesButton) return;
+
+    const codeList = document.getElementById('incident-code-list');
+    const testo = String(codeList?.textContent || '').trim();
+    if (!testo) {
+        window.alert('Non sono presenti codici da copiare.');
+        return;
+    }
+
+    const etichettaOriginale = codesButton.textContent;
+    codesButton.disabled = true;
+
+    try {
+        if (window.isSecureContext && navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(testo);
+        } else {
+            const areaTemporanea = document.createElement('textarea');
+            areaTemporanea.value = testo;
+            areaTemporanea.setAttribute('readonly', '');
+            areaTemporanea.style.position = 'fixed';
+            areaTemporanea.style.opacity = '0';
+            document.body.append(areaTemporanea);
+            areaTemporanea.select();
+            const copied = document.execCommand('copy');
+            areaTemporanea.remove();
+            if (!copied) throw new Error('Copia non confermata dal browser.');
+        }
+
+        codesButton.textContent = 'Codici copiati ✓';
+        window.setTimeout(() => {
+            codesButton.textContent = etichettaOriginale;
+            codesButton.disabled = false;
+        }, 1600);
+    } catch (error) {
+        console.error('Errore durante la copia dei codici:', error);
+        codesButton.textContent = etichettaOriginale;
+        codesButton.disabled = false;
+        window.alert('Il browser ha bloccato la copia automatica dei codici.');
+    }
+});
 
 const restartButton = document.getElementById('btn-restart-incident');
 if (restartButton) {

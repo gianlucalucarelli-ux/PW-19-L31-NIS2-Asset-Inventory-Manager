@@ -100,3 +100,231 @@
         width: 100%;
     }
 }
+
+
+/* ---------------------------------------------------------------------------------------------------------------
+   RIEPILOGO CONCLUSIVO DELLA CLASSIFICAZIONE INCIDENTE
+   --------------------------------------------------------------------------------------------------------------- */
+.incident-result-panel {
+    display: grid;
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.incident-result-complete {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 20px;
+    color: var(--text-high);
+    background: color-mix(in srgb, var(--success) 10%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--success) 42%, var(--border));
+    border-radius: var(--radius-md);
+}
+
+.incident-result-complete__icon {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    place-items: center;
+    color: #ffffff;
+    background: var(--success);
+    border-radius: 50%;
+    font-weight: 800;
+}
+
+.incident-result-complete h3,
+.incident-result-complete p {
+    margin-bottom: 0;
+}
+
+.incident-result-complete p {
+    margin-top: 4px;
+    color: var(--text-low);
+}
+
+.incident-result-status-grid,
+.incident-deadline-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.incident-result-status-card,
+.incident-deadline-card,
+.incident-result-section {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.incident-result-status-card {
+    display: grid;
+    gap: 6px;
+    padding: 18px;
+}
+
+.incident-result-status-card--attention {
+    border-color: color-mix(in srgb, var(--warning) 50%, var(--border));
+}
+
+.incident-result-status-card__label {
+    color: var(--text-low);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.incident-result-status-card small,
+.incident-deadline-card small {
+    color: var(--text-low);
+    line-height: 1.45;
+}
+
+.incident-result-caution {
+    padding: 16px 18px;
+    background: color-mix(in srgb, var(--warning) 10%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+    border-radius: var(--radius-md);
+}
+
+.incident-result-caution p {
+    margin: 5px 0 0;
+    color: var(--text-low);
+}
+
+.incident-deadline-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.incident-deadline-card {
+    display: grid;
+    gap: 7px;
+    padding: 18px;
+    text-align: center;
+}
+
+.incident-deadline-card > span {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    margin: 0 auto 2px;
+    place-items: center;
+    color: var(--primary-contrast);
+    background: var(--primary);
+    border-radius: 50%;
+    font-weight: 800;
+}
+
+.incident-result-section {
+    padding: 20px;
+}
+
+.incident-result-section__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.incident-result-section__heading h3,
+.incident-result-section__heading .eyebrow {
+    margin-bottom: 0;
+}
+
+.incident-narrative {
+    margin-bottom: 0;
+    padding: 16px;
+    color: var(--text-high);
+    background: color-mix(in srgb, var(--success) 7%, var(--bg-input));
+    border-left: 4px solid var(--success);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    line-height: 1.7;
+}
+
+.incident-code-list {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    overflow-wrap: anywhere;
+    color: var(--text-low);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.84rem;
+}
+
+.incident-code-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.incident-code-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 680px;
+}
+
+.incident-code-table th,
+.incident-code-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.incident-code-table th {
+    color: var(--text-high);
+    background: var(--bg-elevated);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.incident-code-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.incident-code-table code {
+    color: var(--primary);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.incident-report-text {
+    margin-top: 18px;
+}
+
+.incident-report-text .report-output {
+    min-height: 360px;
+    line-height: 1.6;
+}
+
+.incident-result-actions {
+    justify-content: flex-start;
+}
+
+@media (max-width: 860px) {
+    .incident-deadline-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .incident-result-status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .incident-result-section__heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .incident-result-section__heading > button {
+        width: 100%;
+    }
+}
